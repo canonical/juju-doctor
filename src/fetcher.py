@@ -14,17 +14,28 @@ import requests
 class Fetcher(object):
     """A deployment configuration validator for juju.
 
-    1. Can we assume probes exist in GH? What about launchpad
+    1. Probes can exist in (GH, Launchpad)
     2. Can we use // TF subdir notation?
     3. Can we use @ for branch notation?
     4. --probe gh://canonical/grafana-k8s//probes@feature/probes
         - This is not intuitive, but could work
     5. Probes are copied to /tmp/fake/probes
     
+
+    --- Leon
+
+    1. Inteface for probes should be Luca or TF notation, otherwise raiseNotImplemented
+    2. 
     """
 
     def __init__(self, opts):
         self.opts = opts
+
+    def parse_tf_notation_into_components(self, url: str):
+        # 
+
+        return {}
+
 
     def run(self):
         if self.opts.probe:
