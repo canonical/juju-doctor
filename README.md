@@ -16,6 +16,13 @@ or
 cat resources/show-unit.yaml | ./resources/relation_dashboard_uid.py
 ```
 
+or
+
+```
+python src/main.py --probe file://resources/show-unit --show-unit resources/show-unit.yaml
+# If you want to see more internals, go to src/main.py and change the log level to INFO
+```
+
 ### Fetcher
 
 Note: The fetcher is intended to work as a lib but currently takes args for prototyping.
