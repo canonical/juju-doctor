@@ -9,13 +9,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
+  "pyyaml",
   # Main
   "sh",
   "typer",
   # Fetcher
   "fsspec",
   "requests",
-  "pyyaml"
 ]
 
 [project.optional-dependencies]
