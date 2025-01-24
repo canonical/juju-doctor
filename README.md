@@ -1,9 +1,7 @@
 # juju-doctor
 > You deploy, we validate, you fix :)
 
-## Features
-
-### Probes
+## Probes
 Run a sample show-unit probe with:
 
 ```
@@ -21,14 +19,4 @@ or
 ```
 python src/main.py --probe file://resources/show-unit --show-unit resources/show-unit.yaml
 # If you want to see more internals, go to src/main.py and change the log level to INFO
-```
-
-### Fetcher
-
-Note: The fetcher is intended to work as a lib but currently takes args for prototyping.
-```
-uv run python3 ./src/fetcher.py ./resources
-uv run python3 ./src/fetcher.py ./resources/relation_dashboard_uid.py
-uv run python3 ./src/fetcher.py "https://raw.githubusercontent.com/canonical/grafana-k8s-operator//probes/external/show-unit/relation_dashboard_uid.py?ref=feature/probes"
-uv run python3 ./src/fetcher.py "https://raw.githubusercontent.com/canonical/grafana-k8s-operator//probes/external/show-unit?ref=feature/probes"
 ```
