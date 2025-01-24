@@ -2,12 +2,13 @@
 
 """Probe for juju show-unit."""
 
-import sys
-import yaml
-import json
 import base64
+import json
 import lzma
 import re
+import sys
+
+import yaml
 
 
 def _uid_from_encoded_dashboard(data: bytes) -> str:
@@ -54,7 +55,10 @@ def validate_dashboard_uid(show_unit: dict):
                 decoded_uid = _uid_from_encoded_dashboard(meta["content"])
                 # 5. Check if the top-level UID exist and is not empty
                 if not _is_valid_format(decoded_uid):
-                    print(f"Invalid dashboard UID ({id}) for relation-id ({relation_id})", file=sys.stderr)
+                    print(
+                        f"Invalid dashboard UID ({id}) for relation-id ({relation_id})",
+                        file=sys.stderr,
+                    )
 
     print("Probe finished!")
 

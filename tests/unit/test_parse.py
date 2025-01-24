@@ -1,7 +1,8 @@
-from fetcher import Fetcher
-from pathlib import Path
 import tempfile
+from pathlib import Path
 from types import SimpleNamespace
+
+from fetcher import Fetcher
 
 
 def test_parse_url_probe():

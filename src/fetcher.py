@@ -1,96 +1,97 @@
 #!/usr/bin/env python3
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+"""Helper module to fetch probes from local or remote endpoints."""
 
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Literal, Optional
+from urllib.error import URLError
+from urllib.parse import urlparse
 
 import fsspec
-from pathlib import Path
-from urllib.parse import urlparse
-from types import SimpleNamespace
-from urllib.error import URLError
-import sys
+
+log = logging.getLogger(__name__)
 
 
-class Fetcher(object):
-    """A deployment configuration validator for juju.
+@dataclass
+class Probe:
+    """A probe that can be executed via juju-doctor."""
 
-    TODO Potential schema:
-        --probe gh://canonical/grafana-k8s//probes@feature/probes
+    name: str
+    category: Optional[Literal["status", "bundle", "show-unit"]]
+    uri: str
+    path: Path
+
+    def is_status(self) -> bool:
+        """Check if the Probe works on juju status."""
+        return self.category == "status"
+
+    def is_bundle(self) -> bool:
+        """Check if the Probe works on juju status."""
+        return self.category == "bundle"
+
+    def is_show_unit(self) -> bool:
+        """Check if the Probe works on juju status."""
+        return self.category == "show-unit"
+
+
+def fetch_probes(uri: str, destination: Path) -> List[Probe]:
+    """Fetch probes from a source to a local directory.
+
+    Args:
+        uri: a URI to a probe living somewhere.
+            Currently only supports 'github://' with Terraform notation and 'file://'.
+        destination: the folder where to save the probes.
     """
+    probes = []
+    parsed_uri = urlparse(uri)
+    subfolder = f"{parsed_uri.netloc}{parsed_uri.path}".replace("/", "_").replace(":", "_")
+    local_path = destination / subfolder
 
-    def __init__(self, destination: Path):
-        self.destination = destination
-        self.meta = self.meta = SimpleNamespace(
-            path=Path(),
-            ref="",
-            org="",
-            repo="",
-            url="",
-            protocol="unknown",
-        )
-
-    def run(self, probe: str):
-        self.parse_tf_notation_into_components(probe)
-        self.fetch_probes()
-
-    def parse_tf_notation_into_components(self, probe: str) -> SimpleNamespace:
-        if Path(probe).is_file() or Path(probe).is_dir():
-            self.meta.protocol = "file"
-            self.meta.path = Path(probe)
-
-        else:
-            parsed_url = urlparse(probe)
-            split_path = parsed_url.path.split("//")
-            if len(split_path) != 2:
-                # TF subdir notation violation
-                # https://developer.hashicorp.com/terraform/language/modules/sources#modules-in-package-sub-directories
+    match parsed_uri.scheme:
+        case "file":
+            path = Path(f"{parsed_uri.netloc}{parsed_uri.path}")
+            filesystem = fsspec.filesystem(protocol="file")
+            local_path.mkdir(parents=True, exist_ok=True)
+        case "github":
+            try:
+                # Extract the org and repository from the URI
+                org_and_repo, path = uri.removeprefix("github://").split("//")
+                org, repo = org_and_repo.split("/")
+                # Extract the branch name if present
+                branch = "main"
+                if "@" in path:
+                    path, branch = path.split("@")
+                path = Path(path)
+            except ValueError:
                 raise URLError(
-                    f"Invalid URL format: {split_path[0]}. Use '//' to define at least 1 sub-directory"
+                    f"Invalid URL format: {uri}. Use '//' to define 1 sub-directory "
+                    "and specify at most 1 branch."
                 )
-            context = [part for part in split_path[0].split("/") if part]
-            self.meta.org = context[0]
-            if len(context) > 1:
-                self.meta.repo = context[1]
-            self.meta.url = f"{parsed_url.scheme}://{parsed_url.netloc}/{self.meta.org}/{self.meta.repo}"
-            self.meta.ref = parsed_url.query.replace("ref=", "")
-            self.meta.path = Path(split_path[1])
-            if "github" in self.meta.url:
-                self.meta.protocol = "github"
-
-    def fetch_probes(self):
-        if self.meta.protocol == "file":
-            fs = self.fsspec_fs_local()
-            self.copy_files(fs)
-        elif self.meta.protocol == "github":
-            fs = self.fsspec_fs_gh()
-            self.copy_files(fs)
-        else:
+            filesystem = fsspec.filesystem(
+                protocol="github", org=org, repo=repo, sha=f"refs/heads/{branch}"
+            )
+        case _:
             raise NotImplementedError
 
-    def fsspec_fs_gh(self):
-        return fsspec.filesystem(
-            self.meta.protocol,
-            org=self.meta.org,
-            repo=self.meta.repo,
-            sha=f"refs/heads/{self.meta.ref}",
-        )
+    # If path ends with a "/", it will be assumed to be a directory
+    # Can submit a list of paths, which may be glob-patterns and will be expanded.
+    filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
 
-    def fsspec_fs_local(self):
-        return fsspec.filesystem(self.meta.protocol)
+    probe_files = filesystem.find(local_path.as_posix())
+    for path in probe_files:
+        # FIXME: very naive category recognition
+        category = None
+        if "status" in path:
+            category = "status"
+        if "bundle" in path:
+            category = "bundle"
+        if "show-unit" in path:
+            category = "show-unit"
+        probe = Probe(name=Path(path).name, category=category, uri=uri, path=Path(path))
+        log.info(f"Fetched probe: {probe}")
+        probes.append(probe)
 
-    def copy_files(self, fs):
-        self.destination.mkdir(exist_ok=True, parents=True)
-        # If path ends with a "/", it will be assumed to be a directory
-        # Can submit a list of paths, which may be glob-patterns and will be expanded.
-        fs.get(str(self.meta.path), self.destination.as_posix(), recursive=True)
-        print(f"Probes located at: {self.destination}")
-
-
-def main():
-    print("probes-fetcher started.")
-    probe = sys.argv[1]
-    fetcher = Fetcher(Path("/tmp/fake/probes"))
-    fetcher.run(probe)
-    print("probes-fetcher finished.")
-
-
-if __name__ == "__main__":
-    main()
+    return probes

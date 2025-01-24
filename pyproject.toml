@@ -2,10 +2,17 @@
 # See LICENSE file for licensing details.
 [project]
 name = "juju-doctor"
-version = "0.0"
+version = "0.1"
+description = "🦆" # TODO: add actual description
+license = { file = "LICENSE" }
+readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
+  # Main
+  "sh",
+  "typer",
+  # Fetcher
   "fsspec",
   "requests",
   "pyyaml"
@@ -21,3 +28,24 @@ dev = [
   "pytest",
   "coverage[toml]",
 ]
+
+# [project.urls]
+# "Homepage" = "?"
+# "Bug Tracker" = "?"
+
+[project.scripts]
+juju-doctor = "main:app"
+
+[tool.ruff]
+line-length = 99
+extend-exclude = ["__pycache__", "*.egg_info"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "C", "N", "R", "D", "I001"]
+# ignore = ["E501", "D107", "RET504", "C901"]
+# D100, D101, D102, D103: Ignore missing docstrings in tests
+per-file-ignores = {"tests/*" = ["D100","D101","D102","D103"], "tests/constants.py" = ["E501"]}
+extend-select = ["I"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
