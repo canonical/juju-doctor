@@ -72,15 +72,6 @@ wheels = [
 ]
 
 [[package]]
-name = "codespell"
-version = "2.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b0/2f/706691245790ae6c63252d48b7ff5e3635951d55b3ce3c0ac13d898bf70b/codespell-2.4.0.tar.gz", hash = "sha256:587d45b14707fb8ce51339ba4cce50ae0e98ce228ef61f3c5e160e34f681be58", size = 344743 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/ce/39bfb82aa428a3ac4d94cc8c9faa3eadeadb2606eee3b584f68d9b575b43/codespell-2.4.0-py3-none-any.whl", hash = "sha256:b4c5b779f747dd481587aeecb5773301183f52b94b96ed51a28126d0482eec1d", size = 344508 },
-]
-
-[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -201,7 +192,6 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "codespell" },
     { name = "coverage", extra = ["toml"] },
     { name = "pyright" },
     { name = "pytest" },
@@ -210,7 +200,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "codespell", marker = "extra == 'dev'" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
     { name = "fsspec" },
     { name = "pyright", marker = "extra == 'dev'" },
