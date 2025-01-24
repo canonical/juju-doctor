@@ -9,11 +9,10 @@ from typing import Annotated, Any, Dict, List, Optional
 import sh
 import typer
 import yaml
-
 from rich.console import Console
 from rich.logging import RichHandler
 
-from fetcher import Probe, fetch_probes
+from fetcher import Probe, ProbeCategory, fetch_probes
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -24,20 +23,22 @@ app = typer.Typer()
 console = Console()
 
 
-def _read_file(filename: str):
+def _read_file(filename: Optional[str]) -> Optional[str]:
     """Read a file into a string."""
+    if not filename:
+        return None
     with open(filename, "r") as f:
         return f.read()
 
 
-def _get_model_data(model: str, probe_category: str) -> str:
+def _get_model_data(model: str, probe_category: ProbeCategory) -> str:
     """Get data from a live model according to the type of probe."""
     match probe_category:
-        case "status":
+        case ProbeCategory.STATUS:
             return sh.juju.status(model=model, format="yaml", _tty_out=False)
-        case "bundle":
-            return sh.juju("export-bundle", model=model, format="yaml", _tty_out=False)
-        case "show-unit":
+        case ProbeCategory.BUNDLE:
+            return sh.juju("export-bundle", model=model, _tty_out=False)
+        case ProbeCategory.SHOW_UNIT:
             units: List[str] = []
             show_units: Dict[str, Any] = {}  # List of show-unit results in dictionary form
             juju_status = yaml.safe_load(
@@ -63,46 +64,68 @@ def check(
         Optional[str],
         typer.Option("--model", "-m", help="Model on which to run live checks"),
     ] = None,
-    juju_status_file: Annotated[
+    status_file: Annotated[
         Optional[str],
         typer.Option("--status", help="Juju status in a .yaml format"),
     ] = None,
-    juju_bundle_file: Annotated[
+    bundle_file: Annotated[
         Optional[str],
         typer.Option("--bundle", help="Juju bundle in a .yaml format"),
     ] = None,
-    juju_show_unit_file: Annotated[
+    show_unit_file: Annotated[
         Optional[str],
         typer.Option("--show-unit", help="Juju show-unit in a .yaml format"),
     ] = None,
 ):
     """Run checks on a certain model."""
+    # Input validation
+    if model and any([status_file, bundle_file, show_unit_file]):
+        raise Exception("If you pass a live model with --model, you cannot pass static files.")
+
+    # Run the actual checks
     with tempfile.TemporaryDirectory() as temp_folder:
-        probes_show_unit_path = Path(f"{temp_folder}/probes/show-unit")
-        probes_show_unit_path.mkdir(parents=True)
+        probes_folder = Path(temp_folder) / Path("probes")
+        probes_folder.mkdir(parents=True)
         log.info(f"Created temporary folder: {temp_folder}")
 
-        juju_show_unit = None
-        if juju_show_unit_file:
-            with open(juju_show_unit_file, "r") as f:
-                juju_show_unit = f.read()
+        input_data: Dict[str, Optional[str]] = {}
+        if model:
+            log.info(f"Getting input data from model {model}")
+            for category in ProbeCategory:
+                input_data[category.value] = _get_model_data(model=model, probe_category=category)
+        else:
+            log.info(
+                f"Getting input data from files: {status_file} {bundle_file} {show_unit_file}"
+            )
+            input_data[ProbeCategory.STATUS.value] = _read_file(status_file) or None
+            input_data[ProbeCategory.BUNDLE.value] = _read_file(bundle_file) or None
+            input_data[ProbeCategory.SHOW_UNIT.value] = _read_file(show_unit_file) or None
 
+        total_succeeded = 0
+        total_failed = 0
+        probes: List[Probe] = []
         for probe_uri in probe_uris:
-            probes: List[Probe] = fetch_probes(uri=probe_uri, destination=probes_show_unit_path)
+            probes.extend(fetch_probes(uri=probe_uri, destination=probes_folder))
 
+        # Run one category of probes at a time
+        for category in ProbeCategory:
+            console.print(f"Probe type: {category.value}", style="bold")
             for probe in probes:
+                if not probe.is_category(category):
+                    continue
                 log.info(f"Running probe {probe}")
-                if probe.is_show_unit():
-                    input_data = juju_show_unit
-                    if model and not input_data:
-                        input_data = _get_model_data(model, "show-unit")
-                    if not input_data:
-                        raise Exception("You didn't supply a juju show-unit or a live model.")
-                    try:
-                        sh.python(probe.path, _in=input_data)
-                        console.print(f":green_circle: {probe.name} succeeded")
-                    except sh.ErrorReturnCode:
-                        console.print(f":red_circle: {probe.name} failed")
+                probe_input = input_data[category.value]
+                if not probe_input:
+                    raise Exception("You didn't supply a juju show-unit or a live model.")
+                try:
+                    sh.python(probe.path, _in=probe_input)
+                    console.print(f":green_circle: {probe.name} succeeded")
+                    total_succeeded += 1
+                except sh.ErrorReturnCode_1:
+                    console.print(f":red_circle: {probe.name} failed")
+                    total_failed += 1
+
+        console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
 
 
 @app.command()

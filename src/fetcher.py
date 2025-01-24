@@ -5,8 +5,9 @@
 
 import logging
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import List, Optional
 from urllib.error import URLError
 from urllib.parse import urlparse
 
@@ -15,26 +16,26 @@ import fsspec
 log = logging.getLogger(__name__)
 
 
+class ProbeCategory(Enum):
+    """Different categories of probes."""
+
+    STATUS = "status"
+    BUNDLE = "bundle"
+    SHOW_UNIT = "show-unit"
+
+
 @dataclass
 class Probe:
     """A probe that can be executed via juju-doctor."""
 
     name: str
-    category: Optional[Literal["status", "bundle", "show-unit"]]
+    category: Optional[ProbeCategory]
     uri: str
     path: Path
 
-    def is_status(self) -> bool:
-        """Check if the Probe works on juju status."""
-        return self.category == "status"
-
-    def is_bundle(self) -> bool:
-        """Check if the Probe works on juju status."""
-        return self.category == "bundle"
-
-    def is_show_unit(self) -> bool:
-        """Check if the Probe works on juju status."""
-        return self.category == "show-unit"
+    def is_category(self, category: ProbeCategory) -> bool:
+        """Check if the Probe belongs to the specified category."""
+        return self.category == category
 
 
 def fetch_probes(uri: str, destination: Path) -> List[Probe]:
@@ -80,16 +81,16 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     # Can submit a list of paths, which may be glob-patterns and will be expanded.
     filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
 
-    probe_files = filesystem.find(local_path.as_posix())
+    probe_files = filesystem.glob(f"{local_path.as_posix()}/**/*.py")
     for path in probe_files:
-        # FIXME: very naive category recognition
+        # NOTE: very naive category recognition
         category = None
-        if "status" in path:
-            category = "status"
-        if "bundle" in path:
-            category = "bundle"
-        if "show-unit" in path:
-            category = "show-unit"
+        if ProbeCategory.STATUS.value in path:
+            category = ProbeCategory.STATUS
+        if ProbeCategory.BUNDLE.value in path:
+            category = ProbeCategory.BUNDLE
+        if ProbeCategory.SHOW_UNIT.value in path:
+            category = ProbeCategory.SHOW_UNIT
         probe = Probe(name=Path(path).name, category=category, uri=uri, path=Path(path))
         log.info(f"Fetched probe: {probe}")
         probes.append(probe)
