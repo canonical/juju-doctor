@@ -39,7 +39,7 @@ def test_parse_url():
         )
 
 def test_download_to_dir():
-    sample_url = "https://raw.githubusercontent.com/MichaelThamm/juju-doctor//resources/relation_dashboard_uid.py?ref=feature/fetcher-2"
+    sample_url = "https://raw.githubusercontent.com/canonical/grafana-k8s-operator//probes/external/show-unit/relation_dashboard_uid.py?ref=feature/probes"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         fetcher = Fetcher(Path(tmpdir))
