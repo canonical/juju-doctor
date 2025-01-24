@@ -3,95 +3,92 @@
 
 import fsspec
 from pathlib import Path
-import shutil
-import argparse
-import os
+from urllib.parse import urlparse
+from types import SimpleNamespace
+from urllib.error import URLError
 import sys
-import tempfile
-import requests
 
 
 class Fetcher(object):
     """A deployment configuration validator for juju.
 
-    1. Can we assume probes exist in GH? What about launchpad
-    2. Can we use // TF subdir notation?
-    3. Can we use @ for branch notation?
-    4. --probe gh://canonical/grafana-k8s//probes@feature/probes
-        - This is not intuitive, but could work
-    5. Probes are copied to /tmp/fake/probes
-    
+    TODO Potential schema:
+        --probe gh://canonical/grafana-k8s//probes@feature/probes
     """
 
-    def __init__(self, opts):
-        self.opts = opts
+    def __init__(self, destination: Path):
+        self.destination = destination
+        self.meta = self.meta = SimpleNamespace(
+            path=Path(),
+            ref="",
+            org="",
+            repo="",
+            url="",
+            protocol="unknown",
+        )
 
-    def run(self):
-        if self.opts.probe:
-            self.fetch_probe()
-        elif self.opts.probes_dir:
-            self.fetch_probes_dir()
-        elif self.opts.branch:
-            self.fetch_probe()
+    def run(self, probe: str):
+        self.parse_tf_notation_into_components(probe)
+        self.fetch_probes()
 
-    def download_file(self, url):
-        # TODO Consider converting automatically to https://raw.githubusercontent.com
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.text
+    def parse_tf_notation_into_components(self, probe: str) -> SimpleNamespace:
+        if Path(probe).is_file() or Path(probe).is_dir():
+            self.meta.protocol = "file"
+            self.meta.path = Path(probe)
+
         else:
-            print(f"Failed to download file. Status code: {response.status_code}")
-            sys.exit(1)
+            parsed_url = urlparse(probe)
+            split_path = parsed_url.path.split("//")
+            if len(split_path) != 2:
+                # TF subdir notation violation
+                # https://developer.hashicorp.com/terraform/language/modules/sources#modules-in-package-sub-directories
+                raise URLError(
+                    f"Invalid URL format: {split_path[0]}. Use '//' to define at least 1 sub-directory"
+                )
+            context = [part for part in split_path[0].split("/") if part]
+            self.meta.org = context[0]
+            if len(context) > 1:
+                self.meta.repo = context[1]
+            self.meta.url = f"{parsed_url.scheme}://{parsed_url.netloc}/{self.meta.org}/{self.meta.repo}"
+            self.meta.ref = parsed_url.query.replace("ref=", "")
+            self.meta.path = Path(split_path[1])
+            if "github" in self.meta.url:
+                self.meta.protocol = "github"
 
-    def save_to_tempfile(self, content):
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(
-            delete=False, mode="w", suffix=".py"
-        ) as temp_file:
-            temp_file.write(content)
-            return temp_file.name
+    def fetch_probes(self):
+        if self.meta.protocol == "file":
+            fs = self.fsspec_fs_local()
+            self.copy_files(fs)
+        elif self.meta.protocol == "github":
+            fs = self.fsspec_fs_gh()
+            self.copy_files(fs)
+        else:
+            raise NotImplementedError
 
-    def fetch_probe(self):
-        probe = self.download_file(self.opts.probe)
-        filename = self.save_to_tempfile(probe)
-        print(filename)
-        os.remove(filename)  # TODO Remove after done testing
+    def fsspec_fs_gh(self):
+        return fsspec.filesystem(
+            self.meta.protocol,
+            org=self.meta.org,
+            repo=self.meta.repo,
+            sha=f"refs/heads/{self.meta.ref}",
+        )
 
-    def fetch_probes_dir(self):
-        # TODO Make this an input
-        destination = Path("/tmp") / "fake" / "probes"
-        destination.mkdir(exist_ok=True, parents=True)
-        fs = fsspec.filesystem("github", org="canonical", repo=self.opts.probes_dir, sha=f"refs/heads/{self.opts.branch}")
+    def fsspec_fs_local(self):
+        return fsspec.filesystem(self.meta.protocol)
+
+    def copy_files(self, fs):
+        self.destination.mkdir(exist_ok=True, parents=True)
         # If path ends with a "/", it will be assumed to be a directory
         # Can submit a list of paths, which may be glob-patterns and will be expanded.
-        fs.get("probes/", destination.as_posix(), recursive=True)
-        print(f"Probes located at: {destination}")
-        # shutil.rmtree(destination, ignore_errors=True)  # TODO Remove after done testing
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument(
-        "--probe", required=False, help="URL of a repository where the probe exists"
-    )
-    parser.add_argument(
-        "--probes-dir",
-        required=False,
-        help="URL of a repository directory where multiple probe exists",
-    )
-    parser.add_argument("--branch", required=False, help="The repository branch")
-
-    args = parser.parse_args()
-
-    return args
+        fs.get(str(self.meta.path), self.destination.as_posix(), recursive=True)
+        print(f"Probes located at: {self.destination}")
 
 
 def main():
-    opts = parse_args()
     print("probes-fetcher started.")
-    fetcher = Fetcher(opts)
-    fetcher.run()
+    probe = sys.argv[1]
+    fetcher = Fetcher(Path("/tmp/fake/probes"))
+    fetcher.run(probe)
     print("probes-fetcher finished.")
 
 

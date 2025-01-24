@@ -1,0 +1,52 @@
+name: Pull Requests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python3 -m pip install tox
+          sudo snap install --classic astral-uv
+      - name: Run tests
+        uses: canonical/observability/.github/actions/charm-run-task@main
+        with:
+          charm-path: '.'
+          test-type: lint
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install tox
+          sudo snap install --classic astral-uv
+      - name: Run tests
+        uses: canonical/observability/.github/actions/charm-run-task@main
+        with:
+          charm-path: '.'
+          test-type: unit
+
