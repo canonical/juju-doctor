@@ -10,3 +10,14 @@ dependencies = [
   "requests",
   "pyyaml"
 ]
+
+[project.optional-dependencies]
+dev = [
+  # Linting
+  "ruff",
+  # Static
+  "pyright",
+  # Unit
+  "pytest",
+  "coverage[toml]",
+]
