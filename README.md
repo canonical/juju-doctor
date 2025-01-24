@@ -18,5 +18,6 @@ or
 
 ```
 python src/main.py check --probe file://resources/show-unit --show-unit resources/show-unit.yaml
+python src/main.py check --probe github://canonical/grafana-k8s-operator//probes/external/show-unit@feature/probes --show-unit resources/show-unit.yaml
 # If you want to see more internals, go to src/main.py and change the log level to INFO
 ```
