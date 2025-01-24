@@ -81,7 +81,11 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     # Can submit a list of paths, which may be glob-patterns and will be expanded.
     filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
 
-    probe_files = filesystem.glob(f"{local_path.as_posix()}/**/*.py")
+    if local_path.is_file():
+        probe_files = [local_path.as_posix()]
+    else:
+        probe_files = filesystem.glob(f"{path.as_posix()}/**/*.py")
+
     for path in probe_files:
         # NOTE: very naive category recognition
         category = None

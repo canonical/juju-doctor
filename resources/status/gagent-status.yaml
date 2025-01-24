@@ -1,0 +1,290 @@
+model:
+  name: sncf
+  type: iaas
+  controller: lxd
+  cloud: localhost
+  region: localhost
+  version: 3.6.1
+  model-status:
+    current: available
+    since: 24 Jan 2025 12:57:47-05:00
+  sla: unsupported
+machines:
+  "0":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:09-05:00
+      version: 3.6.1
+    hostname: juju-391266-0
+    dns-name: 10.50.128.87
+    ip-addresses:
+    - 10.50.128.87
+    - fd42:5c9f:9046:e4f5:216:3eff:fee1:ecde
+    instance-id: juju-391266-0
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      eth0:
+        ip-addresses:
+        - 10.50.128.87
+        - fd42:5c9f:9046:e4f5:216:3eff:fee1:ecde
+        mac-address: 00:16:3e:e1:ec:de
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    hardware: arch=amd64 cores=0 mem=0M virt-type=container
+  "1":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:07-05:00
+      version: 3.6.1
+    hostname: juju-391266-1
+    dns-name: 10.50.128.248
+    ip-addresses:
+    - 10.50.128.248
+    - fd42:5c9f:9046:e4f5:216:3eff:fe59:9887
+    instance-id: juju-391266-1
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      eth0:
+        ip-addresses:
+        - 10.50.128.248
+        - fd42:5c9f:9046:e4f5:216:3eff:fe59:9887
+        mac-address: 00:16:3e:59:98:87
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    hardware: arch=amd64 cores=0 mem=0M virt-type=container
+  "2":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:05-05:00
+      version: 3.6.1
+    hostname: juju-391266-2
+    dns-name: 10.50.128.134
+    ip-addresses:
+    - 10.50.128.134
+    - fd42:5c9f:9046:e4f5:216:3eff:fea7:bd4b
+    instance-id: juju-391266-2
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      eth0:
+        ip-addresses:
+        - 10.50.128.134
+        - fd42:5c9f:9046:e4f5:216:3eff:fea7:bd4b
+        mac-address: 00:16:3e:a7:bd:4b
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    hardware: arch=amd64 cores=0 mem=0M virt-type=container
+  "3":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:08-05:00
+      version: 3.6.1
+    hostname: juju-391266-3
+    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
+    ip-addresses:
+    - 10.50.128.251
+    - fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
+    instance-id: juju-391266-3
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      enp5s0:
+        ip-addresses:
+        - 10.50.128.251
+        - fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
+        mac-address: 00:16:3e:89:38:b3
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
+    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
+  "4":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:10-05:00
+      version: 3.6.1
+    hostname: juju-391266-4
+    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
+    ip-addresses:
+    - 10.50.128.109
+    - fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
+    instance-id: juju-391266-4
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      enp5s0:
+        ip-addresses:
+        - 10.50.128.109
+        - fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
+        mac-address: 00:16:3e:2a:56:bf
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
+    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
+  "5":
+    juju-status:
+      current: started
+      since: 24 Jan 2025 13:00:07-05:00
+      version: 3.6.1
+    hostname: juju-391266-5
+    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
+    ip-addresses:
+    - 10.50.128.195
+    - fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
+    instance-id: juju-391266-5
+    machine-status:
+      current: running
+      message: Running
+      since: 24 Jan 2025 12:58:39-05:00
+    modification-status:
+      current: idle
+      since: 24 Jan 2025 12:58:15-05:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      enp5s0:
+        ip-addresses:
+        - 10.50.128.195
+        - fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
+        mac-address: 00:16:3e:f4:bd:72
+        gateway: 10.50.128.1 10.50.128.1
+        space: alpha
+        is-up: true
+    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
+    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
+applications:
+  ceph-mon:
+    charm: ceph-mon
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: ceph-mon
+    charm-rev: 243
+    charm-channel: quincy/stable
+    exposed: false
+    application-status:
+      current: unknown
+      since: 24 Jan 2025 12:58:13-05:00
+    relations:
+      mon:
+      - related-application: ceph-mon
+        interface: ceph
+        scope: global
+    endpoint-bindings:
+      "": alpha
+      admin: alpha
+      bootstrap-source: alpha
+      client: alpha
+      cluster: alpha
+      cos-agent: alpha
+      dashboard: alpha
+      mds: alpha
+      metrics-endpoint: alpha
+      mon: alpha
+      nrpe-external-master: alpha
+      osd: alpha
+      prometheus: alpha
+      public: alpha
+      radosgw: alpha
+      rbd-mirror: alpha
+  ceph-osd:
+    charm: ceph-osd
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: ceph-osd
+    charm-rev: 622
+    charm-channel: quincy/stable
+    exposed: false
+    application-status:
+      current: unknown
+      since: 24 Jan 2025 12:58:14-05:00
+    endpoint-bindings:
+      "": alpha
+      cluster: alpha
+      mon: alpha
+      nrpe-external-master: alpha
+      public: alpha
+      secrets-storage: alpha
+  grafana-agent:
+    charm: grafana-agent
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 400
+    charm-channel: latest/edge
+    exposed: false
+    application-status:
+      current: unknown
+      since: 24 Jan 2025 12:58:15-05:00
+    relations:
+      peers:
+      - related-application: grafana-agent
+        interface: grafana_agent_replica
+        scope: global
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cos-agent: alpha
+      grafana-cloud-config: alpha
+      grafana-dashboards-provider: alpha
+      juju-info: alpha
+      logging-consumer: alpha
+      peers: alpha
+      receive-ca-cert: alpha
+      send-remote-write: alpha
+      tracing: alpha
+storage: {}
+controller:
+  timestamp: 15:09:43-05:00
