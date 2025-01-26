@@ -58,7 +58,7 @@ def _get_model_data(model: str, probe_category: ProbeCategory) -> str:
 def check(
     probe_uris: Annotated[
         List[str],
-        typer.Option("--probe", "-p", help="URI of a probe containing probes to execute." ""),
+        typer.Option("--probe", "-p", help="URI of a probe containing probes to execute."),
     ] = [],
     model: Annotated[
         Optional[str],
@@ -118,7 +118,7 @@ def check(
                 if not probe_input:
                     raise Exception("You didn't supply a juju show-unit or a live model.")
                 try:
-                    sh.python(probe.path, _in=probe_input)
+                    sh.python(probe.local_path, _in=probe_input)
                     console.print(f":green_circle: {probe.name} succeeded")
                     total_succeeded += 1
                 except sh.ErrorReturnCode_1:
