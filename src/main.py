@@ -118,12 +118,7 @@ def check(
                 if not probe_input:
                     raise Exception("You didn't supply a juju show-unit or a live model.")
                 try:
-                    # Strip /probes from end of probes_folder
-                    strip_probes_from_path = Path(*[part for part in probes_folder.parts if part != "probes"])
-                    # Strip branch from end of path
-                    if "@" in probe.path.name:
-                        path, branch = probe.path.name.split("@")
-                    sh.python(strip_probes_from_path / path, _in=probe_input)
+                    sh.python(probe.path, _in=probe_input)
                     console.print(f":green_circle: {probe.name} succeeded")
                     total_succeeded += 1
                 except sh.ErrorReturnCode_1:
