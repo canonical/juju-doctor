@@ -36,7 +36,6 @@ def test_parse_gh_dir():
         assert len(probes) == 2
         bundle_probe = probes[0]
         status_probe = probes[1]
-        branch = "@main"
         # AND the "bundle" Probe was correctly parsed
         assert bundle_probe.name == "probe_bundle.py"
         assert bundle_probe.path == Path("probes/bundle/probe_bundle.py")
