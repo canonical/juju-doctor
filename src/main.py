@@ -45,7 +45,15 @@ def _get_model_data(model: str, probe_category: ProbeCategory) -> str:
                 sh.juju.status(model=model, format="yaml", _tty_out=False)
             )
             for app in juju_status["applications"]:
-                units.extend(juju_status["applications"][app]["units"].keys())
+                # Subordinate charms don't have a "units" key, so the parsing is different
+                app_status = juju_status["applications"][app]
+                if "units" in app_status:  # if the app is not a subordinate
+                    units.extend(app_status["units"].keys())
+                    # Check for subordinates to each unit
+                    for unit in app_status["units"].keys():
+                        unit_status = app_status["units"][unit]
+                        if "subordinates" in unit_status:
+                            units.extend(unit_status["subordinates"].keys())
             for unit in units:
                 show_unit = yaml.safe_load(
                     sh.juju("show-unit", unit, model=model, format="yaml", _tty_out=False)
@@ -76,6 +84,10 @@ def check(
         Optional[str],
         typer.Option("--show-unit", help="Juju show-unit in a .yaml format"),
     ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose output."),
+    ] = False,
 ):
     """Run checks on a certain model."""
     # Input validation
@@ -121,9 +133,22 @@ def check(
                     sh.python(probe.local_path, _in=probe_input)
                     console.print(f":green_circle: {probe.name} succeeded")
                     total_succeeded += 1
-                except sh.ErrorReturnCode_1:
-                    console.print(f":red_circle: {probe.name} failed")
+                except sh.ErrorReturnCode as error:
                     total_failed += 1
+                    # TODO: in verbose mode, print all the things:
+                    # .full_cmd, .stdout, .stderr, .exit_code
+                    if not verbose:
+                        cmd_error = error.stderr.decode().replace("\n", " ")
+                        console.print(f":red_circle: {probe.name} failed ", end="")
+                        console.print(
+                            f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end=""
+                        )
+                        console.print(")")
+                    if verbose:
+                        console.print(f":red_circle: {probe.name} failed")
+                        console.print(f"[b]Exit code[/b]: {error.exit_code}")
+                        console.print(f"[b]STDOUT[/b]\n{error.stdout.decode()}")
+                        console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
 
         console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
 

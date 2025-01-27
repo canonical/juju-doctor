@@ -16,7 +16,7 @@ def test_parse_gh_file():
         # AND the Probe was correctly parsed
         branch = "@feature_probes"
         assert probe.name == "relation_dashboard_uid.py"
-        assert probe.path == Path("probes/show-unit/relation_dashboard_uid.py")
+        assert probe.original_path == Path("probes/show-unit/relation_dashboard_uid.py")
         assert probe.local_path == Path(
             tmpdir
             + "/canonical_grafana-k8s-operator__probes_show-unit_relation_dashboard_uid.py"
@@ -38,23 +38,22 @@ def test_parse_gh_dir():
         status_probe = probes[1]
         # AND the "bundle" Probe was correctly parsed
         assert bundle_probe.name == "probe_bundle.py"
-        assert bundle_probe.path == Path("probes/bundle/probe_bundle.py")
+        assert bundle_probe.original_path == Path("probes/bundle/probe_bundle.py")
         assert bundle_probe.local_path == Path(
-            tmpdir
-            + "/canonical_grafana-agent-operator__probes"
+            tmpdir + "/canonical_grafana-agent-operator__probes"
         )
         assert bundle_probe.category == ProbeCategory.BUNDLE
         assert bundle_probe.uri == probe_uri
 
         # AND the "status" Probe was correctly parsed
         assert status_probe.name == "probe_status.py"
-        assert status_probe.path == Path("probes/status/probe_status.py")
+        assert status_probe.original_path == Path("probes/status/probe_status.py")
         assert status_probe.local_path == Path(
-            tmpdir
-            + "/canonical_grafana-agent-operator__probes"
+            tmpdir + "/canonical_grafana-agent-operator__probes"
         )
         assert status_probe.category == ProbeCategory.STATUS
         assert status_probe.uri == probe_uri
+
 
 def test_parse_file():
     # GIVEN a local probe file
@@ -67,13 +66,11 @@ def test_parse_file():
         probe = probes[0]
         # AND the Probe was correctly parsed
         assert probe.name == "relation_dashboard_uid.py"
-        assert probe.path == Path("resources/show-unit/relation_dashboard_uid.py")
-        assert probe.local_path == Path(
-            tmpdir
-            + "/resources_show-unit_relation_dashboard_uid.py"
-        )
+        assert probe.original_path == Path("resources/show-unit/relation_dashboard_uid.py")
+        assert probe.local_path == Path(tmpdir + "/resources_show-unit_relation_dashboard_uid.py")
         assert probe.category == ProbeCategory.SHOW_UNIT
         assert probe.uri == probe_uri
+
 
 def test_parse_dir():
     pass

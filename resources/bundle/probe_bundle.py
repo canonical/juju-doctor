@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-import yaml
-from itertools import combinations
 from collections import defaultdict
+from itertools import combinations
+
+import yaml
 
 
 def one_grafana_agent_per_machine(bundle: dict):
