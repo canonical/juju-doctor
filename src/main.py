@@ -16,7 +16,7 @@ from fetcher import Probe, ProbeCategory, fetch_probes
 
 # pyright: reportAttributeAccessIssue=false
 
-logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
+logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 app = typer.Typer()

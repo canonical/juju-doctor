@@ -49,7 +49,11 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     """
     probes = []
     parsed_uri = urlparse(uri)
-    subfolder = f"{parsed_uri.netloc}{parsed_uri.path}".replace("/", "_").replace(":", "_")
+    subfolder = (
+        f"{parsed_uri.netloc}{parsed_uri.path}".replace("/", "_")
+        .replace(":", "_")
+        .replace("@", "_")
+    )
     local_path = destination / subfolder
 
     match parsed_uri.scheme:
@@ -81,28 +85,25 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     # If path ends with a "/", it will be assumed to be a directory
     # Can submit a list of paths, which may be glob-patterns and will be expanded.
     filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
+    log.info(f"copying {path.as_posix()} to {local_path.as_posix()} recursively")
 
-    probe_files: List[str] = []
-    if filesystem.isfile(path.as_posix()):
-        probe_files = [path.as_posix()]
-    else:
-        probe_files = filesystem.glob(f"{local_path.as_posix()}/**/*.py")
+    probe_files: List[Path] = [f for f in local_path.rglob("*") if f.as_posix().endswith(".py")]
 
     for probe_path in probe_files:
         # NOTE: very naive category recognition
         category = None
-        if ProbeCategory.STATUS.value in probe_path:
+        if ProbeCategory.STATUS.value in probe_path.as_posix():
             category = ProbeCategory.STATUS
-        if ProbeCategory.BUNDLE.value in probe_path:
+        if ProbeCategory.BUNDLE.value in probe_path.as_posix():
             category = ProbeCategory.BUNDLE
-        if ProbeCategory.SHOW_UNIT.value in probe_path:
+        if ProbeCategory.SHOW_UNIT.value in probe_path.as_posix():
             category = ProbeCategory.SHOW_UNIT
         probe = Probe(
-            name=Path(probe_path).relative_to(destination).as_posix(),
+            name=probe_path.relative_to(destination).as_posix(),
             category=category,
             uri=uri,
             original_path=Path(path),
-            local_path=Path(probe_path),
+            local_path=probe_path,
         )
         log.info(f"Fetched probe: {probe}")
         probes.append(probe)
