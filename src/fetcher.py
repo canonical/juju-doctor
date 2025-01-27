@@ -49,28 +49,25 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     """
     probes = []
     parsed_uri = urlparse(uri)
-    subfolder = (
-        f"{parsed_uri.netloc}{parsed_uri.path}".replace("/", "_")
-        .replace(":", "_")
-        .replace("@", "_")
-    )
+    probe_path = parsed_uri.netloc + parsed_uri.path
+    subfolder = probe_path.replace("/", "_")
     local_path = destination / subfolder
 
     match parsed_uri.scheme:
         case "file":
-            path = Path(f"{parsed_uri.netloc}{parsed_uri.path}")
+            path = Path(probe_path)
             filesystem = fsspec.filesystem(protocol="file")
-            local_path.mkdir(parents=True, exist_ok=True)
         case "github":
             try:
                 # Extract the org and repository from the URI
-                org_and_repo, path = uri.removeprefix("github://").split("//")
+                org_and_repo, path = probe_path.split("//")
+                path = Path(path)
                 org, repo = org_and_repo.split("/")
                 # Extract the branch name if present
-                branch = "main"
-                if "@" in path:
-                    path, branch = path.split("@")
-                path = Path(path)
+                if parsed_uri.query:
+                    branch = parsed_uri.query
+                else:
+                    branch = "main"
             except ValueError:
                 raise URLError(
                     f"Invalid URL format: {uri}. Use '//' to define 1 sub-directory "
@@ -84,10 +81,16 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
 
     # If path ends with a "/", it will be assumed to be a directory
     # Can submit a list of paths, which may be glob-patterns and will be expanded.
-    filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
+    # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
+    filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True, auto_mkdir=True)
     log.info(f"copying {path.as_posix()} to {local_path.as_posix()} recursively")
 
-    probe_files: List[Path] = [f for f in local_path.rglob("*") if f.as_posix().endswith(".py")]
+    if filesystem.isfile(path.as_posix()):
+        probe_files = [local_path]
+    else:
+        probe_files: List[Path] = [
+            f for f in local_path.rglob("*") if f.as_posix().endswith(".py")
+        ]
 
     for probe_path in probe_files:
         # NOTE: very naive category recognition
