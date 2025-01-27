@@ -32,6 +32,7 @@ class Probe:
     category: Optional[ProbeCategory]
     uri: str
     path: Path
+    local_path: Path
 
     def is_category(self, category: ProbeCategory) -> bool:
         """Check if the Probe belongs to the specified category."""
@@ -81,7 +82,11 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
     # Can submit a list of paths, which may be glob-patterns and will be expanded.
     filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True)
 
-    probe_files = filesystem.glob(f"{local_path.as_posix()}/**/*.py")
+    if filesystem.isfile(path.as_posix()):
+        probe_files = [path.as_posix()]
+    else:
+        probe_files = filesystem.glob(f"{path.as_posix()}/**/*.py")
+
     for path in probe_files:
         # NOTE: very naive category recognition
         category = None
@@ -91,7 +96,13 @@ def fetch_probes(uri: str, destination: Path) -> List[Probe]:
             category = ProbeCategory.BUNDLE
         if ProbeCategory.SHOW_UNIT.value in path:
             category = ProbeCategory.SHOW_UNIT
-        probe = Probe(name=Path(path).name, category=category, uri=uri, path=Path(path))
+        probe = Probe(
+            name=Path(path).name,
+            category=category,
+            uri=uri,
+            path=Path(path),
+            local_path=local_path,
+        )
         log.info(f"Fetched probe: {probe}")
         probes.append(probe)
 
