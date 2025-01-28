@@ -18,6 +18,7 @@ dependencies = [
   "requests",
 ]
 
+
 [project.optional-dependencies]
 dev = [
   # Linting
