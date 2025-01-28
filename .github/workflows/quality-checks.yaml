@@ -24,7 +24,6 @@ jobs:
       - name: Run tests
         uses: canonical/juju-doctor/.github/actions/run-task@main
         with:
-          charm-path: '.'
           test-type: lint
 
   unit-tests:
@@ -43,9 +42,8 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task.yaml@main
+        uses: canonical/juju-doctor/.github/actions/run-task@main
         with:
-          charm-path: '.'
           test-type: unit
 
   solution-tests:
@@ -66,5 +64,4 @@ jobs:
       - name: Run tests
         uses: canonical/juju-doctor/.github/actions/run-task@main
         with:
-          charm-path: '.'
           test-type: solution
