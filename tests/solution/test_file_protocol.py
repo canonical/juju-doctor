@@ -4,14 +4,14 @@ from typer.testing import CliRunner
 from src.main import app
 
 
-def test_check_gh_probe_fails():
+def test_check_file_probe_fails():
     runner = CliRunner()
     test_args = [
         "check",
         "--format",
         "json",
         "--probe",
-        "github://canonical/juju-doctor//tests/resources/show-unit/failing.py",
+        "file://tests/resources/show-unit/failing.py",
         "--show-unit",
         "tests/resources/show-unit/show-unit.yaml",
     ]
