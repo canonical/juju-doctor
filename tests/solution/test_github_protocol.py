@@ -1,5 +1,6 @@
 from typer.testing import CliRunner
 
+# TODO app requires src.fetcher lib
 from src.main import app
 
 
