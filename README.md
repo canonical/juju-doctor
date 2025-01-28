@@ -24,6 +24,7 @@ juju-doctor check \
 ```
 > If you want to see more internals, go to src/main.py and change the log level to INFO
 
+
 ## Demo juju-doctor commands
 ```
 juju-doctor check \
