@@ -24,7 +24,12 @@ alias fmt := format
 format:
   uv run $uv_flags ruff check --fix-only
 
-# Run tests
-test:
-  uv run $uv_flags coverage run --source=src tests -m pytest tests/unit
+# Run unit tests
+unit:
+  uv run $uv_flags coverage run --source=src -m pytest tests/unit
+  uv run $uv_flags coverage report
+
+# Run solution tests
+solution:
+  uv run $uv_flags coverage run --source=src -m pytest tests/solution
   uv run $uv_flags coverage report

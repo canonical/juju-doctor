@@ -1,9 +1,6 @@
 name: Pull Requests
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -20,13 +17,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.10
       - name: Install dependencies
         run: |
-          python3 -m pip install tox
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/observability/.github/actions/charm-run-task@main
+        uses: canonical/juju-doctor/.github/actions/run-task@main
         with:
           charm-path: '.'
           test-type: lint
@@ -42,14 +38,33 @@ jobs:
       - name: Set up python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.10
       - name: Install dependencies
         run: |
-          python -m pip install tox
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/observability/.github/actions/charm-run-task@main
+        uses: canonical/juju-doctor/.github/actions/run-task@main
         with:
           charm-path: '.'
           test-type: unit
 
+  solution-tests:
+    name: Solution tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+      - name: Install dependencies
+        run: |
+          sudo snap install --classic astral-uv
+      - name: Run tests
+        uses: canonical/juju-doctor/.github/actions/run-task@main
+        with:
+          charm-path: '.'
+          test-type: solution

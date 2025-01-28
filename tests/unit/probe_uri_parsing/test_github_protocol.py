@@ -1,12 +1,12 @@
 import tempfile
 from pathlib import Path
 
-from fetcher import ProbeCategory, fetch_probes
+from src.fetcher import ProbeCategory, fetch_probes
 
 
 def test_parse_gh_file():
     # GIVEN a probe file specified in a Github remote for a specific branch
-    probe_uri = "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py?feature/probes"
+    probe_uri = "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))

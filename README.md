@@ -4,22 +4,48 @@
 ## Probes
 Run a sample show-unit probe with:
 
-```
-juju show-unit grafana/0 | ./resources/relation_dashboard_uid.py
-```
+1. On a live model
+`juju show-unit grafana/0 | ./resources/relation_dashboard_uid.py`
+2. On a file
+`cat resources/show-unit.yaml | ./resources/relation_dashboard_uid.py`
 
-or
-
+Run that same probe with `juju-doctor`:
+1. On a live model
 ```
-cat resources/show-unit.yaml | ./resources/relation_dashboard_uid.py
+juju-doctor check \
+    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
+    --model "grafana"
 ```
-
-or
-
+2. On a file
 ```
-python src/main.py check --probe file://resources/show-unit --show-unit resources/show-unit.yaml
-python src/main.py check --probe github://canonical/grafana-k8s-operator//probes/external/show-unit@feature/probes --show-unit resources/show-unit.yaml
-# If you want to see more internals, go to src/main.py and change the log level to INFO
+juju-doctor check \
+    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
+    --show-unit "resources/show-unit/show-unit.yaml"
+```
+> If you want to see more internals, go to src/main.py and change the log level to INFO
+
+## Demo juju-doctor commands
+```
+juju-doctor check \
+    --probe "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py" \
+    --model "cos"
+
+juju-doctor check \
+    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
+    --show-unit "resources/show-unit/show-unit.yaml"
+
+juju-doctor check \
+    --probe "file://resources/status" \
+    --status "resources/status/gagent-status.yaml"
+
+juju-doctor check \
+    --probe "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py" \
+    --show-unit "resources/show-unit/show-unit.yaml"
+
+juju-doctor check \
+    --probe "github://canonical/grafana-agent-operator//probes" \
+    --status "resources/status/gagent-status.yaml" \
+    --bundle "resources/bundle/gagent-bundle.yaml"
 ```
 
 ## Development
