@@ -13,14 +13,14 @@ Run that same probe with `juju-doctor`:
 1. On a live model
 ```
 juju-doctor check \
-    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
+    --probe "file://tests/resources/show-unit/relation_dashboard_uid.py" \
     --model "grafana"
 ```
 2. On a file
 ```
 juju-doctor check \
-    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
-    --show-unit "resources/show-unit/show-unit.yaml"
+    --probe "file://tests/resources/show-unit/relation_dashboard_uid.py" \
+    --show-unit "tests/resources/show-unit/show-unit.yaml"
 ```
 > If you want to see more internals, go to src/main.py and change the log level to INFO
 
@@ -32,11 +32,11 @@ juju-doctor check \
     --model "cos"
 
 juju-doctor check \
-    --probe "file://resources/show-unit/relation_dashboard_uid.py" \
+    --probe "file://tests/resources/show-unit/relation_dashboard_uid.py" \
     --show-unit "resources/show-unit/show-unit.yaml"
 
 juju-doctor check \
-    --probe "file://resources/status" \
+    --probe "file://tests/resources/status" \
     --status "resources/status/gagent-status.yaml"
 
 juju-doctor check \
@@ -45,8 +45,8 @@ juju-doctor check \
 
 juju-doctor check \
     --probe "github://canonical/grafana-agent-operator//probes" \
-    --status "resources/status/gagent-status.yaml" \
-    --bundle "resources/bundle/gagent-bundle.yaml"
+    --status "tests/resources/status/gagent-status.yaml" \
+    --bundle "tests/resources/bundle/gagent-bundle.yaml"
 ```
 
 ## Development
