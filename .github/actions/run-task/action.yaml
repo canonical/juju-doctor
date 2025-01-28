@@ -18,7 +18,9 @@ runs:
       shell: bash
       run: |
         if just --list | grep "${{ inputs.test-type }}"; then
+          just --list
           just "${{ inputs.test-type }}"
         else
+          just --list
           echo "Warning: Just target does not exist -> ${{ inputs.test-type }}."
         fi

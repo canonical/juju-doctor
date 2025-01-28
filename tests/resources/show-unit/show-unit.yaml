@@ -263,22 +263,11 @@
         "application-data": {},
         "local-unit": {
           "in-scope": true,
-          "data": {
-            "egress-subnets": "10.152.183.201/32",
-            "ingress-address": "10.152.183.201",
-            "private-address": "10.152.183.201",
-            "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAuRulje1dNRmMBmGICa3jwfZP4EJIJBLQsb0rP1kbfdu2R7MZ\ntJ2hMjB72CQd1RjSM9LV3JMaFBjuVbg6gHV0sp1UxwTfAnFS2dNzjyHz3WvMlfxo\nks8Wg63GH8iQiwIuG87HCvnNkcFXm5WFMDRRnD4FZCu+JuZQm8BEI+qgqcZtdb2T\ngBpgHxAcMsSaJ0NUkDcGgNoe9yVcCDapoilOEm7kX+n1qCiNYadhDSUm7lNx9qTq\nvhe/klunwd3U7WzXCOvz5gWM9U8srg4ZU0ZNi9+H49dFwtZSRK00NM/N8Hzdg+kl\nvxqYI2uElJq2e4aYQo+780gLCJ7eXU5THzUOMQIDAQABAoH/VA553zkqWjJ/o2Ym\noD6Wbj2rh+qRV9AzdIKyYNHV6hEbdPOfeKUbze62TjAYW+wph971vnQOI5IuqD5A\nUpUDqRhIpxdPLYzIUqHyl8yTMLkC7hjwY7omPyVqEoTBHl6fEYGUYSeOceGaJsx+\n7qTTal+/kv1KG9/6Or/UMXsZ+f2Za8R/p0B2bS8UNnEccBXP+j7tCCdmjdHOxYJo\nfcRZSfe0BgB0AkwJKiOROMjPyvbltRF+Wpr3YEWyP/zeoMVsjpASV2Uq1ssDkDa+\nxDT2T8b/63T+TEJP4MVnjxsm8euegfllENfZ4xR0omrr+uATT202VaHD4UhHQw4n\nZAgBAoGBAPu6J/Y+jwzqP1X6BxnilECSmE47zlAb+IAvac9UrBzWEufCW0rKcfSs\n43ePYGBOHSaBT8VPwhCuf7wwR7BGsWBV+kP/eq0eWuAkAru02wQya4wBzJ2O1+4O\nUX5yH4lilDEEdtLamvhfslzB6KcZXq+MuTy1HoBImf5lvRSW8jYBAoGBALxAAbJZ\nxFNdO5EMGdQ3CeqP70+bTgVzvWd7nI9tlcSoHlgGQjG5YJ0x5y+3WeXWG3NE9gLr\nFsRm6YY4i2tqad6UJJqkAB6ivZGsOghUM7q4Ky2MQM0UDqphHfpmubZnNiiG8tBT\nu9DOVdrThnGawfACW612qQwZpu9I3Np0CLgxAoGBAK5xStAyeh+RFWMXaWReyC4X\naMSOXWLWf1cVhFXRb5RsJZ3F6k3iDSZpyRhJm5ghicHtSsKJiwrUYmCfdI6L7s+7\nxTrqCLF/n6pESkCaDEzURAM6G/nzy1+FPKRLod8rGVb+qPll1I7aglgVaIyj4CH3\ne0a+nOx5Y34QMv/ZuvABAoGAOA7ncnEA4cJVxq/P0T5CmbMbFJ2u8jixImvRB3Ue\nsF1QC+5xL9WAS89chP0YrDTCH+VdTSkssnfi+rFD80zREhMTg2lrD7Rutz6OWYSZ\nkvTdBsdJVMiwRVR+VN7aVtMNcaweCqOkvl1ze6KZ2qK3Nf29xz4awRuydndALV14\na0ECgYEAg6i9zO5S7fM952wQF7uixE1TjyiKaeDCukvcq4qI3iSi5oBCcMkr4xMb\nVivzTLvg0/GIzKcXLWaJvK6SVG5EEKdbyeo+3vZoHrNuRV490GC1cyehogzzW2Ac\nKg/WfGz15X0hKZu9zR6wDGdkkrzN9rx/Y17gWT74hf6rBXvfUFI=\n-----END RSA PRIVATE KEY-----\n"
-          }
         },
         "related-units": {
           "grafana/1": {
             "in-scope": true,
-            "data": {
-              "egress-subnets": "10.152.183.201/32",
-              "ingress-address": "10.152.183.201",
-              "private-address": "10.152.183.201",
-              "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAvTShi6gKizM+ccOLiQBnrGf9XIUeBSLofjlQHNZtEgEOfI3D\n/rko6qafYJFJwoGl/C3kSbWzA9saK6zhzmh43lIZToL4yYmdbwPkc3tTF0l4/Jar\nqqBZd/1FZbq/eQHzoW+4o/HlVqJcwCkQQvmQvaqoDk8vNpuMww17ImB/Q5dIzBeH\nskHgbYkKQEBpPyCO3EFmcETsfiWRyZSEsVmLZkBlh0OaWPI/RWE1s66VWlwxhFqa\nUKJH5t9018LzgzArBkNqNmbl+B2S2Vg+Rk+nuOKDvzn9G1oeH7BwhY7X8MH7ItBM\n1fgezbFEoAqb6iNqFRwCW4k8cFUlN3w/XVXdnwIDAQABAoIBACgGgkYw/koERSl7\n3IDW/ReTyB1Sa89aWySYq0HuepRcdNwUgWnZcbZyGTUshxYGpz551tlg/sXKC/dB\nU2N+5lLhu0jInCjGW++oOyPS6vj6KgYFObuWwFaJ1ax3nRnUN93m7ICCI6n4Hvbn\nuPDyKpR1Dag5SBudPGHm8C2NjF6XvLhuLTNpuwb7S+rHw1DF8eOlXcJCq9MMivFD\nnh+DB67rQEKD8SR6LeIcBTx+EtGHgDlUyrzgS3MM9vapjAFj57aEwnwePGf+tMbw\nQwMxSZ/LF/RkGsveEgxERmjKvI8m3DPebfOUHi0BqH6/6EFFDllzo8JQgsPXX30/\nPvO6XgECgYEA9a+iG9a/Kow0QYVQvu12HhcIHHPQL8tn1FyvAtmebmxnGuqHT9KR\nVnEGmzN0MUJyXgRvTMdweTn+txMQZxncoC6wwMOo72KFP1b6dcM7lZoGvL6zBDcG\n/eWqaEfauCBwCKrvHBE46La9TxhsHYtzRNBCUqQR/8ee4xg2l97nHT8CgYEAxSYB\nzLufZaeadGrNuYY7KFueAjNmcYzq+sUcxByMJyH5gn3umKlTuACijjsInzBkZujb\nIE11mulJu8fwGUhi4oseYx3v4hV2tJrxUfnqB3b17bbjKjsrIc70/rF+2JPW1Xbx\n2W2zgkr0JygJUGgxHOBdD8XdEgj8gwixtVMgR6ECgYBG5r2wrQOUIsv90JxhzSOW\nQW1M0LtW36uCJJE5EFZhZZVHtkEAbzMUMCAI8AtrH9LjgQIhtTinM25npO/J4TPD\nYlYN+ykolFUB13cGPyZV4RJqq9n7sGmrIflQiNP86ReL2NCSWAIFXp85UUH6MME+\nLZ/GO6UaHKCkxtsSbvhhfwKBgDipl9LUChgZd9cF62LrJY2P53YSd9si+VZh2Ma0\nvcNxjFjpAO53nExCQnZGmU/HhNPfETvTh32il0KVUHizyVf7TByIui1spdV6wukg\nvxauJjjQW7IDl338EYYyVZbBxvlLWm93jCRijpHCfArUJ2l5QsYJxGQumQTANvM6\nlQiBAoGBAMiIh/FZ5GQ9PBTwYwESmndtRL3F/UunFTdntd2Gzp7BNEr4fRsSb/aW\nXB2og+uqcVC7/7cv1LHj/v6HQPQYxek33Pg4qyGIXvdYMIPCeuEu/LGUz5gAaZ/A\n7wmgy/yQXwfZiG/d6AB9JP+JIIC/OHhNcZswMhLOgfoQciBGX5g2\n-----END RSA PRIVATE KEY-----\n"
-            }
+            "data": {}
           }
         }
       }
