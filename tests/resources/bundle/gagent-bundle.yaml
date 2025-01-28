@@ -1,0 +1,57 @@
+default-base: ubuntu@22.04/stable
+saas:
+  grafana-dashboard:
+    url: k8s-nov08:admin/obc-502.grafana-dashboard
+  loki:
+    url: k8s-nov08:admin/obc-502.loki
+  prometheus:
+    url: k8s-nov08:admin/obc-502.prometheus
+applications:
+  agent:
+    charm: local:grafana-agent-3
+    options:
+      classic_snap: false
+    trust: true
+  agent-stable:
+    charm: local:grafana-agent-2
+    trust: true
+  zookeeper:
+    charm: zookeeper
+    channel: 3/stable
+    revision: 149
+    num_units: 1
+    to:
+    - "1"
+    constraints: arch=amd64
+    storage:
+      data: rootfs,1,1024M
+  zookeeper-stable:
+    charm: zookeeper
+    channel: 3/stable
+    revision: 149
+    num_units: 1
+    to:
+    - "2"
+    constraints: arch=amd64
+    storage:
+      data: rootfs,1,1024M
+machines:
+  "1":
+    constraints: arch=amd64
+  "2":
+    constraints: arch=amd64
+relations:
+- - agent:logging-consumer
+  - loki:logging
+- - agent:cos-agent
+  - zookeeper:cos-agent
+- - agent-stable:cos-agent
+  - zookeeper-stable:cos-agent
+- - agent-stable:send-remote-write
+  - prometheus:receive-remote-write
+- - agent-stable:logging-consumer
+  - loki:logging
+- - agent:send-remote-write
+  - prometheus:receive-remote-write
+- - agent-stable:grafana-dashboards-provider
+  - grafana-dashboard:grafana-dashboard

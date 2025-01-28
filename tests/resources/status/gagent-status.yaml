@@ -1,0 +1,400 @@
+model:
+  name: obc-502
+  type: iaas
+  controller: lxd
+  cloud: localhost
+  region: localhost
+  version: 3.5.4
+  model-status:
+    current: available
+    since: 09 Jan 2025 14:09:04+01:00
+  sla: unsupported
+machines:
+  "1":
+    juju-status:
+      current: started
+      since: 09 Jan 2025 14:21:34+01:00
+      version: 3.5.4
+    hostname: juju-2a486e-1
+    dns-name: 10.65.60.122
+    ip-addresses:
+    - 10.65.60.122
+    - fd42:a401:be5a:38d4:216:3eff:fead:6f6c
+    instance-id: juju-2a486e-1
+    machine-status:
+      current: running
+      message: Running
+      since: 09 Jan 2025 14:20:26+01:00
+    modification-status:
+      current: applied
+      since: 28 Jan 2025 08:46:20+01:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      eth0:
+        ip-addresses:
+        - 10.65.60.122
+        - fd42:a401:be5a:38d4:216:3eff:fead:6f6c
+        mac-address: 00:16:3e:ad:6f:6c
+        gateway: 10.65.60.1 10.65.60.1
+        space: alpha
+        is-up: true
+    constraints: arch=amd64
+    hardware: arch=amd64 cores=0 mem=0M virt-type=container
+  "2":
+    juju-status:
+      current: started
+      since: 09 Jan 2025 14:27:33+01:00
+      version: 3.5.4
+    hostname: juju-2a486e-2
+    dns-name: 10.65.60.33
+    ip-addresses:
+    - 10.65.60.33
+    - fd42:a401:be5a:38d4:216:3eff:fe70:5b22
+    instance-id: juju-2a486e-2
+    machine-status:
+      current: running
+      message: Running
+      since: 09 Jan 2025 14:26:26+01:00
+    modification-status:
+      current: applied
+      since: 28 Jan 2025 08:46:20+01:00
+    base:
+      name: ubuntu
+      channel: "22.04"
+    network-interfaces:
+      eth0:
+        ip-addresses:
+        - 10.65.60.33
+        - fd42:a401:be5a:38d4:216:3eff:fe70:5b22
+        mac-address: 00:16:3e:70:5b:22
+        gateway: 10.65.60.1 10.65.60.1
+        space: alpha
+        is-up: true
+    constraints: arch=amd64
+    hardware: arch=amd64 cores=0 mem=0M virt-type=container
+applications:
+  agent:
+    charm: local:jammy/grafana-agent-3
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: local
+    charm-name: grafana-agent
+    charm-rev: 3
+    exposed: false
+    application-status:
+      current: error
+      message: 'hook failed: "upgrade-charm"'
+      since: 28 Jan 2025 14:17:51+01:00
+    relations:
+      cos-agent:
+      - related-application: zookeeper
+        interface: cos_agent
+        scope: container
+      logging-consumer:
+      - related-application: loki
+        interface: loki_push_api
+      peers:
+      - related-application: agent
+        interface: grafana_agent_replica
+        scope: global
+      send-remote-write:
+      - related-application: prometheus
+        interface: prometheus_remote_write
+    subordinate-to:
+    - zookeeper
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cos-agent: alpha
+      grafana-cloud-config: alpha
+      grafana-dashboards-provider: alpha
+      juju-info: alpha
+      logging-consumer: alpha
+      peers: alpha
+      receive-ca-cert: alpha
+      send-remote-write: alpha
+      tracing: alpha
+  agent-stable:
+    charm: local:jammy/grafana-agent-2
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: local
+    charm-name: grafana-agent
+    charm-rev: 2
+    exposed: false
+    application-status:
+      current: active
+      message: 'tracing: off'
+      since: 28 Jan 2025 08:46:19+01:00
+    relations:
+      cos-agent:
+      - related-application: zookeeper-stable
+        interface: cos_agent
+        scope: container
+      grafana-dashboards-provider:
+      - related-application: grafana-dashboard
+        interface: grafana_dashboard
+      logging-consumer:
+      - related-application: loki
+        interface: loki_push_api
+      peers:
+      - related-application: agent-stable
+        interface: grafana_agent_replica
+        scope: global
+      send-remote-write:
+      - related-application: prometheus
+        interface: prometheus_remote_write
+    subordinate-to:
+    - zookeeper-stable
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cos-agent: alpha
+      grafana-cloud-config: alpha
+      grafana-dashboards-provider: alpha
+      juju-info: alpha
+      logging-consumer: alpha
+      peers: alpha
+      receive-ca-cert: alpha
+      send-remote-write: alpha
+      tracing: alpha
+  zookeeper:
+    charm: zookeeper
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: zookeeper
+    charm-rev: 149
+    charm-channel: 3/stable
+    exposed: false
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:46:32+01:00
+    relations:
+      cluster:
+      - related-application: zookeeper
+        interface: cluster
+        scope: global
+      cos-agent:
+      - related-application: agent
+        interface: cos_agent
+        scope: container
+      restart:
+      - related-application: zookeeper
+        interface: rolling_op
+        scope: global
+      upgrade:
+      - related-application: zookeeper
+        interface: upgrade
+        scope: global
+    units:
+      zookeeper/0:
+        workload-status:
+          current: active
+          since: 28 Jan 2025 08:46:26+01:00
+        juju-status:
+          current: idle
+          since: 28 Jan 2025 08:46:34+01:00
+          version: 3.5.4
+        leader: true
+        machine: "1"
+        public-address: 10.65.60.122
+        subordinates:
+          agent/1:
+            workload-status:
+              current: error
+              message: 'hook failed: "upgrade-charm"'
+              since: 28 Jan 2025 14:17:51+01:00
+            juju-status:
+              current: idle
+              since: 28 Jan 2025 14:17:51+01:00
+              version: 3.5.4
+            leader: true
+            public-address: 10.65.60.122
+    version: 3.8.4
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cluster: alpha
+      cos-agent: alpha
+      restart: alpha
+      upgrade: alpha
+      zookeeper: alpha
+  zookeeper-stable:
+    charm: zookeeper
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: zookeeper
+    charm-rev: 149
+    charm-channel: 3/stable
+    exposed: false
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:46:31+01:00
+    relations:
+      cluster:
+      - related-application: zookeeper-stable
+        interface: cluster
+        scope: global
+      cos-agent:
+      - related-application: agent-stable
+        interface: cos_agent
+        scope: container
+      restart:
+      - related-application: zookeeper-stable
+        interface: rolling_op
+        scope: global
+      upgrade:
+      - related-application: zookeeper-stable
+        interface: upgrade
+        scope: global
+    units:
+      zookeeper-stable/0:
+        workload-status:
+          current: active
+          since: 28 Jan 2025 08:46:25+01:00
+        juju-status:
+          current: idle
+          since: 28 Jan 2025 08:46:32+01:00
+          version: 3.5.4
+        leader: true
+        machine: "2"
+        public-address: 10.65.60.33
+        subordinates:
+          agent-stable/0:
+            workload-status:
+              current: active
+              message: 'tracing: off'
+              since: 28 Jan 2025 08:46:19+01:00
+            juju-status:
+              current: idle
+              since: 28 Jan 2025 08:46:20+01:00
+              version: 3.5.4
+            leader: true
+            public-address: 10.65.60.33
+    version: 3.8.4
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cluster: alpha
+      cos-agent: alpha
+      restart: alpha
+      upgrade: alpha
+      zookeeper: alpha
+application-endpoints:
+  grafana-dashboard:
+    url: k8s-nov08:admin/obc-502.grafana-dashboard
+    endpoints:
+      grafana-dashboard:
+        interface: grafana_dashboard
+        role: requirer
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      grafana-dashboard:
+      - agent-stable
+  loki:
+    url: k8s-nov08:admin/obc-502.loki
+    endpoints:
+      logging:
+        interface: loki_push_api
+        role: provider
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      logging:
+      - agent
+      - agent-stable
+  prometheus:
+    url: k8s-nov08:admin/obc-502.prometheus
+    endpoints:
+      receive-remote-write:
+        interface: prometheus_remote_write
+        role: provider
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      receive-remote-write:
+      - agent
+      - agent-stable
+storage:
+  storage:
+    data/1:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:21:35+01:00
+      persistent: false
+      attachments:
+        units:
+          zookeeper/0:
+            machine: "1"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+    data/2:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:27:35+01:00
+      persistent: false
+      attachments:
+        units:
+          zookeeper-stable/0:
+            machine: "2"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+  filesystems:
+    1/1:
+      provider-id: 1/1
+      storage: data/1
+      attachments:
+        machines:
+          "1":
+            mount-point: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            read-only: false
+            life: alive
+        units:
+          zookeeper/0:
+            machine: "1"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+      pool: rootfs
+      size: 467297
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:21:35+01:00
+    2/2:
+      provider-id: 2/2
+      storage: data/2
+      attachments:
+        machines:
+          "2":
+            mount-point: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            read-only: false
+            life: alive
+        units:
+          zookeeper-stable/0:
+            machine: "2"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+      pool: rootfs
+      size: 467297
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:27:35+01:00
+controller:
+  timestamp: 14:18:21+01:00

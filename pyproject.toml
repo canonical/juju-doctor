@@ -1,0 +1,51 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+[project]
+name = "juju-doctor"
+version = "0.1"
+description = "Juju-doctor is a pypi package which helps validate Juju deployments using probes."
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "pyyaml",
+  # Main
+  "sh",
+  "typer",
+  # Fetcher
+  "fsspec",
+  "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+  # Linting
+  "ruff",
+  # Static
+  "pyright",
+  # Unit
+  "pytest",
+  "coverage[toml]",
+]
+
+# [project.urls]
+# "Homepage" = "?"
+# "Bug Tracker" = "?"
+
+[project.scripts]
+juju-doctor = "main:app"
+
+[tool.ruff]
+line-length = 110
+extend-exclude = ["__pycache__", "*.egg_info"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "C", "N", "R", "D", "I001"]
+ignore = ["C901"]
+# D100, D101, D102, D103: Ignore missing docstrings in tests
+per-file-ignores = {"tests/*" = ["D100","D101","D102","D103"], "tests/constants.py" = ["E501"]}
+extend-select = ["I"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
