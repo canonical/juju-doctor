@@ -6,7 +6,6 @@ from src.fetcher import ProbeCategory, fetch_probes
 
 def test_parse_gh_file():
     # GIVEN a probe file specified in a Github remote for a specific branch
-    # TODO Add the tests/ root path
     probe_uri = "github://canonical/juju-doctor//tests/resources/show-unit/relation_dashboard_uid.py"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
@@ -24,7 +23,6 @@ def test_parse_gh_file():
 
 def test_parse_gh_dir():
     # GIVEN a probe directory specified in a Github remote
-    # TODO Add the tests/ root path
     probe_uri = "github://canonical/juju-doctor//tests/resources/show-unit"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
