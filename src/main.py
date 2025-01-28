@@ -1,5 +1,6 @@
 """Main Typer application to assemble the CLI."""
 
+import json
 import logging
 import sys
 import tempfile
@@ -16,7 +17,7 @@ from fetcher import Probe, ProbeCategory, fetch_probes
 
 # pyright: reportAttributeAccessIssue=false
 
-logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])
+logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 app = typer.Typer()
@@ -88,6 +89,10 @@ def check(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output."),
     ] = False,
+    format: Annotated[
+        str,
+        typer.Option("--format", "-o", help="Specify output format."),
+    ] = False,
 ):
     """Run checks on a certain model."""
     # Input validation
@@ -137,20 +142,25 @@ def check(
                     total_failed += 1
                     # TODO: in verbose mode, print all the things:
                     # .full_cmd, .stdout, .stderr, .exit_code
-                    if not verbose:
+                    if verbose:
+                        console.print(f":red_circle: {probe.name} failed")
+                        console.print(f"[b]Exit code[/b]: {error.exit_code}")
+                        console.print(f"[b]STDOUT[/b]\n{error.stdout.decode()}")
+                        console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
+                    else:
                         cmd_error = error.stderr.decode().replace("\n", " ")
                         console.print(f":red_circle: {probe.name} failed ", end="")
                         console.print(
                             f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end=""
                         )
                         console.print(")")
-                    if verbose:
-                        console.print(f":red_circle: {probe.name} failed")
-                        console.print(f"[b]Exit code[/b]: {error.exit_code}")
-                        console.print(f"[b]STDOUT[/b]\n{error.stdout.decode()}")
-                        console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
 
-        console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
+    console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
+    match format.lower():
+        case "json":
+            console.print(json.dumps({"passed": total_succeeded, "failed": total_failed}))
+        case _:
+            pass
 
 
 @app.command()

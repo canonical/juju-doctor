@@ -1,0 +1,24 @@
+name: 'Task Runner'
+description: 'Run tests'
+inputs:
+  test-type:
+    type: choice
+    description: 'Test type for the task runner to execute'
+    required: true
+    options:
+    - lint
+    - static
+    - unit
+    - solution
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run test
+      shell: bash
+      run: |
+        if just --list | grep "${{ inputs.test-type }}"; then
+          just "${{ inputs.test-type }}"
+        else
+          echo "Warning: Just target does not exist -> ${{ inputs.test-type }}."
+        fi
