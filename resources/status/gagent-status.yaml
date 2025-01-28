@@ -1,278 +1,110 @@
 model:
-  name: sncf
+  name: obc-502
   type: iaas
   controller: lxd
   cloud: localhost
   region: localhost
-  version: 3.6.1
+  version: 3.5.4
   model-status:
     current: available
-    since: 24 Jan 2025 12:57:47-05:00
+    since: 09 Jan 2025 14:09:04+01:00
   sla: unsupported
 machines:
-  "0":
-    juju-status:
-      current: started
-      since: 24 Jan 2025 13:00:09-05:00
-      version: 3.6.1
-    hostname: juju-391266-0
-    dns-name: 10.50.128.87
-    ip-addresses:
-    - 10.50.128.87
-    - fd42:5c9f:9046:e4f5:216:3eff:fee1:ecde
-    instance-id: juju-391266-0
-    machine-status:
-      current: running
-      message: Running
-      since: 24 Jan 2025 12:58:39-05:00
-    modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
-    base:
-      name: ubuntu
-      channel: "22.04"
-    network-interfaces:
-      eth0:
-        ip-addresses:
-        - 10.50.128.87
-        - fd42:5c9f:9046:e4f5:216:3eff:fee1:ecde
-        mac-address: 00:16:3e:e1:ec:de
-        gateway: 10.50.128.1 10.50.128.1
-        space: alpha
-        is-up: true
-    hardware: arch=amd64 cores=0 mem=0M virt-type=container
   "1":
     juju-status:
       current: started
-      since: 24 Jan 2025 13:00:07-05:00
-      version: 3.6.1
-    hostname: juju-391266-1
-    dns-name: 10.50.128.248
+      since: 09 Jan 2025 14:21:34+01:00
+      version: 3.5.4
+    hostname: juju-2a486e-1
+    dns-name: 10.65.60.122
     ip-addresses:
-    - 10.50.128.248
-    - fd42:5c9f:9046:e4f5:216:3eff:fe59:9887
-    instance-id: juju-391266-1
+    - 10.65.60.122
+    - fd42:a401:be5a:38d4:216:3eff:fead:6f6c
+    instance-id: juju-2a486e-1
     machine-status:
       current: running
       message: Running
-      since: 24 Jan 2025 12:58:39-05:00
+      since: 09 Jan 2025 14:20:26+01:00
     modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
+      current: applied
+      since: 28 Jan 2025 08:46:20+01:00
     base:
       name: ubuntu
       channel: "22.04"
     network-interfaces:
       eth0:
         ip-addresses:
-        - 10.50.128.248
-        - fd42:5c9f:9046:e4f5:216:3eff:fe59:9887
-        mac-address: 00:16:3e:59:98:87
-        gateway: 10.50.128.1 10.50.128.1
+        - 10.65.60.122
+        - fd42:a401:be5a:38d4:216:3eff:fead:6f6c
+        mac-address: 00:16:3e:ad:6f:6c
+        gateway: 10.65.60.1 10.65.60.1
         space: alpha
         is-up: true
+    constraints: arch=amd64
     hardware: arch=amd64 cores=0 mem=0M virt-type=container
   "2":
     juju-status:
       current: started
-      since: 24 Jan 2025 13:00:05-05:00
-      version: 3.6.1
-    hostname: juju-391266-2
-    dns-name: 10.50.128.134
+      since: 09 Jan 2025 14:27:33+01:00
+      version: 3.5.4
+    hostname: juju-2a486e-2
+    dns-name: 10.65.60.33
     ip-addresses:
-    - 10.50.128.134
-    - fd42:5c9f:9046:e4f5:216:3eff:fea7:bd4b
-    instance-id: juju-391266-2
+    - 10.65.60.33
+    - fd42:a401:be5a:38d4:216:3eff:fe70:5b22
+    instance-id: juju-2a486e-2
     machine-status:
       current: running
       message: Running
-      since: 24 Jan 2025 12:58:39-05:00
+      since: 09 Jan 2025 14:26:26+01:00
     modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
+      current: applied
+      since: 28 Jan 2025 08:46:20+01:00
     base:
       name: ubuntu
       channel: "22.04"
     network-interfaces:
       eth0:
         ip-addresses:
-        - 10.50.128.134
-        - fd42:5c9f:9046:e4f5:216:3eff:fea7:bd4b
-        mac-address: 00:16:3e:a7:bd:4b
-        gateway: 10.50.128.1 10.50.128.1
+        - 10.65.60.33
+        - fd42:a401:be5a:38d4:216:3eff:fe70:5b22
+        mac-address: 00:16:3e:70:5b:22
+        gateway: 10.65.60.1 10.65.60.1
         space: alpha
         is-up: true
+    constraints: arch=amd64
     hardware: arch=amd64 cores=0 mem=0M virt-type=container
-  "3":
-    juju-status:
-      current: started
-      since: 24 Jan 2025 13:00:08-05:00
-      version: 3.6.1
-    hostname: juju-391266-3
-    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
-    ip-addresses:
-    - 10.50.128.251
-    - fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
-    instance-id: juju-391266-3
-    machine-status:
-      current: running
-      message: Running
-      since: 24 Jan 2025 12:58:39-05:00
-    modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
-    base:
-      name: ubuntu
-      channel: "22.04"
-    network-interfaces:
-      enp5s0:
-        ip-addresses:
-        - 10.50.128.251
-        - fd42:5c9f:9046:e4f5:216:3eff:fe89:38b3
-        mac-address: 00:16:3e:89:38:b3
-        gateway: 10.50.128.1 10.50.128.1
-        space: alpha
-        is-up: true
-    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
-    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
-  "4":
-    juju-status:
-      current: started
-      since: 24 Jan 2025 13:00:10-05:00
-      version: 3.6.1
-    hostname: juju-391266-4
-    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
-    ip-addresses:
-    - 10.50.128.109
-    - fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
-    instance-id: juju-391266-4
-    machine-status:
-      current: running
-      message: Running
-      since: 24 Jan 2025 12:58:39-05:00
-    modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
-    base:
-      name: ubuntu
-      channel: "22.04"
-    network-interfaces:
-      enp5s0:
-        ip-addresses:
-        - 10.50.128.109
-        - fd42:5c9f:9046:e4f5:216:3eff:fe2a:56bf
-        mac-address: 00:16:3e:2a:56:bf
-        gateway: 10.50.128.1 10.50.128.1
-        space: alpha
-        is-up: true
-    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
-    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
-  "5":
-    juju-status:
-      current: started
-      since: 24 Jan 2025 13:00:07-05:00
-      version: 3.6.1
-    hostname: juju-391266-5
-    dns-name: fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
-    ip-addresses:
-    - 10.50.128.195
-    - fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
-    instance-id: juju-391266-5
-    machine-status:
-      current: running
-      message: Running
-      since: 24 Jan 2025 12:58:39-05:00
-    modification-status:
-      current: idle
-      since: 24 Jan 2025 12:58:15-05:00
-    base:
-      name: ubuntu
-      channel: "22.04"
-    network-interfaces:
-      enp5s0:
-        ip-addresses:
-        - 10.50.128.195
-        - fd42:5c9f:9046:e4f5:216:3eff:fef4:bd72
-        mac-address: 00:16:3e:f4:bd:72
-        gateway: 10.50.128.1 10.50.128.1
-        space: alpha
-        is-up: true
-    constraints: cores=2 mem=4096M root-disk=25600M virt-type=virtual-machine
-    hardware: arch=amd64 cores=2 mem=4096M virt-type=virtual-machine
 applications:
-  ceph-mon:
-    charm: ceph-mon
+  agent:
+    charm: local:jammy/grafana-agent-3
     base:
       name: ubuntu
       channel: "22.04"
-    charm-origin: charmhub
-    charm-name: ceph-mon
-    charm-rev: 243
-    charm-channel: quincy/stable
-    exposed: false
-    application-status:
-      current: unknown
-      since: 24 Jan 2025 12:58:13-05:00
-    relations:
-      mon:
-      - related-application: ceph-mon
-        interface: ceph
-        scope: global
-    endpoint-bindings:
-      "": alpha
-      admin: alpha
-      bootstrap-source: alpha
-      client: alpha
-      cluster: alpha
-      cos-agent: alpha
-      dashboard: alpha
-      mds: alpha
-      metrics-endpoint: alpha
-      mon: alpha
-      nrpe-external-master: alpha
-      osd: alpha
-      prometheus: alpha
-      public: alpha
-      radosgw: alpha
-      rbd-mirror: alpha
-  ceph-osd:
-    charm: ceph-osd
-    base:
-      name: ubuntu
-      channel: "22.04"
-    charm-origin: charmhub
-    charm-name: ceph-osd
-    charm-rev: 622
-    charm-channel: quincy/stable
-    exposed: false
-    application-status:
-      current: unknown
-      since: 24 Jan 2025 12:58:14-05:00
-    endpoint-bindings:
-      "": alpha
-      cluster: alpha
-      mon: alpha
-      nrpe-external-master: alpha
-      public: alpha
-      secrets-storage: alpha
-  grafana-agent:
-    charm: grafana-agent
-    base:
-      name: ubuntu
-      channel: "22.04"
-    charm-origin: charmhub
+    charm-origin: local
     charm-name: grafana-agent
-    charm-rev: 400
-    charm-channel: latest/edge
+    charm-rev: 3
     exposed: false
     application-status:
-      current: unknown
-      since: 24 Jan 2025 12:58:15-05:00
+      current: error
+      message: 'hook failed: "upgrade-charm"'
+      since: 28 Jan 2025 14:17:51+01:00
     relations:
+      cos-agent:
+      - related-application: zookeeper
+        interface: cos_agent
+        scope: container
+      logging-consumer:
+      - related-application: loki
+        interface: loki_push_api
       peers:
-      - related-application: grafana-agent
+      - related-application: agent
         interface: grafana_agent_replica
         scope: global
+      send-remote-write:
+      - related-application: prometheus
+        interface: prometheus_remote_write
+    subordinate-to:
+    - zookeeper
     endpoint-bindings:
       "": alpha
       certificates: alpha
@@ -285,6 +117,284 @@ applications:
       receive-ca-cert: alpha
       send-remote-write: alpha
       tracing: alpha
-storage: {}
+  agent-stable:
+    charm: local:jammy/grafana-agent-2
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: local
+    charm-name: grafana-agent
+    charm-rev: 2
+    exposed: false
+    application-status:
+      current: active
+      message: 'tracing: off'
+      since: 28 Jan 2025 08:46:19+01:00
+    relations:
+      cos-agent:
+      - related-application: zookeeper-stable
+        interface: cos_agent
+        scope: container
+      grafana-dashboards-provider:
+      - related-application: grafana-dashboard
+        interface: grafana_dashboard
+      logging-consumer:
+      - related-application: loki
+        interface: loki_push_api
+      peers:
+      - related-application: agent-stable
+        interface: grafana_agent_replica
+        scope: global
+      send-remote-write:
+      - related-application: prometheus
+        interface: prometheus_remote_write
+    subordinate-to:
+    - zookeeper-stable
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cos-agent: alpha
+      grafana-cloud-config: alpha
+      grafana-dashboards-provider: alpha
+      juju-info: alpha
+      logging-consumer: alpha
+      peers: alpha
+      receive-ca-cert: alpha
+      send-remote-write: alpha
+      tracing: alpha
+  zookeeper:
+    charm: zookeeper
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: zookeeper
+    charm-rev: 149
+    charm-channel: 3/stable
+    exposed: false
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:46:32+01:00
+    relations:
+      cluster:
+      - related-application: zookeeper
+        interface: cluster
+        scope: global
+      cos-agent:
+      - related-application: agent
+        interface: cos_agent
+        scope: container
+      restart:
+      - related-application: zookeeper
+        interface: rolling_op
+        scope: global
+      upgrade:
+      - related-application: zookeeper
+        interface: upgrade
+        scope: global
+    units:
+      zookeeper/0:
+        workload-status:
+          current: active
+          since: 28 Jan 2025 08:46:26+01:00
+        juju-status:
+          current: idle
+          since: 28 Jan 2025 08:46:34+01:00
+          version: 3.5.4
+        leader: true
+        machine: "1"
+        public-address: 10.65.60.122
+        subordinates:
+          agent/1:
+            workload-status:
+              current: error
+              message: 'hook failed: "upgrade-charm"'
+              since: 28 Jan 2025 14:17:51+01:00
+            juju-status:
+              current: idle
+              since: 28 Jan 2025 14:17:51+01:00
+              version: 3.5.4
+            leader: true
+            public-address: 10.65.60.122
+    version: 3.8.4
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cluster: alpha
+      cos-agent: alpha
+      restart: alpha
+      upgrade: alpha
+      zookeeper: alpha
+  zookeeper-stable:
+    charm: zookeeper
+    base:
+      name: ubuntu
+      channel: "22.04"
+    charm-origin: charmhub
+    charm-name: zookeeper
+    charm-rev: 149
+    charm-channel: 3/stable
+    exposed: false
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:46:31+01:00
+    relations:
+      cluster:
+      - related-application: zookeeper-stable
+        interface: cluster
+        scope: global
+      cos-agent:
+      - related-application: agent-stable
+        interface: cos_agent
+        scope: container
+      restart:
+      - related-application: zookeeper-stable
+        interface: rolling_op
+        scope: global
+      upgrade:
+      - related-application: zookeeper-stable
+        interface: upgrade
+        scope: global
+    units:
+      zookeeper-stable/0:
+        workload-status:
+          current: active
+          since: 28 Jan 2025 08:46:25+01:00
+        juju-status:
+          current: idle
+          since: 28 Jan 2025 08:46:32+01:00
+          version: 3.5.4
+        leader: true
+        machine: "2"
+        public-address: 10.65.60.33
+        subordinates:
+          agent-stable/0:
+            workload-status:
+              current: active
+              message: 'tracing: off'
+              since: 28 Jan 2025 08:46:19+01:00
+            juju-status:
+              current: idle
+              since: 28 Jan 2025 08:46:20+01:00
+              version: 3.5.4
+            leader: true
+            public-address: 10.65.60.33
+    version: 3.8.4
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      cluster: alpha
+      cos-agent: alpha
+      restart: alpha
+      upgrade: alpha
+      zookeeper: alpha
+application-endpoints:
+  grafana-dashboard:
+    url: k8s-nov08:admin/obc-502.grafana-dashboard
+    endpoints:
+      grafana-dashboard:
+        interface: grafana_dashboard
+        role: requirer
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      grafana-dashboard:
+      - agent-stable
+  loki:
+    url: k8s-nov08:admin/obc-502.loki
+    endpoints:
+      logging:
+        interface: loki_push_api
+        role: provider
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      logging:
+      - agent
+      - agent-stable
+  prometheus:
+    url: k8s-nov08:admin/obc-502.prometheus
+    endpoints:
+      receive-remote-write:
+        interface: prometheus_remote_write
+        role: provider
+    application-status:
+      current: active
+      since: 28 Jan 2025 08:48:20+01:00
+    relations:
+      receive-remote-write:
+      - agent
+      - agent-stable
+storage:
+  storage:
+    data/1:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:21:35+01:00
+      persistent: false
+      attachments:
+        units:
+          zookeeper/0:
+            machine: "1"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+    data/2:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:27:35+01:00
+      persistent: false
+      attachments:
+        units:
+          zookeeper-stable/0:
+            machine: "2"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+  filesystems:
+    1/1:
+      provider-id: 1/1
+      storage: data/1
+      attachments:
+        machines:
+          "1":
+            mount-point: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            read-only: false
+            life: alive
+        units:
+          zookeeper/0:
+            machine: "1"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+      pool: rootfs
+      size: 467297
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:21:35+01:00
+    2/2:
+      provider-id: 2/2
+      storage: data/2
+      attachments:
+        machines:
+          "2":
+            mount-point: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            read-only: false
+            life: alive
+        units:
+          zookeeper-stable/0:
+            machine: "2"
+            location: /var/snap/charmed-zookeeper/common/var/lib/zookeeper
+            life: alive
+      pool: rootfs
+      size: 467297
+      life: alive
+      status:
+        current: attached
+        since: 09 Jan 2025 14:27:35+01:00
 controller:
-  timestamp: 15:09:43-05:00
+  timestamp: 14:18:21+01:00
