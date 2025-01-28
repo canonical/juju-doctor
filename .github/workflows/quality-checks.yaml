@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
+        uses: canonical/juju-doctor/.github/actions/run-task@feature/solution-tests
         with:
           test-type: lint
 
@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
+        uses: canonical/juju-doctor/.github/actions/run-task@feature/solution-tests
         with:
           test-type: unit
 
@@ -62,6 +62,6 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
+        uses: canonical/juju-doctor/.github/actions/run-task@feature/solution-tests
         with:
           test-type: solution
