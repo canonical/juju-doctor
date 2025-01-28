@@ -29,8 +29,8 @@ def test_parse_file_dir():
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
         # THEN only 1 probe exists
         assert len(probes) == 2
-        failing_probe = probes[0]
-        dashboard_probe = probes[1]
+        failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
+        dashboard_probe = [probe for probe in probes if "relation_dashboard_uid.py" in probe.name][0]
         # AND the "bundle" Probe was correctly parsed
         assert failing_probe.category == ProbeCategory.SHOW_UNIT
         assert failing_probe.uri == probe_uri

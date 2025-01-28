@@ -32,8 +32,8 @@ def test_parse_gh_dir():
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
         # THEN 2 probe exists
         assert len(probes) == 2
-        bundle_probe = probes[0]
-        status_probe = probes[1]
+        bundle_probe = [probe for probe in probes if "probe_bundle.py" in probe.name][0]
+        status_probe = [probe for probe in probes if "probe_status.py" in probe.name][0]
         # AND the "bundle" Probe was correctly parsed
         assert bundle_probe.category == ProbeCategory.BUNDLE
         assert bundle_probe.uri == probe_uri

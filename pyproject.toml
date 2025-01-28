@@ -37,7 +37,7 @@ dev = [
 juju-doctor = "main:app"
 
 [tool.ruff]
-line-length = 99
+line-length = 110
 extend-exclude = ["__pycache__", "*.egg_info"]
 
 [tool.ruff.lint]
