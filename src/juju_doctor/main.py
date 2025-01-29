@@ -125,7 +125,7 @@ def check(
 
         # Run one category of probes at a time
         for category in ProbeCategory:
-            console.print(f"Probe type: {category.value}", style="bold")
+            # console.print(f"Probe type: {category.value}", style="bold")
             for probe in probes:
                 if not probe.is_category(category):
                     continue
@@ -135,7 +135,7 @@ def check(
                     raise Exception(f"You didn't supply {category.value} input or a live model.")
                 try:
                     sh.python(probe.local_path, _in=probe_input)
-                    console.print(f":green_circle: {probe.name} succeeded")
+                    # console.print(f":green_circle: {probe.name} succeeded")
                     total_succeeded += 1
                 except sh.ErrorReturnCode as error:
                     total_failed += 1
@@ -148,16 +148,15 @@ def check(
                         console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
                     else:
                         cmd_error = error.stderr.decode().replace("\n", " ")
-                        console.print(f":red_circle: {probe.name} failed ", end="")
-                        console.print(f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end="")
-                        console.print(")")
+                        # console.print(f":red_circle: {probe.name} failed ", end="")
+                        # console.print(f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end="")
+                        # console.print(")")
 
-    console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
     match format.lower():
         case "json":
-            console.print(json.dumps({"passed": total_succeeded, "failed": total_failed}))
+            console.print(json.dumps({"passed": total_succeeded, "failed": total_failed}), end="")
         case _:
-            pass
+            console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
 
 
 @app.command()
