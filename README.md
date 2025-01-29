@@ -24,24 +24,44 @@ juju-doctor check \
 ```
 > If you want to see more internals, go to src/main.py and change the log level to INFO
 
+### Simplest Probe
+```python
+#!/usr/bin/env python3
+
+import sys
+import yaml
+
+def demo_probe(juju_artifact: dict):
+    # Your validation goes here
+    failure = "you_choose"
+    if failure:
+        print("failed", file=sys.stderr)
+        exit(1)
+
+if __name__ == "__main__":
+    juju_artifact = yaml.safe_load(sys.stdin.read())
+    demo_probe(juju_artifact)
+```
 
 ## Demo juju-doctor commands
 ```
+juju-doctor check --help
+
 juju-doctor check \
     --probe "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py" \
     --model "cos"
 
 juju-doctor check \
+    --probe "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py" \
+    --show-unit "tests/resources/show-unit/show-unit.yaml"
+
+juju-doctor check \
     --probe "file://tests/resources/show-unit/relation_dashboard_uid.py" \
-    --show-unit "resources/show-unit/show-unit.yaml"
+    --show-unit "tests/resources/show-unit/show-unit.yaml"
 
 juju-doctor check \
     --probe "file://tests/resources/status" \
-    --status "resources/status/gagent-status.yaml"
-
-juju-doctor check \
-    --probe "github://canonical/grafana-k8s-operator//probes/show-unit/relation_dashboard_uid.py" \
-    --show-unit "resources/show-unit/show-unit.yaml"
+    --status "tests/resources/status/gagent-status.yaml"
 
 juju-doctor check \
     --probe "github://canonical/grafana-agent-operator//probes" \
@@ -51,7 +71,7 @@ juju-doctor check \
 
 ## Development
 ```bash
-git clone https://github.com/MichaelThamm/juju-doctor.git
+git clone https://github.com/canonical/juju-doctor.git
 python3 -m venv venv && source venv/bin/activate
 pip install -e juju-doctor
 juju-doctor check --help
