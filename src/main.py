@@ -42,9 +42,7 @@ def _get_model_data(model: str, probe_category: ProbeCategory) -> str:
         case ProbeCategory.SHOW_UNIT:
             units: List[str] = []
             show_units: Dict[str, Any] = {}  # List of show-unit results in dictionary form
-            juju_status = yaml.safe_load(
-                sh.juju.status(model=model, format="yaml", _tty_out=False)
-            )
+            juju_status = yaml.safe_load(sh.juju.status(model=model, format="yaml", _tty_out=False))
             for app in juju_status["applications"]:
                 # Subordinate charms don't have a "units" key, so the parsing is different
                 app_status = juju_status["applications"][app]
@@ -111,9 +109,7 @@ def check(
             for category in ProbeCategory:
                 input_data[category.value] = _get_model_data(model=model, probe_category=category)
         else:
-            log.info(
-                f"Getting input data from files: {status_file} {bundle_file} {show_unit_file}"
-            )
+            log.info(f"Getting input data from files: {status_file} {bundle_file} {show_unit_file}")
             input_data[ProbeCategory.STATUS.value] = _read_file(status_file) or None
             input_data[ProbeCategory.BUNDLE.value] = _read_file(bundle_file) or None
             input_data[ProbeCategory.SHOW_UNIT.value] = _read_file(show_unit_file) or None
@@ -133,7 +129,7 @@ def check(
                 log.info(f"Running probe {probe}")
                 probe_input = input_data[category.value]
                 if not probe_input:
-                    raise Exception("You didn't supply a juju show-unit or a live model.")
+                    raise Exception(f"You didn't supply {category.value} input or a live model.")
                 try:
                     sh.python(probe.local_path, _in=probe_input)
                     console.print(f":green_circle: {probe.name} succeeded")
@@ -150,9 +146,7 @@ def check(
                     else:
                         cmd_error = error.stderr.decode().replace("\n", " ")
                         console.print(f":red_circle: {probe.name} failed ", end="")
-                        console.print(
-                            f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end=""
-                        )
+                        console.print(f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end="")
                         console.print(")")
 
     console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
