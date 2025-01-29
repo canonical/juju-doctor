@@ -1,4 +1,6 @@
 # juju-doctor
+![PyPI](https://img.shields.io/pypi/v/juju-doctor)
+
 > You deploy, we validate, you fix :)
 
 ## Probes
