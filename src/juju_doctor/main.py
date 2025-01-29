@@ -10,9 +10,10 @@ from typing import Annotated, Any, Dict, List, Optional
 import sh
 import typer
 import yaml
-from fetcher import Probe, ProbeCategory, fetch_probes
 from rich.console import Console
 from rich.logging import RichHandler
+
+from juju_doctor.fetcher import Probe, ProbeCategory, fetch_probes
 
 # pyright: reportAttributeAccessIssue=false
 

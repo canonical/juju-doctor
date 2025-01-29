@@ -73,6 +73,6 @@ juju-doctor check \
 ```bash
 git clone https://github.com/canonical/juju-doctor.git
 python3 -m venv venv && source venv/bin/activate
-pip install -e juju-doctor
+pip install -e .
 juju-doctor check --help
 ```

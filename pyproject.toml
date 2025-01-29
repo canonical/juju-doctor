@@ -1,12 +1,17 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "juju-doctor"
-version = "0.1"
+version = "0.1.1"
 description = "Juju-doctor is a pypi package which helps validate Juju deployments using probes."
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 
 dependencies = [
   "pyyaml",
@@ -30,11 +35,12 @@ dev = [
 ]
 
 # [project.urls]
-# "Homepage" = "?"
+"Homepage" = "https://github.com/canonical/juju-doctor
+"PyPI" = "https://pypi.org/project/juju-doctor"
 # "Bug Tracker" = "?"
 
 [project.scripts]
-juju-doctor = "main:app"
+juju-doctor = "juju_doctor.main:app"
 
 [tool.ruff]
 line-length = 110
