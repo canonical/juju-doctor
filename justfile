@@ -2,7 +2,7 @@ set export  # Just variables are exported to environment variable
 
 uv := `which uv`
 uv_flags := "--frozen --isolated --extra=dev"
-PYTHONPATH := "src"
+PYTHONPATH := "src/juju_doctor"
 
 [private]
 default:
@@ -27,10 +27,10 @@ format:
 
 # Run unit tests
 unit:
-  uv run $uv_flags coverage run --source=src -m pytest tests/unit
+  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit
   uv run $uv_flags coverage report
 
 # Run solution tests
 solution:
-  uv run $uv_flags coverage run --source=src -m pytest tests/solution
+  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/solution
   uv run $uv_flags coverage report

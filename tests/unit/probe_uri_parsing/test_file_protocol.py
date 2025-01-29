@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from src.fetcher import ProbeCategory, fetch_probes
+from fetcher import ProbeCategory, fetch_probes
 
 
 def test_parse_file_file():
