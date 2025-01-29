@@ -1,0 +1,145 @@
+bundle: kubernetes
+applications:
+  alertmanager:
+    charm: alertmanager-k8s
+    channel: latest/stable
+    revision: 138
+    resources:
+      alertmanager-image: 99
+    scale: 1
+    constraints: arch=amd64
+    storage:
+      data: kubernetes,1,1024M
+    trust: true
+  catalogue:
+    charm: catalogue-k8s
+    channel: latest/stable
+    revision: 75
+    resources:
+      catalogue-image: 34
+    scale: 1
+    options:
+      description: "Canonical Observability Stack Lite, or COS Lite, is a light-weight,
+        highly-integrated, \nJuju-based observability suite running on Kubernetes.\n"
+      tagline: Model-driven Observability Stack deployed with a single command.
+      title: Canonical Observability Stack
+    constraints: arch=amd64
+    trust: true
+  grafana:
+    charm: grafana-k8s
+    channel: latest/stable
+    revision: 126
+    resources:
+      grafana-image: 70
+      litestream-image: 45
+    scale: 1
+    constraints: arch=amd64
+    storage:
+      database: kubernetes,1,1024M
+    trust: true
+  loki:
+    charm: loki-k8s
+    channel: latest/stable
+    revision: 181
+    resources:
+      loki-image: 100
+      node-exporter-image: 3
+    scale: 1
+    constraints: arch=amd64
+    storage:
+      active-index-directory: kubernetes,1,1024M
+      loki-chunks: kubernetes,1,1024M
+    trust: true
+  prometheus:
+    charm: prometheus-k8s
+    channel: latest/stable
+    revision: 221
+    resources:
+      prometheus-image: 151
+    scale: 1
+    constraints: arch=amd64
+    storage:
+      database: kubernetes,1,1024M
+    trust: true
+  traefik:
+    charm: traefik-k8s
+    channel: latest/stable
+    revision: 223
+    resources:
+      traefik-image: 161
+    scale: 1
+    constraints: arch=amd64
+    storage:
+      configurations: kubernetes,1,1024M
+    trust: true
+relations:
+- - traefik:ingress-per-unit
+  - prometheus:ingress
+- - traefik:ingress-per-unit
+  - loki:ingress
+- - traefik:traefik-route
+  - grafana:ingress
+- - traefik:ingress
+  - alertmanager:ingress
+- - prometheus:alertmanager
+  - alertmanager:alerting
+- - grafana:grafana-source
+  - prometheus:grafana-source
+- - grafana:grafana-source
+  - loki:grafana-source
+- - grafana:grafana-source
+  - alertmanager:grafana-source
+- - loki:alertmanager
+  - alertmanager:alerting
+- - prometheus:metrics-endpoint
+  - traefik:metrics-endpoint
+- - prometheus:metrics-endpoint
+  - alertmanager:self-metrics-endpoint
+- - prometheus:metrics-endpoint
+  - loki:metrics-endpoint
+- - prometheus:metrics-endpoint
+  - grafana:metrics-endpoint
+- - grafana:grafana-dashboard
+  - loki:grafana-dashboard
+- - grafana:grafana-dashboard
+  - prometheus:grafana-dashboard
+- - grafana:grafana-dashboard
+  - alertmanager:grafana-dashboard
+- - catalogue:ingress
+  - traefik:ingress
+- - catalogue:catalogue
+  - grafana:catalogue
+- - catalogue:catalogue
+  - prometheus:catalogue
+- - catalogue:catalogue
+  - alertmanager:catalogue
+--- # overlay.yaml
+applications:
+  alertmanager:
+    offers:
+      alertmanager-karma-dashboard:
+        endpoints:
+        - karma-dashboard
+        acl:
+          admin: admin
+  grafana:
+    offers:
+      grafana-dashboards:
+        endpoints:
+        - grafana-dashboard
+        acl:
+          admin: admin
+  loki:
+    offers:
+      loki-logging:
+        endpoints:
+        - logging
+        acl:
+          admin: admin
+  prometheus:
+    offers:
+      prometheus-receive-remote-write:
+        endpoints:
+        - receive-remote-write
+        acl:
+          admin: admin

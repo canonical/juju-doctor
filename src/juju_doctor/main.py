@@ -24,12 +24,15 @@ app = typer.Typer()
 console = Console()
 
 
-def _read_file(filename: Optional[str]) -> Optional[str]:
+def _read_file(filename: Optional[str]) -> Optional[list]:
     """Read a file into a string."""
     if not filename:
         return None
     with open(filename, "r") as f:
-        return f.read()
+        contents = f.read()
+        # Parse all YAML documents and return only the first one
+        # https://github.com/canonical/juju-doctor/issues/10
+        return list(yaml.safe_load_all(contents))[0]
 
 
 def _get_model_data(model: str, probe_category: ProbeCategory) -> str:

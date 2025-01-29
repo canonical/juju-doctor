@@ -44,7 +44,7 @@ if __name__ == "__main__":
 ```
 
 ## Demo juju-doctor commands
-```
+```bash
 juju-doctor check --help
 
 juju-doctor check \

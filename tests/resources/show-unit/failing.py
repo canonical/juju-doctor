@@ -8,5 +8,5 @@ import yaml
 
 if __name__ == "__main__":
     data = yaml.safe_load(sys.stdin)
-    print("This probe always fails!")
+    print("This probe always fails!", file=sys.stderr)
     exit(1)
