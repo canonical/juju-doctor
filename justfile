@@ -2,6 +2,7 @@ set export  # Just variables are exported to environment variable
 
 uv := `which uv`
 uv_flags := "--frozen --isolated --extra=dev"
+PYTHONPATH := "src"
 
 [private]
 default:
