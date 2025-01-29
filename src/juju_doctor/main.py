@@ -147,7 +147,8 @@ def check(
                         console.print(f"[b]STDOUT[/b]\n{error.stdout.decode()}")
                         console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
                     else:
-                        cmd_error = error.stderr.decode().replace("\n", " ")
+                        pass
+                        # cmd_error = error.stderr.decode().replace("\n", " ")
                         # console.print(f":red_circle: {probe.name} failed ", end="")
                         # console.print(f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end="")
                         # console.print(")")
