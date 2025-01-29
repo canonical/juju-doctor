@@ -1,12 +1,14 @@
 import tempfile
 from pathlib import Path
 
+import pytest
 from fetcher import ProbeCategory, fetch_probes
 
 
-def test_parse_file_file():
+@pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
+def test_parse_file_file(category):
     # GIVEN a local probe file
-    probe_uri = "file://tests/resources/show-unit/relation_dashboard_uid.py"
+    probe_uri = f"file://tests/resources/{category}/failing.py"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
@@ -14,10 +16,10 @@ def test_parse_file_file():
         assert len(probes) == 1
         probe = probes[0]
         # AND the Probe was correctly parsed
-        assert probe.category == ProbeCategory.SHOW_UNIT
+        assert probe.category.value == category
         assert probe.uri == probe_uri
-        assert probe.name == "tests_resources_show-unit_relation_dashboard_uid.py"
-        assert probe.original_path == Path("tests/resources/show-unit/relation_dashboard_uid.py")
+        assert probe.name == f"tests_resources_{category}_failing.py"
+        assert probe.original_path == Path(f"tests/resources/{category}/failing.py")
         assert probe.local_path == Path(tmpdir) / probe.name
 
 
@@ -30,7 +32,7 @@ def test_parse_file_dir():
         # THEN 2 probes exist
         assert len(probes) == 2
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
-        dashboard_probe = [probe for probe in probes if "relation_dashboard_uid.py" in probe.name][0]
+        dashboard_probe = [probe for probe in probes if "grafana-probe.py" in probe.name][0]
         # AND the Probe was correctly parsed
         assert failing_probe.category == ProbeCategory.SHOW_UNIT
         assert failing_probe.uri == probe_uri
@@ -41,6 +43,6 @@ def test_parse_file_dir():
         # AND the Probe was correctly parsed
         assert dashboard_probe.category == ProbeCategory.SHOW_UNIT
         assert dashboard_probe.uri == probe_uri
-        assert dashboard_probe.name == "tests_resources_show-unit/relation_dashboard_uid.py"
+        assert dashboard_probe.name == "tests_resources_show-unit/grafana-probe.py"
         assert dashboard_probe.original_path == Path("tests/resources/show-unit")
         assert dashboard_probe.local_path == Path(tmpdir) / dashboard_probe.name
