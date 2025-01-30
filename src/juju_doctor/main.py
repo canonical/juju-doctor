@@ -31,11 +31,12 @@ def _print(message: str, format: Optional[str], *args, **kwargs):
 
 def _print_formatted(message, format: Optional[str], *args, **kwargs):
     """Print a formatted message based on the output format."""
-    match format.lower():
-        case "json":
-            console.print(message, end="", *args, **kwargs)
-        case _:
-            raise NotImplementedError
+    if format:
+        match format.lower():
+            case "json":
+                console.print(message, end="", *args, **kwargs)
+            case _:
+                raise NotImplementedError
 
 
 def _read_file(filename: Optional[str]) -> Optional[str]:

@@ -8,16 +8,13 @@ import yaml
 def one_grafana_agent_per_machine(status: dict):
     # A mapping from grafana-agent app name to the list of apps it's subordinate to
     agents = {
-        k: v["subordinate-to"]
-        for k, v in status["applications"].items()
-        if v["charm"] == "grafana-agent"
+        k: v["subordinate-to"] for k, v in status["applications"].items() if v["charm"] == "grafana-agent"
     }
 
     for agent, principals in agents.items():
         # A mapping from app name to machines
         machines = {
-            p: [u["machine"] for u in status["applications"][p].get("units", {}).values()]
-            for p in principals
+            p: [u["machine"] for u in status["applications"][p].get("units", {}).values()] for p in principals
         }
 
         from itertools import combinations
@@ -25,16 +22,16 @@ def one_grafana_agent_per_machine(status: dict):
         for p1, p2 in combinations(principals, 2):
             if overlap := set(machines[p1]) & set(machines[p2]):
                 print(
-                    f"{agent} is subordinate to both '{p1}', '{p2}' in the same machines {overlap}"
+                    f"{agent} is subordinate to both '{p1}', '{p2}' in the same machines {overlap}",
+                    file=sys.stderr,
                 )
+                exit(1)
 
 
 def one_grafana_agent_per_app(status: dict):
     # A mapping from grafana-agent app name to the list of apps it's subordinate to
     agents = {
-        k: v["subordinate-to"]
-        for k, v in status["applications"].items()
-        if v["charm"] == "grafana-agent"
+        k: v["subordinate-to"] for k, v in status["applications"].items() if v["charm"] == "grafana-agent"
     }
 
     for agent, principals in agents.items():
@@ -44,8 +41,10 @@ def one_grafana_agent_per_app(status: dict):
                 subord_agents = subord_apps & agents.keys()
                 if len(subord_agents) > 1:
                     print(
-                        f"{name} is related to more than one grafana-agent subordinate: {subord_agents}"
+                        f"{name} is related to more than one grafana-agent subordinate: {subord_agents}",
+                        file=sys.stderr,
                     )
+                    exit(1)
 
 
 if __name__ == "__main__":
