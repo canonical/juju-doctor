@@ -32,7 +32,7 @@ def test_parse_file_dir():
         # THEN 2 probes exist
         assert len(probes) == 2
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
-        dashboard_probe = [probe for probe in probes if "grafana-probe.py" in probe.name][0]
+        dashboard_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         # AND the Probe was correctly parsed
         assert failing_probe.category == ProbeCategory.SHOW_UNIT
         assert failing_probe.uri == probe_uri
@@ -43,6 +43,6 @@ def test_parse_file_dir():
         # AND the Probe was correctly parsed
         assert dashboard_probe.category == ProbeCategory.SHOW_UNIT
         assert dashboard_probe.uri == probe_uri
-        assert dashboard_probe.name == "tests_resources_show-unit/grafana-probe.py"
+        assert dashboard_probe.name == "tests_resources_show-unit/passing.py"
         assert dashboard_probe.original_path == Path("tests/resources/show-unit")
         assert dashboard_probe.local_path == Path(tmpdir) / dashboard_probe.name
