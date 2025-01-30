@@ -1,6 +1,5 @@
 """Main Typer application to assemble the CLI."""
 
-import json
 import logging
 import sys
 import tempfile
@@ -164,6 +163,8 @@ def check(
                             end="",
                         )
                         _print(")", format=format)
+
+    console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
 
 
 @app.command()
