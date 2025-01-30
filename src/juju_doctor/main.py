@@ -24,7 +24,13 @@ app = typer.Typer()
 console = Console()
 
 
-def _read_file(filename: Optional[str]) -> Optional[list]:
+def _print(message: str, format: Optional[str], *args, **kwargs):
+    """Print a message based on the output format."""
+    if not format:
+        console.print(message, *args, **kwargs)
+
+
+def _read_file(filename: Optional[str]) -> Optional[str]:
     """Read a file into a string."""
     if not filename:
         return None
@@ -91,9 +97,9 @@ def check(
         typer.Option("--verbose", "-v", help="Enable verbose output."),
     ] = False,
     format: Annotated[
-        str,
+        Optional[str],
         typer.Option("--format", "-o", help="Specify output format."),
-    ] = False,
+    ] = None,
 ):
     """Run checks on a certain model."""
     # Input validation
@@ -125,7 +131,7 @@ def check(
 
         # Run one category of probes at a time
         for category in ProbeCategory:
-            console.print(f"Probe type: {category.value}", style="bold")
+            _print(f"[b]Probe type: {category.value}[/b]", format=format)
             for probe in probes:
                 if not probe.is_category(category):
                     continue
@@ -135,29 +141,29 @@ def check(
                     raise Exception(f"You didn't supply {category.value} input or a live model.")
                 try:
                     sh.python(probe.local_path, _in=probe_input)
-                    console.print(f":green_circle: {probe.name} succeeded")
+                    _print(f":green_circle: {probe.name} succeeded", format=format)
                     total_succeeded += 1
                 except sh.ErrorReturnCode as error:
                     total_failed += 1
                     # TODO: in verbose mode, print all the things:
                     # .full_cmd, .stdout, .stderr, .exit_code
                     if verbose:
-                        console.print(f":red_circle: {probe.name} failed")
-                        console.print(f"[b]Exit code[/b]: {error.exit_code}")
-                        console.print(f"[b]STDOUT[/b]\n{error.stdout.decode()}")
-                        console.print(f"[b]STDERR[/b]\n{error.stderr.decode()}")
+                        _print(f":red_circle: {probe.name} failed", format=format)
+                        _print(f"[b]Exit code[/b]: {error.exit_code}", format=format)
+                        _print(f"[b]STDOUT[/b]\n{error.stdout.decode()}", format=format)
+                        _print(f"[b]STDERR[/b]\n{error.stderr.decode()}", format=format)
                     else:
                         cmd_error = error.stderr.decode().replace("\n", " ")
-                        console.print(f":red_circle: {probe.name} failed ", end="")
-                        console.print(f"({cmd_error}", overflow="ellipsis", no_wrap=True, width=40, end="")
-                        console.print(")")
-
-    console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
-    match format.lower():
-        case "json":
-            console.print(json.dumps({"passed": total_succeeded, "failed": total_failed}))
-        case _:
-            pass
+                        _print(f":red_circle: {probe.name} failed ", format=format, end="")
+                        _print(
+                            f"({cmd_error}",
+                            format=format,
+                            overflow="ellipsis",
+                            no_wrap=True,
+                            width=40,
+                            end="",
+                        )
+                        _print(")", format=format)
 
 
 @app.command()
