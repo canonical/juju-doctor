@@ -23,6 +23,7 @@ def test_parse_file_file(category):
         assert probe.local_path == Path(tmpdir) / probe.name
 
 
+@pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
 def test_parse_file_dir(category):
     # GIVEN a local probe file with the file protocol
     probe_uri = f"file://tests/resources/{category}"
