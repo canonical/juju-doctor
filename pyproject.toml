@@ -34,7 +34,7 @@ dev = [
   "coverage[toml]",
 ]
 
-# [project.urls]
+[project.urls]
 "Homepage" = "https://github.com/canonical/juju-doctor"
 "PyPI" = "https://pypi.org/project/juju-doctor"
 # "Bug Tracker" = "?"
