@@ -1,5 +1,6 @@
 """Main Typer application to assemble the CLI."""
 
+import json
 import logging
 import sys
 import tempfile
@@ -27,6 +28,14 @@ def _print(message: str, format: Optional[str], *args, **kwargs):
     """Print a message based on the output format."""
     if not format:
         console.print(message, *args, **kwargs)
+
+def _print_formatted(message, format: Optional[str], *args, **kwargs):
+    """Print a formatted message based on the output format."""
+    match format.lower():
+        case "json":
+            console.print(message, end="", *args, **kwargs)
+        case _:
+            raise NotImplementedError
 
 
 def _read_file(filename: Optional[str]) -> Optional[str]:
@@ -107,6 +116,7 @@ def check(
 
     # Run the actual checks
     with tempfile.TemporaryDirectory() as temp_folder:
+        json_result = {}
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         log.info(f"Created temporary folder: {temp_folder}")
@@ -164,7 +174,10 @@ def check(
                         )
                         _print(")", format=format)
 
-    console.print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}")
+    json_result.update({"passed": total_succeeded, "failed": total_failed})
+
+    _print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}", format=format)
+    _print_formatted(json_result, format=format)
 
 
 @app.command()
