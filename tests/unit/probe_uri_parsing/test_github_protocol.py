@@ -1,12 +1,14 @@
 import tempfile
 from pathlib import Path
 
-from fetcher import ProbeCategory, fetch_probes
+import pytest
+from fetcher import fetch_probes
 
 
-def test_parse_gh_file():
+@pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
+def test_parse_gh_file(category):
     # GIVEN a probe file specified in a Github remote for a specific branch
-    probe_uri = "github://canonical/juju-doctor//tests/resources/show-unit/relation_dashboard_uid.py"
+    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}/failing.py"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
@@ -14,36 +16,33 @@ def test_parse_gh_file():
         assert len(probes) == 1
         probe = probes[0]
         # AND the Probe was correctly parsed
-        assert probe.category == ProbeCategory.SHOW_UNIT
+        assert probe.category.value == category
         assert probe.uri == probe_uri
-        assert probe.name == "canonical_juju-doctor__tests_resources_show-unit_relation_dashboard_uid.py"
-        assert probe.original_path == Path("tests/resources/show-unit/relation_dashboard_uid.py")
+        assert probe.name == f"canonical_juju-doctor__tests_resources_{category}_failing.py"
+        assert probe.original_path == Path(f"tests/resources/{category}/failing.py")
         assert probe.local_path == Path(tmpdir) / probe.name
 
 
-def test_parse_gh_dir():
+@pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
+def test_parse_gh_dir(category):
     # GIVEN a probe directory specified in a Github remote
-    probe_uri = "github://canonical/juju-doctor//tests/resources/show-unit"
+    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
         # THEN 2 probe exists
         assert len(probes) == 2
+        passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
-        dashboard_probe = [probe for probe in probes if "relation_dashboard_uid.py" in probe.name][0]
-        # AND the Probe was correctly parsed
-        assert failing_probe.category == ProbeCategory.SHOW_UNIT
+        # AND the Probe was correctly parsed as passing
+        assert passing_probe.category.value == category
+        assert passing_probe.uri == probe_uri
+        assert passing_probe.name == f"canonical_juju-doctor__tests_resources_{category}/passing.py"
+        assert passing_probe.original_path == Path(f"tests/resources/{category}")
+        assert passing_probe.local_path == Path(tmpdir) / passing_probe.name
+        # AND the Probe was correctly parsed as failing
+        assert failing_probe.category.value == category
         assert failing_probe.uri == probe_uri
-        assert failing_probe.name == "canonical_juju-doctor__tests_resources_show-unit/failing.py"
-        assert failing_probe.original_path == Path("tests/resources/show-unit")
+        assert failing_probe.name == f"canonical_juju-doctor__tests_resources_{category}/failing.py"
+        assert failing_probe.original_path == Path(f"tests/resources/{category}")
         assert failing_probe.local_path == Path(tmpdir) / failing_probe.name
-
-        # AND the Probe was correctly parsed
-        assert dashboard_probe.category == ProbeCategory.SHOW_UNIT
-        assert dashboard_probe.uri == probe_uri
-        assert (
-            dashboard_probe.name
-            == "canonical_juju-doctor__tests_resources_show-unit/relation_dashboard_uid.py"
-        )
-        assert dashboard_probe.original_path == Path("tests/resources/show-unit")
-        assert dashboard_probe.local_path == Path(tmpdir) / dashboard_probe.name

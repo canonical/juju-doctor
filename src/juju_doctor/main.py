@@ -177,7 +177,7 @@ def check(
     json_result.update({"passed": total_succeeded, "failed": total_failed})
 
     _print(f"\nTotal: :green_circle: {total_succeeded} :red_circle: {total_failed}", format=format)
-    _print_formatted(json_result, format=format)
+    _print_formatted(json.dumps(json_result), format=format)
 
 
 @app.command()

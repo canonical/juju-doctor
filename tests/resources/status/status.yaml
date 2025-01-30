@@ -1,0 +1,782 @@
+model:
+  name: cos
+  type: caas
+  controller: microk8s
+  cloud: microk8s
+  region: localhost
+  version: 3.6.1
+  model-status:
+    current: available
+    since: 29 Jan 2025 15:51:17-05:00
+  sla: unsupported
+machines: {}
+applications:
+  alertmanager:
+    charm: alertmanager-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: alertmanager-k8s
+    charm-rev: 138
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: d32b3ead-47f6-46f5-9366-6977c37f6c5e
+    address: 10.152.183.125
+    exposed: false
+    application-status:
+      current: active
+      since: 29 Jan 2025 15:52:31-05:00
+    relations:
+      alerting:
+      - related-application: loki
+        interface: alertmanager_dispatch
+        scope: global
+      - related-application: prometheus
+        interface: alertmanager_dispatch
+        scope: global
+      catalogue:
+      - related-application: catalogue
+        interface: catalogue
+        scope: global
+      grafana-dashboard:
+      - related-application: grafana
+        interface: grafana_dashboard
+        scope: global
+      grafana-source:
+      - related-application: grafana
+        interface: grafana_datasource
+        scope: global
+      ingress:
+      - related-application: traefik
+        interface: ingress
+        scope: global
+      replicas:
+      - related-application: alertmanager
+        interface: alertmanager_replica
+        scope: global
+      self-metrics-endpoint:
+      - related-application: prometheus
+        interface: prometheus_scrape
+        scope: global
+    units:
+      alertmanager/0:
+        workload-status:
+          current: active
+          since: 29 Jan 2025 15:52:31-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 15:54:27-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.22
+        provider-id: alertmanager-0
+    version: 0.27.0
+    endpoint-bindings:
+      "": alpha
+      alerting: alpha
+      catalogue: alpha
+      certificates: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      karma-dashboard: alpha
+      remote-configuration: alpha
+      replicas: alpha
+      self-metrics-endpoint: alpha
+      tracing: alpha
+  catalogue:
+    charm: catalogue-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: catalogue-k8s
+    charm-rev: 75
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: c63c74fd-8d76-46b4-bbff-60ebe08c6217
+    address: 10.152.183.45
+    exposed: false
+    application-status:
+      current: active
+      since: 29 Jan 2025 15:52:04-05:00
+    relations:
+      catalogue:
+      - related-application: alertmanager
+        interface: catalogue
+        scope: global
+      - related-application: grafana
+        interface: catalogue
+        scope: global
+      - related-application: prometheus
+        interface: catalogue
+        scope: global
+      ingress:
+      - related-application: traefik
+        interface: ingress
+        scope: global
+      replicas:
+      - related-application: catalogue
+        interface: catalogue_replica
+        scope: global
+    units:
+      catalogue/0:
+        workload-status:
+          current: active
+          since: 29 Jan 2025 15:52:04-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 15:53:42-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.59
+        provider-id: catalogue-0
+    endpoint-bindings:
+      "": alpha
+      catalogue: alpha
+      certificates: alpha
+      ingress: alpha
+      replicas: alpha
+      tracing: alpha
+  grafana:
+    charm: grafana-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: grafana-k8s
+    charm-rev: 126
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: 5d812625-e164-41e7-a937-d6517343db61
+    address: 10.152.183.241
+    exposed: false
+    application-status:
+      current: active
+      since: 29 Jan 2025 15:53:14-05:00
+    relations:
+      catalogue:
+      - related-application: catalogue
+        interface: catalogue
+        scope: global
+      grafana:
+      - related-application: grafana
+        interface: grafana_peers
+        scope: global
+      grafana-dashboard:
+      - related-application: alertmanager
+        interface: grafana_dashboard
+        scope: global
+      - related-application: loki
+        interface: grafana_dashboard
+        scope: global
+      - related-application: prometheus
+        interface: grafana_dashboard
+        scope: global
+      grafana-source:
+      - related-application: alertmanager
+        interface: grafana_datasource
+        scope: global
+      - related-application: loki
+        interface: grafana_datasource
+        scope: global
+      - related-application: prometheus
+        interface: grafana_datasource
+        scope: global
+      ingress:
+      - related-application: traefik
+        interface: traefik_route
+        scope: global
+      metrics-endpoint:
+      - related-application: prometheus
+        interface: prometheus_scrape
+        scope: global
+      replicas:
+      - related-application: grafana
+        interface: grafana_replicas
+        scope: global
+    units:
+      grafana/0:
+        workload-status:
+          current: active
+          since: 29 Jan 2025 15:53:14-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 16:50:39-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.61
+        provider-id: grafana-0
+    version: 9.5.3
+    endpoint-bindings:
+      "": alpha
+      catalogue: alpha
+      certificates: alpha
+      charm-tracing: alpha
+      database: alpha
+      grafana: alpha
+      grafana-auth: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      metrics-endpoint: alpha
+      oauth: alpha
+      receive-ca-cert: alpha
+      replicas: alpha
+      workload-tracing: alpha
+  loki:
+    charm: loki-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: loki-k8s
+    charm-rev: 181
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: 2595afa8-71ce-4bfc-87c1-dd07dd1d7043
+    address: 10.152.183.88
+    exposed: false
+    application-status:
+      current: active
+      since: 29 Jan 2025 15:53:16-05:00
+    relations:
+      alertmanager:
+      - related-application: alertmanager
+        interface: alertmanager_dispatch
+        scope: global
+      grafana-dashboard:
+      - related-application: grafana
+        interface: grafana_dashboard
+        scope: global
+      grafana-source:
+      - related-application: grafana
+        interface: grafana_datasource
+        scope: global
+      ingress:
+      - related-application: traefik
+        interface: ingress_per_unit
+        scope: global
+      metrics-endpoint:
+      - related-application: prometheus
+        interface: prometheus_scrape
+        scope: global
+      replicas:
+      - related-application: loki
+        interface: loki_replica
+        scope: global
+    units:
+      loki/0:
+        workload-status:
+          current: active
+          since: 29 Jan 2025 15:53:16-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 15:54:31-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.31
+        provider-id: loki-0
+    version: 2.9.6
+    endpoint-bindings:
+      "": alpha
+      alertmanager: alpha
+      catalogue: alpha
+      certificates: alpha
+      charm-tracing: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      logging: alpha
+      metrics-endpoint: alpha
+      replicas: alpha
+      workload-tracing: alpha
+  prometheus:
+    charm: prometheus-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: prometheus-k8s
+    charm-rev: 221
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: 77ed90e0-1ec8-4dcd-aa66-732235dfc9c5
+    address: 10.152.183.142
+    exposed: false
+    application-status:
+      current: active
+      since: 29 Jan 2025 15:53:40-05:00
+    relations:
+      alertmanager:
+      - related-application: alertmanager
+        interface: alertmanager_dispatch
+        scope: global
+      catalogue:
+      - related-application: catalogue
+        interface: catalogue
+        scope: global
+      grafana-dashboard:
+      - related-application: grafana
+        interface: grafana_dashboard
+        scope: global
+      grafana-source:
+      - related-application: grafana
+        interface: grafana_datasource
+        scope: global
+      ingress:
+      - related-application: traefik
+        interface: ingress_per_unit
+        scope: global
+      metrics-endpoint:
+      - related-application: alertmanager
+        interface: prometheus_scrape
+        scope: global
+      - related-application: grafana
+        interface: prometheus_scrape
+        scope: global
+      - related-application: loki
+        interface: prometheus_scrape
+        scope: global
+      - related-application: traefik
+        interface: prometheus_scrape
+        scope: global
+      prometheus-peers:
+      - related-application: prometheus
+        interface: prometheus_peers
+        scope: global
+    units:
+      prometheus/0:
+        workload-status:
+          current: active
+          since: 29 Jan 2025 15:53:40-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 15:55:21-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.36
+        provider-id: prometheus-0
+    version: 2.52.0
+    endpoint-bindings:
+      "": alpha
+      alertmanager: alpha
+      catalogue: alpha
+      certificates: alpha
+      charm-tracing: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      metrics-endpoint: alpha
+      prometheus-peers: alpha
+      receive-remote-write: alpha
+      self-metrics-endpoint: alpha
+      workload-tracing: alpha
+  traefik:
+    charm: traefik-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: traefik-k8s
+    charm-rev: 223
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: dbcc6c86-e463-4155-bc41-18da3a6cb508
+    address: 10.152.183.239
+    exposed: false
+    application-status:
+      current: active
+      message: Serving at 192.168.88.12
+      since: 29 Jan 2025 16:56:22-05:00
+    relations:
+      ingress:
+      - related-application: alertmanager
+        interface: ingress
+        scope: global
+      - related-application: catalogue
+        interface: ingress
+        scope: global
+      ingress-per-unit:
+      - related-application: loki
+        interface: ingress_per_unit
+        scope: global
+      - related-application: prometheus
+        interface: ingress_per_unit
+        scope: global
+      metrics-endpoint:
+      - related-application: prometheus
+        interface: prometheus_scrape
+        scope: global
+      peers:
+      - related-application: traefik
+        interface: traefik_peers
+        scope: global
+      traefik-route:
+      - related-application: grafana
+        interface: traefik_route
+        scope: global
+    units:
+      traefik/0:
+        workload-status:
+          current: active
+          message: Serving at 192.168.88.12
+          since: 29 Jan 2025 16:56:22-05:00
+        juju-status:
+          current: idle
+          since: 29 Jan 2025 15:53:21-05:00
+          version: 3.6.1
+        leader: true
+        address: 10.1.185.52
+        provider-id: traefik-0
+    version: 2.11.0
+    endpoint-bindings:
+      "": alpha
+      certificates: alpha
+      charm-tracing: alpha
+      experimental-forward-auth: alpha
+      grafana-dashboard: alpha
+      ingress: alpha
+      ingress-per-unit: alpha
+      logging: alpha
+      metrics-endpoint: alpha
+      peers: alpha
+      receive-ca-cert: alpha
+      traefik-route: alpha
+      workload-tracing: alpha
+offers:
+  alertmanager-karma-dashboard:
+    application: alertmanager
+    charm: ch:amd64/alertmanager-k8s-138
+    endpoints:
+      karma-dashboard:
+        interface: karma_dashboard
+        role: provider
+  grafana-dashboards:
+    application: grafana
+    charm: ch:amd64/grafana-k8s-126
+    endpoints:
+      grafana-dashboard:
+        interface: grafana_dashboard
+        role: requirer
+  loki-logging:
+    application: loki
+    charm: ch:amd64/loki-k8s-181
+    endpoints:
+      logging:
+        interface: loki_push_api
+        role: provider
+  prometheus-receive-remote-write:
+    application: prometheus
+    charm: ch:amd64/prometheus-k8s-221
+    endpoints:
+      receive-remote-write:
+        interface: prometheus_remote_write
+        role: provider
+storage:
+  storage:
+    active-index-directory/2:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-f2e1b54e-5b99-4267-9757-f8aa7aba7e63
+        since: 29 Jan 2025 15:52:21-05:00
+      persistent: false
+      attachments:
+        units:
+          loki/0:
+            life: alive
+    configurations/5:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-6b56794c-e9e1-4afb-8c69-7f94c1e9c9c7
+        since: 29 Jan 2025 15:52:19-05:00
+      persistent: false
+      attachments:
+        units:
+          traefik/0:
+            life: alive
+    data/0:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-37beb771-6425-4d02-a805-7fcaba9d24af
+        since: 29 Jan 2025 15:51:49-05:00
+      persistent: false
+      attachments:
+        units:
+          alertmanager/0:
+            life: alive
+    database/1:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-36dc1ea7-8b81-4aee-9b50-fc5cfa8ced61
+        since: 29 Jan 2025 15:52:14-05:00
+      persistent: false
+      attachments:
+        units:
+          grafana/0:
+            life: alive
+    database/4:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-0bcf84f1-ff10-42ae-af43-0b0ca16e4c8b
+        since: 29 Jan 2025 15:52:18-05:00
+      persistent: false
+      attachments:
+        units:
+          prometheus/0:
+            life: alive
+    loki-chunks/3:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-346001da-5676-48e8-b1f7-2103c9104fbd
+        since: 29 Jan 2025 15:52:21-05:00
+      persistent: false
+      attachments:
+        units:
+          loki/0:
+            life: alive
+  filesystems:
+    "0":
+      provider-id: 37beb771-6425-4d02-a805-7fcaba9d24af
+      volume: "0"
+      storage: data/0
+      attachments:
+        containers:
+          alertmanager/0:
+            mount-point: /var/lib/juju/storage/data/0
+            read-only: false
+            life: alive
+        units:
+          alertmanager/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-37beb771-6425-4d02-a805-7fcaba9d24af
+        since: 29 Jan 2025 15:51:49-05:00
+    "1":
+      provider-id: 36dc1ea7-8b81-4aee-9b50-fc5cfa8ced61
+      volume: "1"
+      storage: database/1
+      attachments:
+        containers:
+          grafana/0:
+            mount-point: /var/lib/juju/storage/database/0
+            read-only: false
+            life: alive
+        units:
+          grafana/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-36dc1ea7-8b81-4aee-9b50-fc5cfa8ced61
+        since: 29 Jan 2025 15:52:14-05:00
+    "2":
+      provider-id: f2e1b54e-5b99-4267-9757-f8aa7aba7e63
+      volume: "2"
+      storage: active-index-directory/2
+      attachments:
+        containers:
+          loki/0:
+            mount-point: /var/lib/juju/storage/active-index-directory/0
+            read-only: false
+            life: alive
+        units:
+          loki/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-f2e1b54e-5b99-4267-9757-f8aa7aba7e63
+        since: 29 Jan 2025 15:52:21-05:00
+    "3":
+      provider-id: 346001da-5676-48e8-b1f7-2103c9104fbd
+      volume: "3"
+      storage: loki-chunks/3
+      attachments:
+        containers:
+          loki/0:
+            mount-point: /var/lib/juju/storage/loki-chunks/0
+            read-only: false
+            life: alive
+        units:
+          loki/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-346001da-5676-48e8-b1f7-2103c9104fbd
+        since: 29 Jan 2025 15:52:21-05:00
+    "4":
+      provider-id: 0bcf84f1-ff10-42ae-af43-0b0ca16e4c8b
+      volume: "4"
+      storage: database/4
+      attachments:
+        containers:
+          prometheus/0:
+            mount-point: /var/lib/juju/storage/database/0
+            read-only: false
+            life: alive
+        units:
+          prometheus/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-0bcf84f1-ff10-42ae-af43-0b0ca16e4c8b
+        since: 29 Jan 2025 15:52:18-05:00
+    "5":
+      provider-id: 6b56794c-e9e1-4afb-8c69-7f94c1e9c9c7
+      volume: "5"
+      storage: configurations/5
+      attachments:
+        containers:
+          traefik/0:
+            mount-point: /var/lib/juju/storage/configurations/0
+            read-only: false
+            life: alive
+        units:
+          traefik/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        message: Successfully provisioned volume pvc-6b56794c-e9e1-4afb-8c69-7f94c1e9c9c7
+        since: 29 Jan 2025 15:52:19-05:00
+  volumes:
+    "0":
+      provider-id: pvc-37beb771-6425-4d02-a805-7fcaba9d24af
+      storage: data/0
+      attachments:
+        containers:
+          alertmanager/0:
+            read-only: false
+            life: alive
+        units:
+          alertmanager/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:51:49-05:00
+    "1":
+      provider-id: pvc-36dc1ea7-8b81-4aee-9b50-fc5cfa8ced61
+      storage: database/1
+      attachments:
+        containers:
+          grafana/0:
+            read-only: false
+            life: alive
+        units:
+          grafana/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:52:14-05:00
+    "2":
+      provider-id: pvc-f2e1b54e-5b99-4267-9757-f8aa7aba7e63
+      storage: active-index-directory/2
+      attachments:
+        containers:
+          loki/0:
+            read-only: false
+            life: alive
+        units:
+          loki/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:52:21-05:00
+    "3":
+      provider-id: pvc-346001da-5676-48e8-b1f7-2103c9104fbd
+      storage: loki-chunks/3
+      attachments:
+        containers:
+          loki/0:
+            read-only: false
+            life: alive
+        units:
+          loki/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:52:21-05:00
+    "4":
+      provider-id: pvc-0bcf84f1-ff10-42ae-af43-0b0ca16e4c8b
+      storage: database/4
+      attachments:
+        containers:
+          prometheus/0:
+            read-only: false
+            life: alive
+        units:
+          prometheus/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:52:18-05:00
+    "5":
+      provider-id: pvc-6b56794c-e9e1-4afb-8c69-7f94c1e9c9c7
+      storage: configurations/5
+      attachments:
+        containers:
+          traefik/0:
+            read-only: false
+            life: alive
+        units:
+          traefik/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 29 Jan 2025 15:52:19-05:00
+controller:
+  timestamp: 17:17:42-05:00
