@@ -13,7 +13,7 @@ import yaml
 from rich.console import Console
 from rich.logging import RichHandler
 
-from juju_doctor.fetcher import Probe, ProbeCategory, fetch_probes
+from juju_doctor.fetcher import Fetcher, Probe, ProbeCategory
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -28,6 +28,7 @@ def _print(message: str, format: Optional[str], *args, **kwargs):
     """Print a message based on the output format."""
     if not format:
         console.print(message, *args, **kwargs)
+
 
 def _print_formatted(message, format: Optional[str], *args, **kwargs):
     """Print a formatted message based on the output format."""
@@ -120,6 +121,7 @@ def check(
         json_result = {}
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
+        fetcher = Fetcher(probes_folder)
         log.info(f"Created temporary folder: {temp_folder}")
 
         input_data: Dict[str, Optional[str]] = {}
@@ -137,7 +139,7 @@ def check(
         total_failed = 0
         probes: List[Probe] = []
         for probe_uri in probe_uris:
-            probes.extend(fetch_probes(uri=probe_uri, destination=probes_folder))
+            probes.extend(fetcher.fetch_probes(uri=probe_uri))
 
         # Run one category of probes at a time
         for category in ProbeCategory:

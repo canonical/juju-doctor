@@ -2,16 +2,17 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from fetcher import fetch_probes
+from fetcher import Fetcher
 
 
 @pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
 def test_parse_gh_file(category):
-    # GIVEN a probe file specified in a Github remote for a specific branch
-    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}/failing.py"
+    # GIVEN a probe file specified in a Github remote on the main branch
+    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}/failing.py?main"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -25,11 +26,12 @@ def test_parse_gh_file(category):
 
 @pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
 def test_parse_gh_dir(category):
-    # GIVEN a probe directory specified in a Github remote
-    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}"
+    # GIVEN a probe directory specified in a Github remote on the main branch
+    probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN 2 probe exists
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
