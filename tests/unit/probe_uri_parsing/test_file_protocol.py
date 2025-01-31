@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from fetcher import fetch_probes
+from fetcher import Fetcher
 
 
 @pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
@@ -10,8 +10,9 @@ def test_parse_file_file(category):
     # GIVEN a local probe file
     probe_uri = f"file://tests/resources/{category}/failing.py"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -28,8 +29,9 @@ def test_parse_file_dir(category):
     # GIVEN a local probe file with the file protocol
     probe_uri = f"file://tests/resources/{category}"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = fetch_probes(uri=probe_uri, destination=Path(tmpdir))
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN 2 probes exist
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
