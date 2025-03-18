@@ -11,7 +11,7 @@ from urllib.parse import ParseResult, urlparse
 
 import fsspec
 
-from src.juju_doctor.probes import Probe
+from juju_doctor.probes import Probe
 
 log = logging.getLogger(__name__)
 

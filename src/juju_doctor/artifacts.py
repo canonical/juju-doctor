@@ -71,22 +71,25 @@ class ModelArtifact:
 class Artifacts:
     """Wrapper around all input artifacts."""
 
-    artifacts: Dict[str, ModelArtifact] = {}
+    artifacts: Dict[str, ModelArtifact]
 
     def statuses(self) -> Optional[Dict[str, Dict]]:
         """Get the Juju status for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
             result[model] = model_artifact.status
+        return result
 
     def bundles(self) -> Optional[Dict[str, Dict]]:
         """Get the Juju bundle for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
             result[model] = model_artifact.bundle
+        return result
 
     def show_units(self) -> Optional[Dict[str, Dict]]:
         """Get the Juju show-units for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
             result[model] = model_artifact.show_units
+        return result

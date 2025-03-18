@@ -104,6 +104,7 @@ def check(
         # Run the probes
         total_passed = 0
         total_failed = 0
+
         for probe in probes:
             try:
                 probe.run(artifacts)
@@ -129,3 +130,7 @@ def check(
     json_result = {"passed": total_passed, "failed": total_failed}
     _print(f"\nTotal: :green_circle: {total_passed} :red_circle: {total_failed}", format=format)
     _print_formatted(json.dumps(json_result), format=format)
+
+
+if __name__ == "__main__":
+    app()

@@ -2,12 +2,18 @@
 
 import importlib.util
 import inspect
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.juju_doctor.artifacts import Artifacts
+from rich.logging import RichHandler
+
+from juju_doctor.artifacts import Artifacts
 
 SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
+
+logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,15 +32,22 @@ class Probe:
         if not spec:
             raise ValueError(f"Probe not found at its 'path': {self}")
         module = importlib.util.module_from_spec(spec)
-        # spec.loader.exec_module(module)
+        if spec.loader:
+            spec.loader.exec_module(module)
         functions = inspect.getmembers(module, inspect.isfunction)
         for name, func in functions:
             match name:
                 case "status":
+                    if not artifacts.statuses():
+                        raise Exception("No 'juju status' artifacts have been provided.")
                     func(artifacts.statuses())
                 case "bundle":
+                    if not artifacts.bundles():
+                        raise Exception("No 'juju bundle' artifacts have been provided.")
                     func(artifacts.bundles())
                 case "show_unit":
+                    if not artifacts.bundles():
+                        raise Exception("No 'juju show-unit' artifacts have been provided.")
                     func(artifacts.show_units())
                 case _:
                     continue
