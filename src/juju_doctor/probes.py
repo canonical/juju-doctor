@@ -1,3 +1,5 @@
+"""Helper module to wrap and execute probes."""
+
 import importlib.util
 import inspect
 from dataclasses import dataclass
