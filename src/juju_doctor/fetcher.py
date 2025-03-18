@@ -4,43 +4,21 @@
 """Helper module to fetch probes from local or remote endpoints."""
 
 import logging
-from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from urllib.error import URLError
 from urllib.parse import ParseResult, urlparse
 
 import fsspec
 
+from src.juju_doctor.probes import Probe
+
 log = logging.getLogger(__name__)
-
-
-class ProbeCategory(Enum):
-    """Different categories of probes."""
-
-    STATUS = "status"
-    BUNDLE = "bundle"
-    SHOW_UNIT = "show-unit"
-
-
-@dataclass
-class Probe:
-    """A probe that can be executed via juju-doctor."""
-
-    name: str
-    category: Optional[ProbeCategory]
-    uri: str
-    original_path: Path
-    local_path: Path
-
-    def is_category(self, category: ProbeCategory) -> bool:
-        """Check if the Probe belongs to the specified category."""
-        return self.category == category
 
 
 class Fetcher(object):
     """A fetcher which uses protocols for obtaining a remote FS to copy to a local one."""
+
     def __init__(self, destination: Path):
         """Build a fetcher object.
 
@@ -50,7 +28,7 @@ class Fetcher(object):
         self.destination = destination
 
     def _get_filesystem(
-        self, filesystem: fsspec.filesystem, path: Path, local_path: Path, parsed_uri: ParseResult
+        self, filesystem: fsspec.AbstractFileSystem, path: Path, local_path: Path, parsed_uri: ParseResult
     ):
         try:
             # If path ends with a "/", it will be assumed to be a directory
@@ -58,13 +36,13 @@ class Fetcher(object):
             # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
             filesystem.get(path.as_posix(), local_path.as_posix(), recursive=True, auto_mkdir=True)
         except FileNotFoundError as e:
-            log.warn(
+            log.warning(
                 f"{e} file not found when attempting to copy '{path.as_posix()}' to '{local_path.as_posix()}'"
             )
             raise
 
     def _build_probes(
-        self, filesystem: fsspec.filesystem, uri: str, path: Path, local_path: Path
+        self, filesystem: fsspec.AbstractFileSystem, uri: str, path: Path, local_path: Path
     ) -> List[Probe]:
         if filesystem.isfile(path.as_posix()):
             probe_files = [local_path]
@@ -73,20 +51,11 @@ class Fetcher(object):
 
         probes = []
         for probe_path in probe_files:
-            # NOTE: very naive category recognition
-            category = None
-            if ProbeCategory.STATUS.value in probe_path.as_posix():
-                category = ProbeCategory.STATUS
-            if ProbeCategory.BUNDLE.value in probe_path.as_posix():
-                category = ProbeCategory.BUNDLE
-            if ProbeCategory.SHOW_UNIT.value in probe_path.as_posix():
-                category = ProbeCategory.SHOW_UNIT
             probe = Probe(
                 name=probe_path.relative_to(self.destination).as_posix(),
-                category=category,
                 uri=uri,
                 original_path=Path(path),
-                local_path=probe_path,
+                path=probe_path,
             )
             log.info(f"Fetched probe: {probe}")
             probes.append(probe)

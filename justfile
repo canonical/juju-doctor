@@ -31,6 +31,6 @@ unit:
   uv run $uv_flags coverage report
 
 # Run solution tests
-solution:
+test:
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/solution
   uv run $uv_flags coverage report
