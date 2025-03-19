@@ -26,14 +26,23 @@ class Probe:
     path: Path  # path in the temporary folder
 
     def run(self, artifacts: Artifacts):
-        """Run the probe."""
+        """Dynamically load a Python script from self.path, making its functions available.
+
+        Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`.
+
+        We need to import the module dynamically with the 'spec' mechanism because the path
+        of the probe is only known at runtime.
+        """
         module_name = "probe"
+        # Get the spec (metadata) for Python to be able to import the probe as a module
         spec = importlib.util.spec_from_file_location(module_name, self.path.resolve())
         if not spec:
             raise ValueError(f"Probe not found at its 'path': {self}")
+        # Import the module dynamically
         module = importlib.util.module_from_spec(spec)
         if spec.loader:
             spec.loader.exec_module(module)
+        # Get the functions defined in the probe module
         functions = inspect.getmembers(module, inspect.isfunction)
         for name, func in functions:
             match name:

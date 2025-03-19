@@ -30,7 +30,7 @@ test: unit solution
 
 # Run unit tests
 unit:
-  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit/information_gathering
+  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit
   uv run $uv_flags coverage report
 
 # Run solution tests
