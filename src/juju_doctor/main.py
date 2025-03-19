@@ -132,5 +132,11 @@ def check(
     _print_formatted(json.dumps(json_result), format=format)
 
 
+@app.command()
+def help():
+    """Show the help information for juju-doctor."""
+    app().help()
+
+
 if __name__ == "__main__":
     app()

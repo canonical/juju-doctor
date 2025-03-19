@@ -9,7 +9,7 @@ import yaml
 # pyright: reportAttributeAccessIssue=false
 
 
-def _read_yaml_file(filename: Optional[str]) -> Optional[Dict]:
+def _read_file(filename: Optional[str]) -> Optional[Dict]:
     """Read a file into a string."""
     if not filename:
         return None
@@ -61,9 +61,9 @@ class ModelArtifact:
     ) -> "ModelArtifact":
         """Gather information from static files."""
         return ModelArtifact(
-            status=_read_yaml_file(status_file) or None,
-            bundle=_read_yaml_file(bundle_file) or None,
-            show_units=_read_yaml_file(show_unit_file) or None,
+            status=_read_file(status_file) or None,
+            bundle=_read_file(bundle_file) or None,
+            show_units=_read_file(show_unit_file) or None,
         )
 
 
