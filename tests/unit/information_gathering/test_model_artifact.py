@@ -1,10 +1,9 @@
-import tempfile
-from pathlib import Path
 
-import pytest
-from juju_doctor.artifacts import ModelArtifact
 from unittest.mock import MagicMock, mock_open, patch
+
 import yaml
+
+from juju_doctor.artifacts import ModelArtifact
 
 JUJU_STATUS = """
 model:

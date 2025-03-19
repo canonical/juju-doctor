@@ -1,6 +1,5 @@
 import json
 
-import pytest
 from main import app
 from typer.testing import CliRunner
 
