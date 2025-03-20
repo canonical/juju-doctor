@@ -33,18 +33,18 @@ def check(
         List[str],
         typer.Option("--model", "-m", help="Model on which to run live checks"),
     ] = [],
-    status_file: Annotated[
-        Optional[str],
+    status_files: Annotated[
+        List[str],
         typer.Option("--status", help="Juju status in a .yaml format"),
-    ] = None,
-    bundle_file: Annotated[
-        Optional[str],
+    ] = [],
+    bundle_files: Annotated[
+        List[str],
         typer.Option("--bundle", help="Juju bundle in a .yaml format"),
-    ] = None,
-    show_unit_file: Annotated[
-        Optional[str],
+    ] = [],
+    show_unit_files: Annotated[
+        List[str],
         typer.Option("--show-unit", help="Juju show-unit in a .yaml format"),
-    ] = None,
+    ] = [],
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output."),
@@ -56,7 +56,7 @@ def check(
 ):
     """Run checks on a certain model."""
     # Input validation
-    if models and any([status_file, bundle_file, show_unit_file]):
+    if models and any([status_files, bundle_files, show_unit_files]):
         raise Exception("If you pass a live model with --model, you cannot pass static files.")
 
     # Gather the input
@@ -67,15 +67,13 @@ def check(
             input[model] = model_artifact
         artifacts = Artifacts(input)
     else:
-        artifacts = Artifacts(
-            {
-                "(none)": ModelArtifact.from_files(
-                    status_file=status_file,
-                    bundle_file=bundle_file,
-                    show_unit_file=show_unit_file,
-                )
-            }
-        )
+        for f in status_files:
+            input[f] = ModelArtifact.from_files(status_file=f)
+        for f in bundle_files:
+            input[f] = ModelArtifact.from_files(bundle_file=f)
+        for f in show_unit_files:
+            input[f] = ModelArtifact.from_files(show_unit_file=f)
+        artifacts = Artifacts(input)
 
     # Gather the probes
     probes: List[Probe] = []
