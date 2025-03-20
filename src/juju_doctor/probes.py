@@ -87,15 +87,15 @@ class Probe:
         """Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`."""
         # Silence the result printing if needed
         results: List[ProbeResults] = []
-        for name, func in self.functions.items():
+        for func_name, func in self.functions.items():
             # Get the artifact needed by the probe, and fail if it's missing
-            artifact = getattr(artifacts, name)
+            artifact = getattr(artifacts, func_name)
             if not artifact:
                 results.append(
                     ProbeResults(
-                        probe_name=self.name,
+                        probe_name=f"{self.name}/{func_name}",
                         passed=False,
-                        exception=Exception(f"No '{name}' artifacts have been provided."),
+                        exception=Exception(f"No '{func_name}' artifacts have been provided."),
                     )
                 )
                 continue
@@ -103,7 +103,7 @@ class Probe:
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(ProbeResults(probe_name=self.name, passed=False, exception=e))
+                results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=False, exception=e))
             else:
-                results.append(ProbeResults(probe_name=self.name, passed=True))
+                results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=True))
         return results
