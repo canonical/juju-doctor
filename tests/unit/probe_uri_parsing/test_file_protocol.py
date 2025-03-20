@@ -4,7 +4,7 @@ from pathlib import Path
 from fetcher import Fetcher
 
 
-def test_parse_file_file():
+def test_parse_file():
     # GIVEN a local probe file
     probe_uri = "file://tests/resources/failing.py"
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -21,7 +21,7 @@ def test_parse_file_file():
         assert probe.path == Path(tmpdir) / probe.name
 
 
-def test_parse_file_dir():
+def test_parse_dir():
     # GIVEN a local probe file with the file protocol
     probe_uri = "file://tests/resources"
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -6,7 +6,7 @@ from fetcher import Fetcher
 
 
 @pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
-def test_parse_gh_file(category):
+def test_parse_file(category):
     # GIVEN a probe file specified in a Github remote on the main branch
     probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}/failing.py?main"
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -24,7 +24,7 @@ def test_parse_gh_file(category):
 
 
 @pytest.mark.parametrize("category", ["status", "bundle", "show-unit"])
-def test_parse_gh_dir(category):
+def test_parse_dir(category):
     # GIVEN a probe directory specified in a Github remote on the main branch
     probe_uri = f"github://canonical/juju-doctor//tests/resources/{category}?main"
     with tempfile.TemporaryDirectory() as tmpdir:

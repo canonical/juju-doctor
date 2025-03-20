@@ -149,6 +149,7 @@ def test_model_artifact_parsing_from_file():
 
 def test_model_artifact_parsing_from_live_model():
     def _juju_side_effect(command, *args, **kwargs):
+        """Dashes `-` are not allowed in chained commands from the `sh` module."""
         if command == "export-bundle":
             return JUJU_EXPORT_BUNDLE
         if command == "show-unit":
