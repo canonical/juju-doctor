@@ -22,4 +22,4 @@ def test_check_gh_probe_fails():
     assert result.exit_code == 0
     # AND the Probe was correctly executed
     check = json.loads(result.stdout)
-    assert check == {"failed": 1, "passed": 0}
+    assert check == {"failed": 3, "passed": 0}

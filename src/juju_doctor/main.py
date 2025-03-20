@@ -12,7 +12,7 @@ from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
 from juju_doctor.fetcher import Fetcher
-from juju_doctor.probes import Probe
+from juju_doctor.probes import Probe, ProbeResults
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -21,22 +21,6 @@ log = logging.getLogger(__name__)
 
 app = typer.Typer()
 console = Console()
-
-
-def _print(message: str, format: Optional[str], *args, **kwargs):
-    """Print a message based on the output format."""
-    if not format:
-        console.print(message, *args, **kwargs)
-
-
-def _print_formatted(message, format: Optional[str], *args, **kwargs):
-    """Print a formatted message based on the output format."""
-    if format:
-        match format.lower():
-            case "json":
-                console.print(message, end="", *args, **kwargs)
-            case _:
-                raise NotImplementedError
 
 
 @app.command()
@@ -103,34 +87,22 @@ def check(
             probes.extend(fetcher.fetch_probes(uri=probe_uri))
 
         # Run the probes
-        total_passed = 0
-        total_failed = 0
-
+        probe_results: List[ProbeResults] = []
         for probe in probes:
-            try:
-                probe.run(artifacts)
-                total_passed += 1
-                _print(f":green_circle: {probe.name} succeeded", format=format)
-            except Exception as e:
-                total_failed += 1
-                if verbose:
-                    _print(f":red_circle: {probe.name} failed", format=format)
-                    _print(f"[b]Exception[/b]: {e}", format=format)
-                else:
-                    _print(f":red_circle: {probe.name} failed ", format=format, end="")
-                    _print(
-                        f"({e}",
-                        format=format,
-                        overflow="ellipsis",
-                        no_wrap=True,
-                        width=40,
-                        end="",
-                    )
-                    _print(")", format=format)
+            current_results: List[ProbeResults] = probe.run(artifacts)
+            for r in current_results:
+                if not format:
+                    r.print(verbose=verbose)
+            probe_results.extend(current_results)
 
-    json_result = {"passed": total_passed, "failed": total_failed}
-    _print(f"\nTotal: :green_circle: {total_passed} :red_circle: {total_failed}", format=format)
-    _print_formatted(json.dumps(json_result), format=format)
+    total_passed = len([pr for pr in probe_results if pr.passed])
+    total_failed = len([pr for pr in probe_results if not pr.passed])
+    match format:
+        case "json":
+            json_result = {"passed": total_passed, "failed": total_failed}
+            console.print(json.dumps(json_result))
+        case _:
+            console.print(f"\nTotal: :green_circle: {total_passed} :red_circle: {total_failed}")
 
 
 @app.command()

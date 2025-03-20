@@ -23,4 +23,4 @@ def test_check_file_probe_fails():
     assert result.exit_code == 0
     check = json.loads(result.stdout)
     # AND the Probe was correctly executed
-    assert check == {"failed": 1, "passed": 0}
+    assert check == {"failed": 3, "passed": 0}
