@@ -9,18 +9,42 @@ Here's some typical usage examples:
 
 ```bash
 ∮ juju-doctor check --help # displays the help
+```
 
-# Get the probes and models information from a config file
-∮ juju-doctor check
+You can run `juju-doctor` against a solution archive:
 
-# Run a local probe against multiple models
-∮ juju-doctor check --model cos --model mymodel --probe file://some_probe.py
+```
+∮ juju-doctor check --verbose \
+    --probe file://tests/resources/failing.py \
+    --probe file://tests/resources/passing.py \
+    --status=status.yaml \
+    --status=status.yaml
+```
+If you have a live deplyoment, you can also run `juju-doctor` against that:
+```
+∮ juju-doctor check --verbose \
+    --probe file://tests/resources/failing.py \
+    --probe file://tests/resources/passing.py \
+    --model testy \
+    --model testy-two
+```
+In either case, the output will look like so:
+```
+🔴 tests_resources_failing.py/bundle failed
+Exception: Bundle probe here, something went wrong
+🔴 tests_resources_failing.py/show_unit failed
+Exception: I'm the show-unit probe, bad things happened
+🔴 tests_resources_failing.py/status failed
+Exception: I'm the status probe, and I failed
+🟢 tests_resources_passing.py/bundle passed
+🟢 tests_resources_passing.py/show_unit passed
+🟢 tests_resources_passing.py/status passed
+```
+
+The path to a probe can also be a url:
+```
 # Run a remote probe against a live model
 ∮ juju-doctor check --model cos --probe github://canonical/grafana-k8s-operator//probes/some_probe.py
-
-# Run a probe against partial information
-∮ juju-doctor check --status juju-status.yaml --probe file://some_probe.py
-∮ juju-doctor check --status juju-status.yaml --bundle juju-export-bundle.yaml --probe file://some_probe.py
 ```
 
 ## Writing Probes
