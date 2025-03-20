@@ -25,6 +25,9 @@ alias fmt := format
 format:
   uv run $uv_flags ruff check --fix-only
 
+# Run all tests
+test: unit solution
+
 # Run unit tests
 unit:
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit

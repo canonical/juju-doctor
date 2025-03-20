@@ -23,9 +23,8 @@ jobs:
           sudo snap install --classic astral-uv
           sudo snap install --classic just
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
-        with:
-          test-type: lint
+        run: just lint
+        
 
   unit-tests:
     name: Unit tests
@@ -43,10 +42,10 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
           sudo snap install --classic just
+          sudo snap install juju  # mocking 'sh' fails without this
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
-        with:
-          test-type: unit
+        run: just unit
+
 
   solution-tests:
     name: Solution tests
@@ -65,6 +64,5 @@ jobs:
           sudo snap install --classic astral-uv
           sudo snap install --classic just
       - name: Run tests
-        uses: canonical/juju-doctor/.github/actions/run-task@main
-        with:
-          test-type: solution
+        run: just solution
+
