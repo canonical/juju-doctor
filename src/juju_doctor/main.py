@@ -80,9 +80,8 @@ def check(
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
-        fetcher = Fetcher(probes_folder)
         for probe_uri in probe_uris:
-            probes.extend(fetcher.fetch_probes(uri=probe_uri))
+            probes.extend(Fetcher.fetch_probes(destination=probes_folder, uri=probe_uri))
 
         # Run the probes
         probe_results: List[ProbeResults] = []
