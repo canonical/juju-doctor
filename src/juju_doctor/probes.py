@@ -64,8 +64,8 @@ class ProbeFS:
         """Parse the URI to determine relative and local paths, ensuring proper formatting.
 
         Args:
-            destination (Path): the file path for the probes on the local FS.
-            uri (str): a string representing the Probe's URI.
+            destination: the file path for the probes on the local FS.
+            uri: a string representing the Probe's URI.
         """
         self.destination: Path = destination
         self.uri: str = uri
@@ -105,10 +105,6 @@ class ProbeFS:
                 raise NotImplementedError
 
         return filesystem
-
-    def probe_name_as_posix(self) -> str:
-        """Return the relative path of the Probe to use as its name."""
-        return probe_name_as_posix(self.destination, self.rel_path)
 
 
 @dataclass
