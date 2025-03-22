@@ -8,8 +8,9 @@ def test_parse_file():
     # GIVEN a probe file specified in a Github remote on the main branch
     probe_uri = "github://canonical/juju-doctor//tests/resources/failing.py?main"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = Fetcher.fetch_probes(destination=Path(tmpdir), uri=probe_uri)
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -24,8 +25,9 @@ def test_parse_dir():
     # GIVEN a probe directory specified in a Github remote on the main branch
     probe_uri = "github://canonical/juju-doctor//tests/resources?main"
     with tempfile.TemporaryDirectory() as tmpdir:
+        fetcher = Fetcher(Path(tmpdir))
         # WHEN the probes are fetched to a local filesystem
-        probes = Fetcher.fetch_probes(destination=Path(tmpdir), uri=probe_uri)
+        probes = fetcher.fetch_probes(uri=probe_uri)
         # THEN 2 probe exists
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
