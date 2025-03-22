@@ -121,8 +121,6 @@ class Fetcher(object):
         if probe_fs.filesystem.isfile(probe_fs.rel_path.as_posix()):
             probe_files = [probe_fs.local_path]
         else:
-            # TODO Ideally we have Probe.extensions include all suffixes
-            #   and Ruleset.extensions include just YAML(s) -> creates circular dep
             probe_files: List[Path] = [
                 f for f in probe_fs.local_path.rglob("*") if f.suffix.lower() in [".py"] + RuleSet.extensions
             ]

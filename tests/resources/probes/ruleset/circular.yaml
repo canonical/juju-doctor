@@ -1,5 +1,5 @@
-name: A declarative deployment RuleSet (calling other RuleSets)
+name: A declarative deployment RuleSet
 probes:
-  - name: Some local ruleset
+  - name: Local ruleset (calling a circular RuleSet chain)
     type: ruleset
     uri: file://tests/resources/probes/ruleset/circular.yaml

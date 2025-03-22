@@ -7,11 +7,6 @@ from fetcher import Fetcher
 
 # TODO Find a good dir structure or make the probe paths dynamic (lot of work to update paths on changes)
 def test_ruleset_calls_scriptlet_file():
-    # TODO We should cover the probe naming in a test for:
-    #   1. nested (once and twice) in ruleset
-    #   2. direct python probe
-    #   Then never check the naming semantics again in tests.
-
     # GIVEN a ruleset probe file calls scriptlets
     probe_uri = "file://tests/resources/probes/ruleset/scriptlet.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
