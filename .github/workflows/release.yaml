@@ -7,7 +7,7 @@ name: Release to PyPI
 on:
   pull_request:
     branches:
-      - feat/pypi-ci
+      - main
 
 jobs:
   quality:
