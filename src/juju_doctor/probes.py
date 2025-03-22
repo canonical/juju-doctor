@@ -23,6 +23,11 @@ log = logging.getLogger(__name__)
 console = Console()
 
 
+def probe_name_as_posix(destination: Path, rel_path: Path) -> str:
+    """Return the relative path of the Probe to use as its name."""
+    return rel_path.relative_to(destination).as_posix()
+
+
 @dataclass
 class ProbeResults:
     """A helper class to wrap results for a Probe."""
@@ -59,8 +64,8 @@ class ProbeFS:
         """Parse the URI to determine relative and local paths, ensuring proper formatting.
 
         Args:
-            destination: the file path for the probes on the local FS.
-            uri: a string representing the Probe's URI.
+            destination (Path): the file path for the probes on the local FS.
+            uri (str): a string representing the Probe's URI.
         """
         self.destination: Path = destination
         self.uri: str = uri
@@ -101,6 +106,10 @@ class ProbeFS:
 
         return filesystem
 
+    def probe_name_as_posix(self) -> str:
+        """Return the relative path of the Probe to use as its name."""
+        return probe_name_as_posix(self.destination, self.rel_path)
+
 
 @dataclass
 class Probe:
@@ -111,8 +120,7 @@ class Probe:
     original_path: Path  # path in the source folder
     path: Path  # path in the temporary folder
 
-    @property
-    def functions(self) -> Dict:
+    def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -140,7 +148,7 @@ class Probe:
         """Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`."""
         # Silence the result printing if needed
         results: List[ProbeResults] = []
-        for func_name, func in self.functions.items():
+        for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:

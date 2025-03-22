@@ -1,0 +1,5 @@
+name: A declarative deployment RuleSet (calling other RuleSets)
+probes:
+  - name: Some local ruleset
+    type: ruleset
+    uri: file://tests/resources/probes/ruleset/scriptlet.yaml

@@ -13,10 +13,10 @@ def test_check_file_probe_fails():
         "--format",
         "json",
         "--probe",
-        "file://tests/resources/failing.py",
-        "--status=tests/resources/status.yaml",
-        "--bundle=tests/resources/bundle.yaml",
-        "--show-unit=tests/resources/show-unit.yaml",
+        "file://tests/resources/probes/python/failing.py",
+        "--status=tests/resources/artifacts/status.yaml",
+        "--bundle=tests/resources/artifacts/bundle.yaml",
+        "--show-unit=tests/resources/artifacts/show-unit.yaml",
     ]
     result = runner.invoke(app, test_args)
     # THEN the command succeeds

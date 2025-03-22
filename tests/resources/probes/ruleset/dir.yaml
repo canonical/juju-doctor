@@ -1,0 +1,5 @@
+name: A declarative deployment RuleSet
+probes:
+  - name: Some local probe
+    type: scriptlet
+    uri: file://tests/resources/probes/ruleset/small-dir

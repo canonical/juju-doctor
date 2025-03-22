@@ -13,9 +13,10 @@ def test_check_gh_probe_fails():
         "--format",
         "json",
         "--probe",
-        "github://canonical/juju-doctor//tests/resources/failing.py",
+        # FIXME: switch probe back to main branch
+        "github://canonical/juju-doctor//tests/resources/probes/python/failing.py?feat/ruleset",
         "--status",
-        "tests/resources/status.yaml",
+        "tests/resources/artifacts/status.yaml",
     ]
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
