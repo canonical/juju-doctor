@@ -1,5 +1,3 @@
-# TODO Ref from: https://github.com/canonical/cos-lib/blob/main/.github/workflows/release.yaml
-# https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 name: Release to PyPI
 
 # on:
