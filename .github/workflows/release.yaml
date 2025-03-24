@@ -1,0 +1,67 @@
+name: Release to PyPI
+
+on:
+  release:
+    types:
+    - published
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality-checks.yaml
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+    needs: 
+    - quality
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install pypa/build
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+      - name: Build a binary wheel and a source tarball
+        run: python3 -m build
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/juju-doctor
+    permissions:
+      id-token: write  # mandatory for trusted publishing
+    steps:
+    - name: Auto set pyproject.toml version from tag
+      # Ref: https://github.com/grst/python-ci-versioneer
+      run: |
+        # from refs/tags/1.2.3 get 1.2.3
+        VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
+        echo "Setting version to $VERSION"
+        PLACEHOLDER='^version\s*=.*'
+        # ensure the placeholder is there. If grep doesn't find the placeholder
+        # it exits with exit code 1 and github actions aborts the build.
+        grep -E "$PLACEHOLDER" pyproject.toml
+        sed -i -e "s/^\(version\s*=\).*/\1 \"${VERSION}\"/g" pyproject.toml
+      shell: bash
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
