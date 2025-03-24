@@ -1,15 +1,9 @@
 name: Release to PyPI
 
-# TODO Uncomment
-# on:
-#   release:
-#     types: [published]
-
-# TODO Remove
 on:
-  pull_request:
-    branches:
-      - main
+  release:
+    types:
+    - published
 
 jobs:
   quality:
@@ -43,7 +37,6 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
     - build
     runs-on: ubuntu-latest
@@ -53,6 +46,18 @@ jobs:
     permissions:
       id-token: write  # mandatory for trusted publishing
     steps:
+    - name: Auto set pyproject.toml version from tag
+      # Ref: https://github.com/grst/python-ci-versioneer
+      run: |
+        # from refs/tags/1.2.3 get 1.2.3
+        VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
+        echo "Setting version to $VERSION"
+        PLACEHOLDER='^version\s*=.*'
+        # ensure the placeholder is there. If grep doesn't find the placeholder
+        # it exits with exit code 1 and github actions aborts the build.
+        grep -E "$PLACEHOLDER" pyproject.toml
+        sed -i -e "s/^\(version\s*=\).*/\1 \"${VERSION}\"/g" pyproject.toml
+      shell: bash
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
