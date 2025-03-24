@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from fetcher import Fetcher
+from juju_doctor.probes import Probe
 
 
 def test_parse_file():
@@ -9,7 +9,7 @@ def test_parse_file():
     probe_uri = "github://canonical/juju-doctor//tests/resources/failing.py?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Fetcher.fetch_probes(destination=Path(tmpdir), uri=probe_uri)
+        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -25,7 +25,7 @@ def test_parse_dir():
     probe_uri = "github://canonical/juju-doctor//tests/resources?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Fetcher.fetch_probes(destination=Path(tmpdir), uri=probe_uri)
+        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
         # THEN 2 probe exists
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
