@@ -13,7 +13,7 @@ def test_check_gh_probe_fails():
         "--format",
         "json",
         "--probe",
-        "file://tests/resources/failing.py",  # FIXME: change this to github:// after the PR is merged
+        "github://canonical/juju-doctor//tests/resources/failing.py",
         "--status",
         "tests/resources/status.yaml",
     ]
