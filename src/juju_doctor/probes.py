@@ -6,14 +6,14 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
-from urllib.error import URLError
-from urllib.parse import ParseResult, urlparse
+from urllib.parse import urlparse
 
 import fsspec
 from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
+from juju_doctor.fetcher import copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
 
@@ -120,7 +120,56 @@ class Probe:
     original_path: Path  # path in the source folder
     path: Path  # path in the temporary folder
 
-    def get_functions(self) -> Dict:
+    @staticmethod
+    def from_uri(uri: str, probes_root: Path) -> List["Probe"]:
+        """Build a set of Probes from a URI.
+
+        This function parses the URI to construct a generic 'filesystem' object,
+        that allows us to interact with files regardless of whether they are on
+        local disk or on GitHub.
+
+        Then, it copies the parsed probes to a subfolder inside 'probes_root', and
+        return a list of Probe items for each probe that was copied.
+
+        Args:
+            uri: a string representing the Probe's URI.
+            probes_root: the root folder for the probes on the local FS.
+        """
+        # Get the fsspec.AbstractFileSystem for the Probe's protocol
+        parsed_uri = urlparse(uri)
+        uri_without_scheme = parsed_uri.netloc + parsed_uri.path
+        uri_flattened = uri_without_scheme.replace("/", "_")
+        match parsed_uri.scheme:
+            case "file":
+                path = Path(uri_without_scheme)
+                filesystem = fsspec.filesystem(protocol="file")
+            case "github":
+                branch = parsed_uri.query or "main"
+                org, repo, path = parse_terraform_notation(uri_without_scheme)
+                path = Path(path)
+                filesystem = fsspec.filesystem(
+                    protocol="github", org=org, repo=repo, sha=f"refs/heads/{branch}"
+                )
+            case _:
+                raise NotImplementedError
+
+        probes = []
+        for probe_path in copy_probes(
+            filesystem=filesystem, path=path, probes_destination=probes_root / uri_flattened
+        ):
+            probe = Probe(
+                name=probe_path.relative_to(probes_root).as_posix(),
+                uri=uri,
+                original_path=path,
+                path=probe_path,
+            )
+            log.info(f"Fetched probe: {probe}")
+            probes.append(probe)
+
+        return probes
+
+    @property
+    def functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path

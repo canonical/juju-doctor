@@ -5,166 +5,67 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Tuple
+from urllib.error import URLError
 
 import yaml
-
-from juju_doctor.probes import Probe, ProbeFS, probe_name_as_posix
 
 log = logging.getLogger(__name__)
 
 
-class CircularRulesetError(Exception):
-    """Raised when a Ruleset execution chain exceeds 2 Rulesets."""
+def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
+    """Extract the path from a GitHub URI in Terraform notation.
 
+    Args:
+        uri_without_scheme: a Terraform-notation URI such as
+            'canonical/juju-doctor//probes/path'
 
-def _read_file(filename: Path) -> Optional[Dict]:
-    """Read a file into a string."""
-    try:
-        with open(str(filename), "r") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        log.warning(f"Error: File '{filename}' not found.")
-    except yaml.YAMLError as e:
-        log.warning(f"Error: Failed to parse YAML in '{filename}': {e}")
-    except Exception as e:
-        log.warning(f"Unexpected error while reading '{filename}': {e}")
-    return None
-
-class RuleSet:
-    """Represents a set of probes defined in a ruleset configuration file.
-
-    Supports recursive aggregation of probes, handling scriptlets and nested rulesets.
-    Detects and prevents circular dependencies.
+    Returns:
+        org: The organization that ownes the repository, i.e. 'canonical'
+        repo: The repository name, i.e. 'juju-doctor'
+        path: The local path inside the specified repository,
+            i.e. `probes/path`
     """
-
-    extensions: List[str] = [".yaml", ".yml"]
-
-    def __init__(self, name: str, destination: Path, probe_path: Path):
-        """Initialize a RuleSet instance.
-
-        Args:
-            name (str): The name of the ruleset.
-            destination (Path): The directory where probes are stored.
-            probe_path (Path): The relative path to the ruleset configuration file.
-        """
-        self.name = name
-        self.destination = destination
-        self.probe_path = probe_path
-        self.probes = []
-
-    def aggregate_probes(self) -> List:
-        """Obtain all the probes from the RuleSet.
-
-        This method is recursive when it finds another RuleSet probe.
-
-        Raises CircularRulesetError if a Ruleset execution chain contained more than 2 Rulesets.
-        """
-        content = _read_file(self.probe_path)
-        if not content:
-            return []
-        ruleset_probes = content.get("probes", [])
-        probes = []
-        for probe in ruleset_probes:
-            match probe["type"]:
-                case "scriptlet":
-                    probes.extend(Fetcher.fetch_probes(self.destination, probe["uri"]))
-                case "ruleset":
-                    # Call other probes
-                    if probe.get("uri", None):
-                        if self._is_circular_ruleset(self.destination, probe["uri"]):
-                            raise CircularRulesetError("A Ruleset execution chain contained more than 2 Rulesets")
-                        probe_fs = ProbeFS(self.destination, probe["uri"])
-                        ruleset = RuleSet(probe["name"], self.destination, probe_fs.rel_path)
-                        # Recurse probes until we no longer have Ruleset probes
-                        nested_ruleset_probes = ruleset.aggregate_probes()
-                        log.info(f"Fetched probes: {ruleset.probes}")
-                        probes.extend(nested_ruleset_probes)
-                    # Built-in probes
-                    else:
-                        # e.g. "apps/has-relation" or "apps/has-subordinate"
-                        pass
-                case _:
-                    log.warning(f'{probe["name"]} contains a ruleste type that is not implemented.')
-
-        return probes
-
-    @staticmethod
-    def _is_circular_ruleset(destination: Path, uri: str) -> bool:
-        probe_fs = ProbeFS(destination, uri)
-        # Get the neseted RuleSet to determine the probe list
-        ruleset = RuleSet("test-circular", destination, probe_fs.rel_path)
-        content = _read_file(ruleset.probe_path)
-        if not content:
-            return False
-        ruleset_probes = content.get("probes", [])
-        return any(probe["type"] == "ruleset" for probe in ruleset_probes)
+    try:
+        # Extract the org and repository from the relative path
+        org_and_repo, path = uri_without_scheme.split("//")
+        org, repo = org_and_repo.split("/")
+    except ValueError:
+        raise URLError(
+            f"Invalid URI format: {uri_without_scheme}. Use '//' to define 1 sub-directory "
+            "and specify at most 1 branch."
+        )
+    return org, repo, path
 
 
-class Fetcher(object):
-    """A fetcher which uses protocols for obtaining a remote FS to copy to a local one."""
+def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path) -> List[Path]:
+    """Scan a path for probes from a generic filesystem and cop them to a destination.
 
-    @staticmethod
-    def _copy_remote_to_local(probe_fs: ProbeFS):
-        try:
-            # If path ends with a "/", it will be assumed to be a directory
-            # Can submit a list of paths, which may be glob-patterns and will be expanded.
-            # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
-            probe_fs.filesystem.get(
-                probe_fs.rel_path.as_posix(), probe_fs.local_path.as_posix(), recursive=True, auto_mkdir=True
-            )
-        except FileNotFoundError as e:
-            log.warning(
-                f"{e} file not found when attempting to copy "
-                f"'{probe_fs.rel_path.as_posix()}' to '{probe_fs.local_path.as_posix()}'"
-            )
-            raise
+    Args:
+        filesystem: the abstraction of the filesystem containing the probe
+        path: the path to the probe relative to the filesystem (either file or directory)
+        probes_destination: the folder or file the probes are saved to
 
-    @staticmethod
-    def _build_probes(probe_fs: ProbeFS) -> List[Probe]:
-        if probe_fs.filesystem.isfile(probe_fs.rel_path.as_posix()):
-            probe_files = [probe_fs.local_path]
-        else:
-            probe_files: List[Path] = [
-                f for f in probe_fs.local_path.rglob("*") if f.suffix.lower() in [".py"] + RuleSet.extensions
-            ]
-        probes = []
-        for probe_path in probe_files:
-            name = probe_name_as_posix(probe_fs.destination, probe_path)
-            if probe_path.suffix.lower() in RuleSet.extensions:
-                ruleset = RuleSet(name, probe_fs.destination, probe_path)
-                ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probes: {ruleset.probes}")
-                probes.extend(ruleset_probes)
-            else:
-                probe = Probe(
-                    name=name,
-                    uri=probe_fs.uri,
-                    original_path=probe_fs.rel_path,
-                    path=probe_path,
-                )
-                log.info(f"Fetched probe: {probe}")
-                probes.append(probe)
+    Returns:
+        A list of paths to the probes files copied over to 'probes_destination'
+    """
+    # Copy the probes to the 'probes_destination' folder
+    try:
+        # If path ends with a "/", it will be assumed to be a directory
+        # Can submit a list of paths, which may be glob-patterns and will be expanded.
+        # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
+        filesystem.get(path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True)
+    except FileNotFoundError as e:
+        log.warning(
+            f"{e} file not found when attempting to copy "
+            f"'{path.as_posix()}' to '{probes_destination.as_posix()}'"
+        )
 
-        return probes
+    # Create a Probe for each file in 'probes_destination' if it's a folder, else create just one
+    if filesystem.isfile(path.as_posix()):
+        probe_files: List[Path] = [probes_destination]
+    else:
+        probe_files: List[Path] = [f for f in probes_destination.rglob("*") if f.as_posix().endswith(".py")]
+        log.info(f"copying {path.as_posix()} to {probes_destination.as_posix()} recursively")
 
-    @staticmethod
-    def fetch_probes(destination: Path, uri: str) -> List[Probe]:
-        """Fetch probes from a source to a local directory.
-
-        Args:
-            destination (Path): the file path for the probes on the local FS.
-            uri (str): a URI to a probe living somewhere.
-                Currently only supports:
-                - 'github://' with Terraform notation
-                - 'file://'
-        """
-        probe_fs = ProbeFS(destination, uri)
-        try:
-            Fetcher._copy_remote_to_local(probe_fs)
-        except FileNotFoundError:
-            pass
-
-        log.info(f"copying {probe_fs.rel_path.as_posix()} to {probe_fs.local_path.as_posix()} recursively")
-
-        return Fetcher._build_probes(probe_fs)
+    return probe_files
