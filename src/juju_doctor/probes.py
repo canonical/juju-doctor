@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
-from urllib.error import URLError
 from urllib.parse import urlparse
 
 import fsspec
@@ -14,6 +13,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
+from juju_doctor.fetcher import copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
 
@@ -62,20 +62,20 @@ class Probe:
     path: Path  # path in the temporary folder
 
     @staticmethod
-    def from_uri(self, uri: str, temp_dir: Path) -> List["Probe"]:
-        """build probe from URI.
+    def from_uri(uri: str, probes_root: Path) -> List["Probe"]:
+        """Build a set of Probes from a URI.
 
-        Here we would do the protocol matching
-        Return Probe or list of Probes
+        This function parses the URI to construct a generic 'filesystem' object,
+        that allows us to interact with files regardless of whether they are on
+        local disk or on GitHub.
 
-        Manage the relevant paths that a Probe or a Probe runner would require.
-        Parse the URI to determine relative and local paths, ensuring proper formatting.
-        # TODO update docstring
+        Then, it copies the parsed probes to a subfolder inside 'probes_root', and
+        return a list of Probe items for each probe that was copied.
+
         Args:
             uri: a string representing the Probe's URI.
-            temp_dir: the file path for the probes on the local FS.
+            probes_root: the root folder for the probes on the local FS.
         """
-
         # Get the fsspec.AbstractFileSystem for the Probe's protocol
         parsed_uri = urlparse(uri)
         uri_without_scheme = parsed_uri.netloc + parsed_uri.path
@@ -85,47 +85,21 @@ class Probe:
                 path = Path(uri_without_scheme)
                 filesystem = fsspec.filesystem(protocol="file")
             case "github":
-                try:
-                    branch = parsed_uri.query or "main"
-                    # Extract the org and repository from the relative path
-                    org_and_repo, path_str = uri_without_scheme.split("//")
-                    org, repo = org_and_repo.split("/")
-                    path = Path(path_str)  # Sanitize the TF dir notation `//` in the path
-                except ValueError:
-                    raise URLError(
-                        f"Invalid URI format: {self.uri}. Use '//' to define 1 sub-directory "
-                        "and specify at most 1 branch."
-                    )
+                branch = parsed_uri.query or "main"
+                org, repo, path = parse_terraform_notation(uri_without_scheme)
+                path = Path(path)
                 filesystem = fsspec.filesystem(
                     protocol="github", org=org, repo=repo, sha=f"refs/heads/{branch}"
                 )
             case _:
                 raise NotImplementedError
 
-        try:
-            # If path ends with a "/", it will be assumed to be a directory
-            # Can submit a list of paths, which may be glob-patterns and will be expanded.
-            # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
-            probe_destination = temp_dir / uri_flattened
-            filesystem.get(
-                path.as_posix(), probe_destination.as_posix(), recursive=True, auto_mkdir=True
-            )
-        except FileNotFoundError as e:
-            log.warning(
-                f"{e} file not found when attempting to copy "
-                f"'{path.as_posix()}' to '{probe_destination.as_posix()}'"
-            )
-        if filesystem.isfile(path.as_posix()):
-            probe_files = [probe_destination]
-        else:
-            probe_files: List[Path] = [
-                f for f in probe_destination.rglob("*") if f.as_posix().endswith(".py")
-            ]
-            log.info(f"copying {path.as_posix()} to {probe_destination.as_posix()} recursively")
         probes = []
-        for probe_path in probe_files:
+        for probe_path in copy_probes(
+            filesystem=filesystem, path=path, probes_destination=probes_root / uri_flattened
+        ):
             probe = Probe(
-                name=probe_path.relative_to(temp_dir).as_posix(),
+                name=probe_path.relative_to(probes_root).as_posix(),
                 uri=uri,
                 original_path=path,
                 path=probe_path,
@@ -134,7 +108,6 @@ class Probe:
             probes.append(probe)
 
         return probes
-
 
     @property
     def functions(self) -> Dict:
