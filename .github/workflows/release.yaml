@@ -46,6 +46,7 @@ jobs:
     permissions:
       id-token: write  # mandatory for trusted publishing
     steps:
+    - uses: actions/checkout@v4
     - name: Auto set pyproject.toml version from tag
       # Ref: https://github.com/grst/python-ci-versioneer
       run: |
