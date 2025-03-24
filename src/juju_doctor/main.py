@@ -81,7 +81,7 @@ def check(
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_uri in probe_uris:
-            probes.extend(Fetcher.fetch_probes(destination=probes_folder, uri=probe_uri))
+            probes.extend(Probe.from_uri(uri=probe_uri, temp_dir=probes_folder))
 
         # Run the probes
         probe_results: List[ProbeResults] = []
