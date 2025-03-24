@@ -70,18 +70,22 @@ class RuleSet:
                 case "scriptlet":
                     probes.extend(Fetcher.fetch_probes(self.destination, probe["uri"]))
                 case "ruleset":
-                    if self._is_circular_ruleset(self.destination, probe["uri"]):
-                        raise CircularRulesetError("A Ruleset execution chain contained more than 2 Rulesets")
-                    probe_fs = ProbeFS(self.destination, probe["uri"])
-                    name = probe_name_as_posix(self.destination, probe_fs.local_path)
-                    ruleset = RuleSet(name, self.destination, probe_fs.rel_path)
-                    # Recurses until we no longer have Ruleset probes
-                    nested_ruleset_probes = ruleset.aggregate_probes()
-                    log.info(f"Fetched probes: {ruleset.probes}")
-                    probes.extend(nested_ruleset_probes)
+                    # Call other probes
+                    if probe.get("uri", None):
+                        if self._is_circular_ruleset(self.destination, probe["uri"]):
+                            raise CircularRulesetError("A Ruleset execution chain contained more than 2 Rulesets")
+                        probe_fs = ProbeFS(self.destination, probe["uri"])
+                        ruleset = RuleSet(probe["name"], self.destination, probe_fs.rel_path)
+                        # Recurse probes until we no longer have Ruleset probes
+                        nested_ruleset_probes = ruleset.aggregate_probes()
+                        log.info(f"Fetched probes: {ruleset.probes}")
+                        probes.extend(nested_ruleset_probes)
+                    # Built-in probes
+                    else:
+                        # e.g. "apps/has-relation" or "apps/has-subordinate"
+                        pass
                 case _:
-                    # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
-                    pass
+                    log.warning(f'{probe["name"]} contains a ruleste type that is not implemented.')
 
         return probes
 
