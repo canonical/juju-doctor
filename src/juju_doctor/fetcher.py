@@ -39,7 +39,7 @@ def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
 
 
 def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path) -> List[Path]:
-    """Scan a path for probes from a generic filesystem and copies it to a destination.
+    """Scan a path for probes from a generic filesystem and cop them to a destination.
 
     Args:
         filesystem: the abstraction of the filesystem containing the probe
@@ -61,8 +61,7 @@ def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destin
             f"'{path.as_posix()}' to '{probes_destination.as_posix()}'"
         )
 
-    # Create a Probe for each file in 'probes_destination' if it's a folder,
-    # else create just one
+    # Create a Probe for each file in 'probes_destination' if it's a folder, else create just one
     if filesystem.isfile(path.as_posix()):
         probe_files: List[Path] = [probes_destination]
     else:
