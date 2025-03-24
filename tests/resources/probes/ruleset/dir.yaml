@@ -1,5 +1,5 @@
 name: A declarative deployment RuleSet
 probes:
-  - name: Local probe
+  - name: Local probe directory
     type: scriptlet
     uri: file://tests/resources/probes/ruleset/small-dir
