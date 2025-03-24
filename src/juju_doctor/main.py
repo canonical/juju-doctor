@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.fetcher import Fetcher
 from juju_doctor.probes import Probe, ProbeResults
 
 # pyright: reportAttributeAccessIssue=false
