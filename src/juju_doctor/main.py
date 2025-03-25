@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.fetcher import Fetcher
 from juju_doctor.probes import Probe, ProbeResults
 
 # pyright: reportAttributeAccessIssue=false
@@ -80,9 +79,8 @@ def check(
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
-        fetcher = Fetcher(probes_folder)
         for probe_uri in probe_uris:
-            probes.extend(fetcher.fetch_probes(uri=probe_uri))
+            probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
 
         # Run the probes
         probe_results: List[ProbeResults] = []
