@@ -4,13 +4,24 @@
 """Helper module to fetch probes from local or remote endpoints."""
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Set, Tuple
 from urllib.error import URLError
 
 import fsspec
 
 log = logging.getLogger(__name__)
+
+
+class FileExtensions:
+    python = {".py"}
+    ruleset = {".yaml", ".yml"}
+
+    @classmethod
+    def all(cls):
+        """Return all file extensions."""
+        return cls.python | cls.ruleset
 
 
 def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
@@ -65,7 +76,9 @@ def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destin
     if filesystem.isfile(path.as_posix()):
         probe_files: List[Path] = [probes_destination]
     else:
-        probe_files: List[Path] = [f for f in probes_destination.rglob("*") if f.as_posix().endswith(".py")]
+        probe_files: List[Path] = [
+            f for f in probes_destination.rglob("*") if f.suffix.lower() in FileExtensions.all()
+        ]
         log.info(f"copying {path.as_posix()} to {probes_destination.as_posix()} recursively")
 
     return probe_files

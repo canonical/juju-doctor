@@ -3,24 +3,29 @@
 import importlib.util
 import inspect
 import logging
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 import fsspec
+import yaml
 from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.fetcher import copy_probes, parse_terraform_notation
+from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
+# TODO This is never used
 SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 console = Console()
+
+sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
 @dataclass
@@ -51,15 +56,28 @@ class ProbeResults:
             )
             console.print(")")
 
-
 @dataclass
 class Probe:
-    """A probe that can be executed via juju-doctor."""
+    """A probe that can be executed via juju-doctor.
 
-    name: str
+    For example, you can instantiate with:
+        Probe(
+            uri='file://resources/passing.py'
+            probes_root=PosixPath('/probes')
+            original_path=PosixPath('resources/passing.py')
+            path=PosixPath('/probes/resources_passing.py')
+        )
+    """
+
     uri: str
+    probes_root: Path
     original_path: Path  # path in the source folder
     path: Path  # path in the temporary folder
+
+    @property
+    def name(self) -> str:
+        """The name of the probe sanitized by replacing `/` with `_`."""
+        return self.original_path.as_posix()
 
     @staticmethod
     def from_uri(uri: str, probes_root: Path) -> List["Probe"]:
@@ -95,22 +113,26 @@ class Probe:
                 raise NotImplementedError
 
         probes = []
-        for probe_path in copy_probes(
-            filesystem=filesystem, path=path, probes_destination=probes_root / uri_flattened
-        ):
+        probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / uri_flattened)
+        for probe_path in probe_paths:
             probe = Probe(
-                name=probe_path.relative_to(probes_root).as_posix(),
                 uri=uri,
+                probes_root=probes_root,
                 original_path=path,
                 path=probe_path,
             )
-            log.info(f"Fetched probe: {probe}")
-            probes.append(probe)
+            if probe.path.suffix.lower() in FileExtensions.ruleset:
+                ruleset = RuleSet(probe)
+                ruleset_probes = ruleset.aggregate_probes()
+                log.info(f"Fetched probes: {ruleset_probes}")
+                probes.extend(ruleset_probes)
+            else:
+                log.info(f"Fetched probe: {probe}")
+                probes.append(probe)
 
         return probes
 
-    @property
-    def functions(self) -> Dict:
+    def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -138,7 +160,7 @@ class Probe:
         """Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`."""
         # Silence the result printing if needed
         results: List[ProbeResults] = []
-        for func_name, func in self.functions.items():
+        for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
@@ -158,3 +180,76 @@ class Probe:
             else:
                 results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=True))
         return results
+
+
+def _read_file(filename: Path) -> Optional[Dict]:
+    """Read a file into a string."""
+    try:
+        with open(str(filename), "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        log.warning(f"Error: File '{filename}' not found.")
+    except yaml.YAMLError as e:
+        log.warning(f"Error: Failed to parse YAML in '{filename}': {e}")
+    except Exception as e:
+        log.warning(f"Unexpected error while reading '{filename}': {e}")
+    return None
+
+
+class RuleSet:
+    """Represents a set of probes defined in a ruleset configuration file.
+
+    Supports recursive aggregation of probes, handling scriptlets and nested rulesets.
+    Detects and prevents circular dependencies.
+    """
+
+    def __init__(self, probe: Probe, name: str = None):
+        """Initialize a RuleSet instance.
+
+        Args:
+            probe (Probe): The Probe representing the ruleset configuration file.
+            name (str): The name of the ruleset.
+        """
+        self.probe = probe
+        self.name = name or self.probe.name
+
+    def aggregate_probes(self) -> List[Probe]:
+        """Obtain all the probes from the RuleSet.
+
+        This method is recursive when it finds another RuleSet probe.
+
+        Raises CircularRulesetError if a Ruleset execution chain contained more than 2 Rulesets.
+        """
+        content = _read_file(self.probe.path)
+        if not content:
+            return []
+        ruleset_probes = content.get("probes", [])
+        probes = []
+        for ruleset_probe in ruleset_probes:
+            match ruleset_probe["type"]:
+                # TODO We currently do not handle file extension validation.
+                #   i.e. we trust an author to put a ruleset if they specify type: ruleset
+                case "directory" | "scriptlet":  # TODO Support a dir type since UX feels weird without?
+                    probes.extend(Probe.from_uri(ruleset_probe["uri"], self.probe.probes_root))
+                case "ruleset":
+                    if ruleset_probe.get("uri", None):
+                        nested_ruleset_probes = Probe.from_uri(ruleset_probe["uri"], self.probe.probes_root)
+                        # If the probe is a directory of probes, append and continue to the next probe
+                        if len(nested_ruleset_probes) > 1:
+                            probes.extend(nested_ruleset_probes)
+                            continue
+                        # Recurses until we no longer have Ruleset probes
+                        for nested_ruleset_probe in nested_ruleset_probes:
+                            ruleset = RuleSet(nested_ruleset_probe)
+                            derived_ruleset_probes = ruleset.aggregate_probes()
+                            log.info(f"Fetched probes: {derived_ruleset_probes}")
+                            probes.extend(derived_ruleset_probes)
+                    else:
+                        # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
+                        log.warning(f'Found built-in probe config: \n{ruleset_probe.get("with", None)}')
+                        # raise NotImplementedError
+
+                case _:
+                    raise NotImplementedError
+
+        return probes

@@ -80,7 +80,11 @@ def check(
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_uri in probe_uris:
-            probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
+            try:
+                probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
+            except RecursionError:
+                log.error(f"Recursion limit exceeded for probe: {probe_uri}")
+                log.warn("Reduce the intensity of probe chaining!")
 
         # Run the probes
         probe_results: List[ProbeResults] = []
