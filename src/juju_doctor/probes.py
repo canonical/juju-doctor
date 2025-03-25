@@ -247,6 +247,8 @@ class RuleSet:
                     else:
                         # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
                         log.warning(f'Found built-in probe config: \n{ruleset_probe.get("with", None)}')
+                        # TODO Change verbosity on raising for CLI tool, consider using:
+                        # https://pypi.org/project/pretty-traceback/
                         # raise NotImplementedError
 
                 case _:
