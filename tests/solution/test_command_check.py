@@ -35,7 +35,8 @@ def test_check_gh_probe_fails():
         "--format",
         "json",
         "--probe",
-        "github://canonical/juju-doctor//tests/resources/probes/python/failing.py?main",
+        # FIXME revert to main
+        "github://canonical/juju-doctor//tests/resources/probes/python/failing.py?feat/ruleset-v2",
         "--status",
         "tests/resources/artifacts/status.yaml",
     ]
