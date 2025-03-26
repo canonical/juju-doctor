@@ -13,11 +13,22 @@ import fsspec
 log = logging.getLogger(__name__)
 
 
-def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
-    """Extract the path from a GitHub URI in Terraform notation.
+class FileExtensions:
+    """Source of truth for all supported Probe file extensions."""
+    python = {".py"}
+    ruleset = {".yaml", ".yml"}
+
+    @classmethod
+    def all(cls):
+        """Return all file extensions."""
+        return cls.python | cls.ruleset
+
+
+def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
+    """Extract the path from a GitHub URL in Terraform notation.
 
     Args:
-        uri_without_scheme: a Terraform-notation URI such as
+        url_without_scheme: a Terraform-notation URL such as
             'canonical/juju-doctor//probes/path'
 
     Returns:
@@ -28,11 +39,11 @@ def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
     """
     try:
         # Extract the org and repository from the relative path
-        org_and_repo, path = uri_without_scheme.split("//")
+        org_and_repo, path = url_without_scheme.split("//")
         org, repo = org_and_repo.split("/")
     except ValueError:
         raise URLError(
-            f"Invalid URI format: {uri_without_scheme}. Use '//' to define 1 sub-directory "
+            f"Invalid URL format: {url_without_scheme}. Use '//' to define 1 sub-directory "
             "and specify at most 1 branch."
         )
     return org, repo, path
@@ -65,7 +76,9 @@ def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destin
     if filesystem.isfile(path.as_posix()):
         probe_files: List[Path] = [probes_destination]
     else:
-        probe_files: List[Path] = [f for f in probes_destination.rglob("*") if f.as_posix().endswith(".py")]
+        probe_files: List[Path] = [
+            f for f in probes_destination.rglob("*") if f.suffix.lower() in FileExtensions.all()
+        ]
         log.info(f"copying {path.as_posix()} to {probes_destination.as_posix()} recursively")
 
     return probe_files

@@ -85,7 +85,7 @@ applications:
            const streams = 1 // How many log streams per client
            const minSize = 256  // log line minimum size: 1mb (now 1kb)
            const maxSize = 1024  // log line maximum size: 2mb (now 2kb)
-           const thinkTime = randInt(1, 3)  // TODO: change to randInt(30, 90) or (40, 80)
+           const thinkTime = randInt(1, 3)
            const res = client.pushParameterized(streams, minSize, maxSize)
            // check(res, { 'successful push': (res) => res.status == 200 });
            sleep(thinkTime)

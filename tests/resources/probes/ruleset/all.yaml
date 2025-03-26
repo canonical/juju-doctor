@@ -1,0 +1,11 @@
+name: A declarative deployment RuleSet
+probes:
+  - name: Local probe - passing
+    type: scriptlet
+    url: file://tests/resources/probes/python/passing.py
+  - name: Local probe directory (contains both scriptlets and rulesets)
+    type: directory
+    url: file://tests/resources/probes/ruleset/small-dir
+  - name: Local ruleset
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/scriptlet.yaml

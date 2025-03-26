@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 import tempfile
 from pathlib import Path
 from typing import Annotated, Dict, List, Optional
@@ -18,15 +19,16 @@ from juju_doctor.probes import Probe, ProbeResults
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_show_locals=False)
 console = Console()
+sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
 @app.command()
 def check(
-    probe_uris: Annotated[
+    probe_urls: Annotated[
         List[str],
-        typer.Option("--probe", "-p", help="URI of a probe containing probes to execute."),
+        typer.Option("--probe", "-p", help="URL of a probe containing probes to execute."),
     ] = [],
     models: Annotated[
         List[str],
@@ -79,8 +81,14 @@ def check(
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
-        for probe_uri in probe_uris:
-            probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
+        for probe_url in probe_urls:
+            try:
+                probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
+            except RecursionError:
+                log.error(
+                    f"Recursion limit exceeded for probe: {probe_url}\n"
+                    "Try reducing the intensity of probe chaining!"
+                )
 
         # Run the probes
         probe_results: List[ProbeResults] = []
