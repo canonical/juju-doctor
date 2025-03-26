@@ -2,4 +2,4 @@ name: A declarative deployment RuleSet
 probes:
   - name: Local probe - builtins
     type: ruleset
-    with: something  # TODO Should you be able to supply a URI and "with"? -> Update code
+    with: something  # TODO Should you be able to supply a "uri" and "with"?

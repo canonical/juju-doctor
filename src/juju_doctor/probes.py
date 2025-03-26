@@ -3,7 +3,6 @@
 import importlib.util
 import inspect
 import logging
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -17,15 +16,12 @@ from rich.logging import RichHandler
 from juju_doctor.artifacts import Artifacts
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
-# TODO This is never used
 SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 console = Console()
-
-sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
 @dataclass
@@ -60,24 +56,24 @@ class ProbeResults:
 class Probe:
     """A probe that can be executed via juju-doctor.
 
-    For example, you can instantiate with:
+    For example, instantiate a Probe with:
         Probe(
-            uri='file://resources/passing.py'
-            probes_root=PosixPath('/probes')
-            original_path=PosixPath('resources/passing.py')
-            path=PosixPath('/probes/resources_passing.py')
+            path=PosixPath('/tmp/probes_passing.py')
+            probes_root=PosixPath('/tmp')
         )
     """
 
-    uri: str
-    probes_root: Path
-    original_path: Path  # path in the source folder
-    path: Path  # path in the temporary folder
+    path: Path  # relative path in the temporary folder
+    probes_root: Path  # temporary folder
 
     @property
     def name(self) -> str:
-        """The name of the probe sanitized by replacing `/` with `_`."""
-        return self.original_path.as_posix()
+        """Return the sanitized name of the probe by replacing `/` with `_`.
+
+        This converts the probe's path relative to the root directory into a string format
+        suitable for use in filenames or identifiers.
+        """
+        return self.path.relative_to(self.probes_root).as_posix()
 
     @staticmethod
     def from_uri(uri: str, probes_root: Path) -> List["Probe"]:
@@ -115,12 +111,7 @@ class Probe:
         probes = []
         probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / uri_flattened)
         for probe_path in probe_paths:
-            probe = Probe(
-                uri=uri,
-                probes_root=probes_root,
-                original_path=path,
-                path=probe_path,
-            )
+            probe = Probe(probe_path, probes_root)
             if probe.path.suffix.lower() in FileExtensions.ruleset:
                 ruleset = RuleSet(probe)
                 ruleset_probes = ruleset.aggregate_probes()
@@ -153,7 +144,7 @@ class Probe:
         return {
             name: func
             for name, func in inspect.getmembers(module, inspect.isfunction)
-            if name in ["status", "bundle", "show_unit"]
+            if name in SUPPORTED_PROBE_TYPES
         }
 
     def run(self, artifacts: Artifacts) -> List[ProbeResults]:
@@ -200,10 +191,9 @@ class RuleSet:
     """Represents a set of probes defined in a ruleset configuration file.
 
     Supports recursive aggregation of probes, handling scriptlets and nested rulesets.
-    Detects and prevents circular dependencies.
     """
 
-    def __init__(self, probe: Probe, name: str = None):
+    def __init__(self, probe: Probe, name: Optional[str] = None):
         """Initialize a RuleSet instance.
 
         Args:
@@ -216,9 +206,8 @@ class RuleSet:
     def aggregate_probes(self) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
 
-        This method is recursive when it finds another RuleSet probe.
-
-        Raises CircularRulesetError if a Ruleset execution chain contained more than 2 Rulesets.
+        This method is recursive when it finds another RuleSet probe and returns
+        a list of probes that were found after traversing all the probes in the ruleset.
         """
         content = _read_file(self.probe.path)
         if not content:
@@ -246,10 +235,8 @@ class RuleSet:
                             probes.extend(derived_ruleset_probes)
                     else:
                         # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
-                        log.warning(f'Found built-in probe config: \n{ruleset_probe.get("with", None)}')
-                        # TODO Change verbosity on raising for CLI tool, consider using:
-                        # https://pypi.org/project/pretty-traceback/
-                        # raise NotImplementedError
+                        log.info(f'Found built-in probe config: \n{ruleset_probe.get("with", None)}')
+                        raise NotImplementedError
 
                 case _:
                     raise NotImplementedError

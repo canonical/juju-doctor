@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 import tempfile
 from pathlib import Path
 from typing import Annotated, Dict, List, Optional
@@ -18,8 +19,9 @@ from juju_doctor.probes import Probe, ProbeResults
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_show_locals=False)
 console = Console()
+sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
 @app.command()
@@ -83,8 +85,10 @@ def check(
             try:
                 probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
             except RecursionError:
-                log.error(f"Recursion limit exceeded for probe: {probe_uri}")
-                log.warn("Reduce the intensity of probe chaining!")
+                log.error(
+                    f"Recursion limit exceeded for probe: {probe_uri}\n"
+                    "Try reducing the intensity of probe chaining!"
+                )
 
         # Run the probes
         probe_results: List[ProbeResults] = []

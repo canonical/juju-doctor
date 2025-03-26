@@ -4,9 +4,8 @@
 """Helper module to fetch probes from local or remote endpoints."""
 
 import logging
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import List, Tuple
 from urllib.error import URLError
 
 import fsspec
@@ -15,6 +14,7 @@ log = logging.getLogger(__name__)
 
 
 class FileExtensions:
+    """Source of truth for all supported Probe file extensions."""
     python = {".py"}
     ruleset = {".yaml", ".yml"}
 
