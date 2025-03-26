@@ -7,7 +7,7 @@ from juju_doctor.probes import Probe
 def test_parse_file():
     # GIVEN a probe file specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python/failing.py"
-    probe_url = f"github://canonical/juju-doctor//{path_str}?feat/ruleset-v2"  # FIXME revert to main
+    probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
@@ -22,7 +22,7 @@ def test_parse_file():
 def test_parse_dir():
     # GIVEN a probe directory specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python"
-    probe_url = f"github://canonical/juju-doctor//{path_str}?feat/ruleset-v2"  # FIXME revert to main
+    probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
