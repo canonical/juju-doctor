@@ -104,13 +104,13 @@ name: A declarative deployment RuleSet
 probes:
   - name: Local probe - passing
     type: scriptlet
-    uri: file://tests/resources/probes/python/passing.py
+    url: file://tests/resources/probes/python/passing.py
   - name: Local ruleset
     type: ruleset
-    uri: file://tests/resources/probes/ruleset/ruleset.yaml
+    url: file://tests/resources/probes/ruleset/ruleset.yaml
   - name: Local probe directory (may contain scriptlets and/or rulesets)
     type: directory
-    uri: file://tests/resources/probes/ruleset/small-dir
+    url: file://tests/resources/probes/ruleset/small-dir
 ```
 
 ## Development

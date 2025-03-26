@@ -24,11 +24,11 @@ class FileExtensions:
         return cls.python | cls.ruleset
 
 
-def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
-    """Extract the path from a GitHub URI in Terraform notation.
+def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
+    """Extract the path from a GitHub URL in Terraform notation.
 
     Args:
-        uri_without_scheme: a Terraform-notation URI such as
+        url_without_scheme: a Terraform-notation URL such as
             'canonical/juju-doctor//probes/path'
 
     Returns:
@@ -39,11 +39,11 @@ def parse_terraform_notation(uri_without_scheme: str) -> Tuple[str, str, str]:
     """
     try:
         # Extract the org and repository from the relative path
-        org_and_repo, path = uri_without_scheme.split("//")
+        org_and_repo, path = url_without_scheme.split("//")
         org, repo = org_and_repo.split("/")
     except ValueError:
         raise URLError(
-            f"Invalid URI format: {uri_without_scheme}. Use '//' to define 1 sub-directory "
+            f"Invalid URL format: {url_without_scheme}. Use '//' to define 1 sub-directory "
             "and specify at most 1 branch."
         )
     return org, repo, path

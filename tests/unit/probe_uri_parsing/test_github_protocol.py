@@ -7,10 +7,10 @@ from juju_doctor.probes import Probe
 def test_parse_file():
     # GIVEN a probe file specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python/failing.py"
-    probe_uri = f"github://canonical/juju-doctor//{path_str}?feat/ruleset-v2"  # FIXME revert to main
+    probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -22,10 +22,10 @@ def test_parse_file():
 def test_parse_dir():
     # GIVEN a probe directory specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python"
-    probe_uri = f"github://canonical/juju-doctor//{path_str}?feat/ruleset-v2"  # FIXME revert to main
+    probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN 2 probe exists
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]

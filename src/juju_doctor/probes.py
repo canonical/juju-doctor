@@ -76,10 +76,10 @@ class Probe:
         return self.path.relative_to(self.probes_root).as_posix()
 
     @staticmethod
-    def from_uri(uri: str, probes_root: Path) -> List["Probe"]:
-        """Build a set of Probes from a URI.
+    def from_url(url: str, probes_root: Path) -> List["Probe"]:
+        """Build a set of Probes from a URL.
 
-        This function parses the URI to construct a generic 'filesystem' object,
+        This function parses the URL to construct a generic 'filesystem' object,
         that allows us to interact with files regardless of whether they are on
         local disk or on GitHub.
 
@@ -87,20 +87,20 @@ class Probe:
         return a list of Probe items for each probe that was copied.
 
         Args:
-            uri: a string representing the Probe's URI.
+            url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
         """
         # Get the fsspec.AbstractFileSystem for the Probe's protocol
-        parsed_uri = urlparse(uri)
-        uri_without_scheme = parsed_uri.netloc + parsed_uri.path
-        uri_flattened = uri_without_scheme.replace("/", "_")
-        match parsed_uri.scheme:
+        parsed_url = urlparse(url)
+        url_without_scheme = parsed_url.netloc + parsed_url.path
+        url_flattened = url_without_scheme.replace("/", "_")
+        match parsed_url.scheme:
             case "file":
-                path = Path(uri_without_scheme)
+                path = Path(url_without_scheme)
                 filesystem = fsspec.filesystem(protocol="file")
             case "github":
-                branch = parsed_uri.query or "main"
-                org, repo, path = parse_terraform_notation(uri_without_scheme)
+                branch = parsed_url.query or "main"
+                org, repo, path = parse_terraform_notation(url_without_scheme)
                 path = Path(path)
                 filesystem = fsspec.filesystem(
                     protocol="github", org=org, repo=repo, sha=f"refs/heads/{branch}"
@@ -109,7 +109,7 @@ class Probe:
                 raise NotImplementedError
 
         probes = []
-        probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / uri_flattened)
+        probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
             probe = Probe(probe_path, probes_root)
             if probe.path.suffix.lower() in FileExtensions.ruleset:
@@ -219,10 +219,10 @@ class RuleSet:
                 # TODO We currently do not handle file extension validation.
                 #   i.e. we trust an author to put a ruleset if they specify type: ruleset
                 case "directory" | "scriptlet":  # TODO Support a dir type since UX feels weird without?
-                    probes.extend(Probe.from_uri(ruleset_probe["uri"], self.probe.probes_root))
+                    probes.extend(Probe.from_url(ruleset_probe["url"], self.probe.probes_root))
                 case "ruleset":
-                    if ruleset_probe.get("uri", None):
-                        nested_ruleset_probes = Probe.from_uri(ruleset_probe["uri"], self.probe.probes_root)
+                    if ruleset_probe.get("url", None):
+                        nested_ruleset_probes = Probe.from_url(ruleset_probe["url"], self.probe.probes_root)
                         # If the probe is a directory of probes, append and continue to the next probe
                         if len(nested_ruleset_probes) > 1:
                             probes.extend(nested_ruleset_probes)

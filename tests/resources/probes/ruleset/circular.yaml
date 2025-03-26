@@ -2,4 +2,4 @@ name: A declarative deployment RuleSet
 probes:
   - name: Local ruleset (calling a circular RuleSet chain)
     type: ruleset
-    uri: file://tests/resources/probes/ruleset/circular.yaml
+    url: file://tests/resources/probes/ruleset/circular.yaml

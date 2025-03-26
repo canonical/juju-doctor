@@ -26,9 +26,9 @@ sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increa
 
 @app.command()
 def check(
-    probe_uris: Annotated[
+    probe_urls: Annotated[
         List[str],
-        typer.Option("--probe", "-p", help="URI of a probe containing probes to execute."),
+        typer.Option("--probe", "-p", help="URL of a probe containing probes to execute."),
     ] = [],
     models: Annotated[
         List[str],
@@ -81,12 +81,12 @@ def check(
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
-        for probe_uri in probe_uris:
+        for probe_url in probe_urls:
             try:
-                probes.extend(Probe.from_uri(uri=probe_uri, probes_root=probes_folder))
+                probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
             except RecursionError:
                 log.error(
-                    f"Recursion limit exceeded for probe: {probe_uri}\n"
+                    f"Recursion limit exceeded for probe: {probe_url}\n"
                     "Try reducing the intensity of probe chaining!"
                 )
 

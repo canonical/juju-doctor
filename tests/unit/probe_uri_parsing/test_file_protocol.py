@@ -7,10 +7,10 @@ from juju_doctor.probes import Probe
 def test_parse_python_file():
     # GIVEN a local Python probe file
     path_str = "tests/resources/probes/python/failing.py"
-    probe_uri = f"file://{path_str}"
+    probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -22,10 +22,10 @@ def test_parse_python_file():
 def test_parse_dir():
     # GIVEN a local probe file with the file protocol
     path_str = "tests/resources/probes/python"
-    probe_uri = f"file://{path_str}"
+    probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN 2 probes exist
         assert len(probes) == 2
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
@@ -41,10 +41,10 @@ def test_parse_dir():
 def test_parse_ruleset_file():
     # GIVEN a local RuleSet probe file
     path_str = "tests/resources/probes/ruleset/scriptlet.yaml"
-    probe_uri = f"file://{path_str}"
+    probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        found_probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
         assert len(found_probes) > 0
         # AND the Probe does not leak information about which RuleSet called it

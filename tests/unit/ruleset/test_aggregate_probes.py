@@ -18,29 +18,29 @@ def contains_only_passing_and_failing_probes(probes: List[Probe]):
 
 def test_ruleset_calls_scriptlet():
     # GIVEN a ruleset probe file calls scriptlet probes
-    probe_uri = "file://tests/resources/probes/ruleset/scriptlet.yaml"
+    probe_url = "file://tests/resources/probes/ruleset/scriptlet.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        found_probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
         contains_only_passing_and_failing_probes(found_probes)
 
 
 def test_ruleset_calls_nested():
     # GIVEN a ruleset probe file calls another ruleset
-    probe_uri = "file://tests/resources/probes/ruleset/nested.yaml"
+    probe_url = "file://tests/resources/probes/ruleset/nested.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        found_probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
         contains_only_passing_and_failing_probes(found_probes)
 
 
 def test_ruleset_calls_dir():
     # GIVEN a ruleset probe file calls a directory of probes (scriptlet and/or ruleset)
-    probe_uri = "file://tests/resources/probes/ruleset/dir.yaml"
+    probe_url = "file://tests/resources/probes/ruleset/dir.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        found_probes = Probe.from_uri(uri=probe_uri, probes_root=Path(tmpdir))
+        found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
         contains_only_passing_and_failing_probes(found_probes)
