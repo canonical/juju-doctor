@@ -1,0 +1,5 @@
+name: A declarative deployment RuleSet
+probes:
+  - name: Local ruleset (calling a circular RuleSet chain)
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/circular.yaml

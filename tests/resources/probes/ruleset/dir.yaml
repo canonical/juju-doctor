@@ -1,0 +1,5 @@
+name: A declarative deployment RuleSet
+probes:
+  - name: Local probe
+    type: directory  # TODO What type would you set if the UR is a subdir? ruleset, scriptlet, directory?
+    url: file://tests/resources/probes/ruleset/small-dir

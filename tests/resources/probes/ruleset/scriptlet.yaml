@@ -1,0 +1,8 @@
+name: A declarative deployment RuleSet
+probes:
+  - name: Local probe - passing
+    type: scriptlet
+    url: file://tests/resources/probes/python/passing.py
+  - name: Local probe - failing
+    type: scriptlet
+    url: file://tests/resources/probes/python/failing.py

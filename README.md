@@ -28,7 +28,7 @@ If you have a live deplyoment, you can also run `juju-doctor` against that:
     --model testy \
     --model testy-two
 ```
-In either case, the output will look like so:
+In either case, the output will look like so (configurable with `--format`):
 ```
 🔴 tests_resources_failing.py/bundle failed
 Exception: Bundle probe here, something went wrong
@@ -49,7 +49,8 @@ The path to a probe can also be a url:
 
 ## Writing Probes
 
-Probes are written in Python, and can run on standardized artifacts that can be provided either as static files, or gathered from a live model.
+### Scriptlet
+Scriptlet probes are written in Python, and can run on standardized artifacts that can be provided either as static files, or gathered from a live model.
 
 Currently, we support the following artifacts:
 - **`status`**: `juju status --format=yaml`
@@ -90,6 +91,27 @@ def show_unit(juju_show_units):
 
 **Remember**: `juju-doctor` will only run functions that exactly match a supported artifact name, and will always pass to them a dictionary of *model name* mapped to the proper artifact.
 
+### Ruleset
+Ruleset probes are written in YAML, specifying which probes should be coordinated for a deployment validation.
+
+Currently, we support the following probe types:
+- **`scriptlet`**: A Python probe
+- **`ruleset`**: A declarative deployment RuleSet
+- **`directory`**: A directory of probes (from the types in this list)
+
+```yaml
+name: A declarative deployment RuleSet
+probes:
+  - name: Local probe - passing
+    type: scriptlet
+    url: file://tests/resources/probes/python/passing.py
+  - name: Local ruleset
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/ruleset.yaml
+  - name: Local probe directory (may contain scriptlets and/or rulesets)
+    type: directory
+    url: file://tests/resources/probes/ruleset/small-dir
+```
 
 ## Development
 ```bash
