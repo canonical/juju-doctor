@@ -336,19 +336,14 @@ class ProbeResultAggregator:
                 json_result = {"passed": total_passed, "failed": total_failed}
                 # self.tree.to_json(with_data=True)
                 console.print(json.dumps(json_result))
-            case "tree":
+            case _:
                 # self.tree.save2file('archive.txt')
                 groupings = ["status"]
-                if format == "tree-verbose":
+                if verbose:
                     groupings = ["status", "artifact", "parent"]
 
                 for grouping in groupings:
                     tree = self._build_tree(grouping, verbose)
                     self.tree.paste("root", tree)  # inserts the grouping's subtree into the aggregated tree
                 self.tree.show(line_type="ascii-exr")
-                console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")
-            case _:
-                for r in self.results:
-                    if not format:
-                        r.print(verbose=verbose)
                 console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")

@@ -51,7 +51,7 @@ def check(
     ] = False,
     format: Annotated[
         Optional[str],
-        typer.Option("--format", "-o", help="Specify output format."),
+        typer.Option("--format", "-o", help="Specify output format. Use `--verbose` to increase verbosity"),
     ] = None,
 ):
     """Run checks on a certain model."""
@@ -97,6 +97,7 @@ def check(
 
         aggregator = ProbeResultAggregator("status", probe_results)
         aggregator.print_results(format, verbose)
+
 
 @app.command()
 def help():
