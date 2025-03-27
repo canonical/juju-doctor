@@ -334,10 +334,8 @@ class ProbeResultAggregator:
         match format:
             case "json":
                 json_result = {"passed": total_passed, "failed": total_failed}
-                # self.tree.to_json(with_data=True)
                 console.print(json.dumps(json_result))
             case _:
-                # self.tree.save2file('archive.txt')
                 groupings = ["status"]
                 if verbose:
                     groupings = ["status", "artifact", "parent"]
