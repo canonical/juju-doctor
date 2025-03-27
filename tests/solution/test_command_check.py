@@ -1,7 +1,8 @@
 import json
 
-from main import app
 from typer.testing import CliRunner
+
+from juju_doctor.main import app
 
 
 def test_check_file_probe_fails():
@@ -21,9 +22,8 @@ def test_check_file_probe_fails():
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
-    check = json.loads(result.stdout)
     # AND the Probe was correctly executed
-    assert check == {"failed": 3, "passed": 0}
+    assert json.loads(result.stdout) == {"failed": 3, "passed": 0}
 
 
 def test_check_gh_probe_fails():
@@ -43,8 +43,7 @@ def test_check_gh_probe_fails():
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the Probe was correctly executed
-    check = json.loads(result.stdout)
-    assert check == {"failed": 3, "passed": 0}
+    assert json.loads(result.stdout) == {"failed": 3, "passed": 0}
 
 
 def test_check_raises_recursion_error():
