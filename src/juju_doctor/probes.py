@@ -332,16 +332,17 @@ class ProbeResultAggregator:
         total_passed = len(self._get_by_status("pass"))
         total_failed = len(self._get_by_status("fail"))
         match format:
-            case "json":
-                json_result = {"passed": total_passed, "failed": total_failed}
-                console.print(json.dumps(json_result))
-            case _:
+            case None:
                 groupings = ["status"]
                 if verbose:
                     groupings = ["status", "artifact", "parent"]
-
                 for grouping in groupings:
                     tree = self._build_tree(grouping, verbose)
                     self.tree.paste("root", tree)  # inserts the grouping's subtree into the aggregated tree
                 self.tree.show(line_type="ascii-exr")
                 console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")
+            case "json":
+                json_result = {"passed": total_passed, "failed": total_failed}
+                console.print(json.dumps(json_result))
+            case _:
+                raise NotImplementedError
