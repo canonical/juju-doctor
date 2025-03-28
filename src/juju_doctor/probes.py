@@ -365,7 +365,7 @@ class ProbeResultAggregator:
                 )
         return tree
 
-    def assemble_trees(self, show: bool = False):
+    def assemble_trees(self):
         """For each group, build a sub-tree which gets pasted to the root tree of results.
 
         Optionally display the exception logs and the tree result.
@@ -375,7 +375,6 @@ class ProbeResultAggregator:
             tree = self._build_tree(group)
             self.output_fmt.exception_logging = False  # only log Exceptions once when grouping
             self.tree.paste("root", tree)  # inserts the grouping's subtree into the aggregated tree
-            self.tree.show(group, line_type="ascii-exr", stdout=show)
 
     def print_results(self):
         """Handle the formating and logging of probe results."""
@@ -383,10 +382,11 @@ class ProbeResultAggregator:
         total_failed = len(self._get_by_status("fail"))
         match self.output_fmt.format:
             case None:
-                self.assemble_trees(show=True)
+                self.assemble_trees()
+                self.tree.show(line_type="ascii-exr")
                 console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")
             case "json":
-                self.assemble_trees(show=False)
+                self.assemble_trees()
                 tree_json = json.loads(self.tree.to_json())
                 tree_json.update({"passed": total_passed, "failed": total_failed})
                 print(json.dumps(tree_json))

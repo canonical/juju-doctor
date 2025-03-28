@@ -62,7 +62,7 @@ def test_assemble_tree():
         # WHEN the probe results are aggregated and placed in a tree
         output_fmt = OutputFormat(False, "json", ["status"], exception_logging=False)
         aggregator = ProbeResultAggregator(mocked_results, output_fmt)
-        aggregator.assemble_trees(show=False)
+        aggregator.assemble_trees()
         # THEN We get all the groupings
         assert json.loads(aggregator.tree.to_json()) == expected_json
 
@@ -154,7 +154,7 @@ def test_assemble_tree_verbose():
     # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
     output_fmt = OutputFormat(False, "json", ["all"], exception_logging=False)
     aggregator = ProbeResultAggregator(mocked_results, output_fmt)
-    aggregator.assemble_trees(show=False)
+    aggregator.assemble_trees()
     # THEN We get all the groupings
     assert json.loads(aggregator.tree.to_json()) == expected_json
 
