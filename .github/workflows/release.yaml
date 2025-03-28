@@ -24,6 +24,7 @@ jobs:
           VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
           if [[ -z "$VERSION" ]]; then
               echo "❌ ERROR: Could not extract version from GITHUB_REF ($ref)"
+              exit 1
           fi
           echo "Setting version to $VERSION"
           PLACEHOLDER='^version\s*=.*'
