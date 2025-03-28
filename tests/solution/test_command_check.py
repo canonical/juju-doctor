@@ -1,10 +1,11 @@
 import json
 
-from main import app
 from typer.testing import CliRunner
 
+from juju_doctor.main import app
 
-def test_check_file_probe_fails():
+
+def test_check_multiple_artifacts():
     # GIVEN a CLI Typer app
     runner = CliRunner()
     # WHEN the "check" command is executed on a failing file probe
@@ -21,9 +22,9 @@ def test_check_file_probe_fails():
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
-    check = json.loads(result.stdout)
     # AND the Probe was correctly executed
-    assert check == {"failed": 3, "passed": 0}
+    assert json.loads(result.stdout)["failed"] == 3
+    assert json.loads(result.stdout)["passed"] == 0
 
 
 def test_check_gh_probe_fails():
@@ -43,20 +44,48 @@ def test_check_gh_probe_fails():
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the Probe was correctly executed
-    check = json.loads(result.stdout)
-    assert check == {"failed": 3, "passed": 0}
+    assert json.loads(result.stdout)["failed"] == 3
+    assert json.loads(result.stdout)["passed"] == 0
 
 
-def test_check_raises_recursion_error():
+def test_check_multiple_file_probes():
     # GIVEN a CLI Typer app
     runner = CliRunner()
-    # WHEN the "check" command is executed on a circular ruleset execution chain
+    # WHEN the "check" command is executed on a complex ruleset probe
     test_args = [
         "check",
+        "--format",
+        "json",
         "--probe",
-        "file://tests/resources/probes/ruleset/circular.yaml",
+        "file://tests/resources/probes/python/passing.py",
+        "--probe",
+        "file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
-    # THEN the command raises a RecursionError
-    # with pytest.raises(RecursionError):  # FIXME Catch RecursionError natively with typer.CLIRunner
-    runner.invoke(app, test_args, catch_exceptions=False)
+    result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the Probe was correctly executed
+    assert json.loads(result.stdout)["failed"] == 3
+    assert json.loads(result.stdout)["passed"] == 3
+
+def test_check_returns_valid_json():
+    # GIVEN a CLI Typer app
+    runner = CliRunner()
+    # WHEN the "check" command is executed on a complex ruleset probe
+    test_args = [
+        "check",
+        "--format",
+        "json",
+        "--probe",
+        "file://tests/resources/probes/ruleset/all.yaml",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the result is valid JSON
+    try:
+        json.loads(result.output)
+    except json.JSONDecodeError as e:
+        assert False, f"Output is not valid JSON: {e}\nOutput:\n{result.output}"

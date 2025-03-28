@@ -1,6 +1,5 @@
 """Main Typer application to assemble the CLI."""
 
-import json
 import logging
 import sys
 import tempfile
@@ -12,7 +11,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe, ProbeResults
+from juju_doctor.probes import OutputFormat, Probe, ProbeResultAggregator, ProbeResults
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -54,11 +53,21 @@ def check(
         Optional[str],
         typer.Option("--format", "-o", help="Specify output format."),
     ] = None,
+    grouping: Annotated[
+        List[str],
+        typer.Option(
+            "--grouping",
+            "-g",
+            help="Specify the grouping type (status, artifact, directory, all) in the result tree.",
+        ),
+    ] = ["status"],
 ):
     """Run checks on a certain model."""
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
         raise Exception("If you pass a live model with --model, you cannot pass static files.")
+    if verbose and format == "json":
+        raise Exception("If you set the format to JSON with --json, you can no longer use --verbose.")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -94,19 +103,11 @@ def check(
         probe_results: List[ProbeResults] = []
         for probe in probes:
             current_results: List[ProbeResults] = probe.run(artifacts)
-            for r in current_results:
-                if not format:
-                    r.print(verbose=verbose)
             probe_results.extend(current_results)
 
-    total_passed = len([pr for pr in probe_results if pr.passed])
-    total_failed = len([pr for pr in probe_results if not pr.passed])
-    match format:
-        case "json":
-            json_result = {"passed": total_passed, "failed": total_failed}
-            console.print(json.dumps(json_result))
-        case _:
-            console.print(f"\nTotal: :green_circle: {total_passed} :red_circle: {total_failed}")
+        output_fmt = OutputFormat(verbose, format, grouping, exception_logging=True)
+        aggregator = ProbeResultAggregator(probe_results, output_fmt)
+        aggregator.print_results()
 
 
 @app.command()
