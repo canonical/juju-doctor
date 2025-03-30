@@ -152,7 +152,7 @@ def test_assemble_tree_verbose():
     mocked_results.extend(probe_results("/fake/path", "tests_resources_probes_python_failing.py", False))
     mocked_results.extend(probe_results("/fake/path", "tests_resources_probes_python_passing.py", True))
     # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
-    output_fmt = OutputFormat(False, "json", ["all"], exception_logging=False)
+    output_fmt = OutputFormat(False, "json", ProbeResultAggregator.groups, exception_logging=False)
     aggregator = ProbeResultAggregator(mocked_results, output_fmt)
     aggregator.assemble_trees()
     # THEN We get all the groupings

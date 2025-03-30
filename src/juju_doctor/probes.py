@@ -370,8 +370,7 @@ class ProbeResultAggregator:
 
         Optionally display the exception logs and the tree result.
         """
-        grouping = self.groups if self.output_fmt.grouping == ["all"] else self.output_fmt.grouping
-        for group in grouping:
+        for group in self.output_fmt.grouping:
             tree = self._build_tree(group)
             self.output_fmt.exception_logging = False  # only log Exceptions once when grouping
             self.tree.paste("root", tree)  # inserts the grouping's subtree into the aggregated tree

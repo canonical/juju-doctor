@@ -58,16 +58,20 @@ def check(
         typer.Option(
             "--grouping",
             "-g",
-            help="Specify the grouping type (status, artifact, directory, all) in the result tree.",
+            help=f"Specify the grouping type ({', '.join(ProbeResultAggregator.groups)}) in the result tree.",
         ),
     ] = ["status"],
 ):
     """Run checks on a certain model."""
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
-        raise Exception("If you pass a live model with --model, you cannot pass static files.")
+        raise typer.BadParameter("If you pass a live model with --model, you cannot pass static files.")
     if verbose and format == "json":
-        raise Exception("If you set the format to JSON with --json, you can no longer use --verbose.")
+        raise typer.BadParameter(
+            "If you set the format to JSON with --json, you can no longer use --verbose."
+        )
+    if any(g not in ProbeResultAggregator.groups for g in grouping):
+        raise typer.BadParameter(f"Grouping type is not in supported types: {ProbeResultAggregator.groups}.")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}

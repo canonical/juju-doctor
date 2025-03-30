@@ -28,7 +28,7 @@ If you have a live deplyoment, you can also run `juju-doctor` against that:
     --model testy \
     --model testy-two
 ```
-In either case, the output will look like so (configurable with `--format`):
+In either case, the output will look like so (configurable with `--format` and `--verbose`):
 ```
 Results
 └── Status
