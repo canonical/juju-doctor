@@ -15,7 +15,7 @@ Here's some typical usage examples:
 
 You can run `juju-doctor` against a solution archive:
 
-```
+```bash
 ∮ juju-doctor check --verbose \
     --probe file://tests/resources/failing.py \
     --probe file://tests/resources/passing.py \
@@ -23,7 +23,7 @@ You can run `juju-doctor` against a solution archive:
     --status=status.yaml
 ```
 If you have a live deplyoment, you can also run `juju-doctor` against that:
-```
+```bash
 ∮ juju-doctor check --verbose \
     --probe file://tests/resources/failing.py \
     --probe file://tests/resources/passing.py \
@@ -44,7 +44,7 @@ Exception: I'm the status probe, and I failed
 ```
 
 The path to a probe can also be a url:
-```
+```bash
 # Run a remote probe against a live model
 ∮ juju-doctor check --model cos --probe github://canonical/grafana-k8s-operator//probes/some_probe.py
 ```
