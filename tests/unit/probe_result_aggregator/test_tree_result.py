@@ -4,7 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from juju_doctor.probes import OutputFormat, Probe, ProbeResultAggregator, ProbeResults
+from juju_doctor.probes import OutputFormat, Probe, ProbeResults
+from juju_doctor.tree import ProbeResultAggregator
 
 
 def probe_results(tmp_path: str, flattened_path: str, passed: bool):
@@ -23,6 +24,7 @@ def probe_results(tmp_path: str, flattened_path: str, passed: bool):
 
 
 def test_assemble_tree():
+    # TODO This is flaky
     expected_json = {
         "Results": {
             "children": [
@@ -68,6 +70,7 @@ def test_assemble_tree():
 
 
 def test_assemble_tree_verbose():
+    # TODO Write one per grouping so its not as flaky (I think order is affecting it)
     expected_json = {
         "Results": {
             "children": [

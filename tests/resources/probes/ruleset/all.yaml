@@ -4,7 +4,7 @@ probes:
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
   - name: Local probe directory (contains both scriptlets and rulesets)
-    type: directory
+    type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir
   - name: Local ruleset
     type: ruleset
