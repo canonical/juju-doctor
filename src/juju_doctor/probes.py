@@ -215,6 +215,7 @@ class ProbeResult:
         probe_name = f"{red} {self.probe_name} failed"
         if output_fmt.verbose:
             if output_fmt.exception_logging:
+                # TODO remove the [b] bold formatting in JSON
                 exception_msg = f"[b]Exception[/b] ({self.probe_name}): {self.exception}"
             return probe_name, exception_msg
         truncated_exception = self.truncate_exception_msg(str(self.exception))

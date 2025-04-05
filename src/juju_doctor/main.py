@@ -12,7 +12,7 @@ from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
 from juju_doctor.probes import Probe, ProbeResult
-from juju_doctor.tree import Group, OutputFormat, ProbeResultAggregator
+from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -54,14 +54,6 @@ def check(
         Optional[str],
         typer.Option("--format", "-o", help="Specify output format."),
     ] = None,
-    grouping: Annotated[
-        List[str],
-        typer.Option(
-            "--grouping",
-            "-g",
-            help=f"Specify the grouping type ({', '.join(Group.all())}) in the result tree.",
-        ),
-    ] = ["status"],
 ):
     """Run checks on a certain model."""
     # Input validation
@@ -69,7 +61,6 @@ def check(
         raise typer.BadParameter(
             "If you pass a live model with --model, you cannot pass static files."
         )
-    log.info(f"Results are grouped by: {[Group(g) for g in grouping]}")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -107,7 +98,7 @@ def check(
             current_results: List[ProbeResult] = probe.run(artifacts)
             probe_results.extend(current_results)
 
-        output_fmt = OutputFormat(verbose, True, format, grouping)
+        output_fmt = OutputFormat(verbose, True, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)
         aggregator.print_results()
 

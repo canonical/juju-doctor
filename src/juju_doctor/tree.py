@@ -4,8 +4,6 @@ import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from rich.console import Console
@@ -19,18 +17,6 @@ log = logging.getLogger(__name__)
 console = Console()
 
 
-class Group(Enum):
-    """Grouping types for the tree output."""
-
-    STATUS = "status"
-    ARTIFACT = "artifact"
-    DIRECTORY = "directory"
-
-    @staticmethod
-    def all():
-        return [g.value for g in Group]
-
-
 @dataclass
 class OutputFormat:
     """Track the output format for the application."""
@@ -38,7 +24,6 @@ class OutputFormat:
     verbose: bool
     exception_logging: bool
     format: Optional[str]
-    grouping: List[Group]
     rich_map = {
         "green": "🟢",
         "red": "🔴",
@@ -74,52 +59,46 @@ class ProbeResultAggregator:
         self.tree = RichTree()
         self.tree.create_node("Results", "root")  # root node
         self.grouped_by_status = defaultdict(list)
-        self.grouped_by_artifact = defaultdict(list)
-        self.grouped_by_directory = defaultdict(list)
         self._group_results()
 
     def _group_results(self):
-        # TODO Improve the docstring since dynamic grouped_by_ building is confusing
-        """Group results by status, parent directory, and probe type."""
+        """Group results by status, and probe type."""
         for result in self.results:
             self.grouped_by_status[result.status].append(result)
-            self.grouped_by_artifact[result.func_name].append(result)
-            self.grouped_by_directory[result.probe.path.parent].append(result)
-
 
     def _get_by_status(self, status: str) -> List[Dict]:
         return self.grouped_by_status.get(status, [])
 
-    def _get_by_artifact(self, probe_type: str) -> List[Dict]:
-        return self.grouped_by_artifact.get(probe_type, [])
-
-    def _get_by_parent(self, parent: Path) -> List[Dict]:
-        return self.grouped_by_directory.get(parent, [])
-
-    def _build_tree(self, group: str) -> Tree:
+    def _build_tree(self):
         # TODO Add doctsring
-        tree = Tree()
-        tree.create_node(group.capitalize(), group)  # sub-tree root node
-        grouped_attr = getattr(self, f"grouped_by_{group}")
-        for key, values in grouped_attr.items():
-            tree.create_node(str(key), f"{group}-{key}", parent=group)
+        for key, values in self.grouped_by_status.items():
+            self.tree.create_node(str(key), key, parent="root")
+            store = {}
             for probe_result in values:
-                probe_name, probe_exception = probe_result.get_text(self.output_fmt)
+                node_name, probe_exception = probe_result.get_text(self.output_fmt)
                 if probe_exception:
                     self.exceptions.append(probe_exception)
-                tree.create_node(
-                    probe_name,
-                    f"{group}|{probe_result.func_name}" + probe_result.probe.get_chain(),
-                    parent=f"{group}-{key}",
-                )
-        return tree
 
-    def assemble_trees(self):
-        """For each group, build a sub-tree which gets pasted to the `root` tree."""
-        for group in self.output_fmt.grouping:
-            group_tree = self._build_tree(group)
-            self.output_fmt.exception_logging = False  # only log Exceptions once when grouping
-            self.tree.paste("root", group_tree)
+                def sort_and_group_by_parent(store: Dict, probe_result: ProbeResult):
+                    # TODO Maybe grouping with .split("/") for each lowest-level "children" in tree
+                    #   sort the probe names and split for common parent paths
+                    #   This assumes that the tree is already created, but we likely want to do this before
+                    #   with the store variable below
+                    # We can still get duplicate probes e.g. ruleset/all.yaml so we need a way to
+                    #   show the origin of each by resolving the top-level probe (by UUID) next to each probe if there are duplicates
+                    CONTINUE HERE
+                    for part in probe_result.probe_name.split("/"):
+                        store[part] = probe_result
+                    return store
+
+                store = sort_and_group_by_parent(store, probe_result)
+                # To ensure the node ID is unique across all trees, we build a string including the
+                # probe chain, grouping, and probe function
+                self.tree.create_node(
+                    node_name,
+                    probe_result.probe.get_chain() + f"/{probe_result.func_name}",
+                    parent=key,
+                )
 
     def print_results(self):
         """Handle the formating and logging of probe results."""
@@ -127,13 +106,13 @@ class ProbeResultAggregator:
         total_failed = len(self._get_by_status("fail"))
         match self.output_fmt.format:
             case None:
-                self.assemble_trees()
+                self._build_tree()
                 self.tree.show()
                 for e in self.exceptions:
                     console.print(e)
                 console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")
             case "json":
-                self.assemble_trees()
+                self._build_tree()
                 tree_json = json.loads(self.tree.to_json())
                 meta_json = {
                     "passed": total_passed,
