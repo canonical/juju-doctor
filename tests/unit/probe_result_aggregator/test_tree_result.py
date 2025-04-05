@@ -1,20 +1,21 @@
 # ruff: noqa: E501
 
 import json
-import tempfile
 from pathlib import Path
 
-from juju_doctor.probes import OutputFormat, Probe, ProbeResults
-from juju_doctor.tree import ProbeResultAggregator
+from juju_doctor.probes import Probe, ProbeResult
+from juju_doctor.tree import Group, OutputFormat, ProbeResultAggregator
 
+# TODO Add a docstring to each tests file
 
 def probe_results(tmp_path: str, flattened_path: str, passed: bool):
     results = []
     for func_name in ["status", "bundle", "show_unit"]:
         results.append(
-            ProbeResults(
+            ProbeResult(
                 probe=Probe(
-                    path=Path(f"{tmp_path}/probes/{flattened_path}"), probes_root=Path(f"{tmp_path}/probes")
+                    path=Path(f"{tmp_path}/probes/{flattened_path}"),
+                    probes_root=Path(f"{tmp_path}/probes"),
                 ),
                 func_name=func_name,
                 passed=passed,
@@ -23,126 +24,31 @@ def probe_results(tmp_path: str, flattened_path: str, passed: bool):
     return results
 
 
-def test_assemble_tree():
-    # TODO This is flaky
+def test_assemble_tree_artifact_group():
     expected_json = {
-        "Results": {
+        "Artifact": {
             "children": [
                 {
-                    "Status": {
+                    "bundle": {
                         "children": [
-                            {
-                                "fail": {
-                                    "children": [
-                                        ":red_circle: tests_resources_probes_python_failing.py/bundle failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/show_unit failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/status failed (None)",
-                                    ]
-                                }
-                            },
-                            {
-                                "pass": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/bundle passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/show_unit passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/status passed",
-                                    ]
-                                }
-                            },
-                        ]
-                    }
-                }
-            ]
-        }
-    }
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # GIVEN The results for 2 python probes (passing and failing)
-        mocked_results = []
-        mocked_results.extend(probe_results(tmpdir, "tests_resources_probes_python_failing.py", False))
-        mocked_results.extend(probe_results(tmpdir, "tests_resources_probes_python_passing.py", True))
-        # WHEN the probe results are aggregated and placed in a tree
-        output_fmt = OutputFormat(False, "json", ["status"], exception_logging=False)
-        aggregator = ProbeResultAggregator(mocked_results, output_fmt)
-        aggregator.assemble_trees()
-        # THEN We get all the groupings
-        assert json.loads(aggregator.tree.to_json()) == expected_json
-
-
-def test_assemble_tree_verbose():
-    # TODO Write one per grouping so its not as flaky (I think order is affecting it)
-    expected_json = {
-        "Results": {
-            "children": [
-                {
-                    "Artifact": {
-                        "children": [
-                            {
-                                "bundle": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/bundle passed",
-                                        ":red_circle: tests_resources_probes_python_failing.py/bundle failed (None)",
-                                    ]
-                                }
-                            },
-                            {
-                                "show_unit": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/show_unit passed",
-                                        ":red_circle: tests_resources_probes_python_failing.py/show_unit failed (None)",
-                                    ]
-                                }
-                            },
-                            {
-                                "status": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/status passed",
-                                        ":red_circle: tests_resources_probes_python_failing.py/status failed (None)",
-                                    ]
-                                }
-                            },
+                            "🔴 tests_resources_probes_python_failing.py/bundle failed (None)",
+                            "🟢 tests_resources_probes_python_passing.py/bundle passed",
                         ]
                     }
                 },
                 {
-                    "Directory": {
+                    "show_unit": {
                         "children": [
-                            {
-                                "/fake/path/probes": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/bundle passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/show_unit passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/status passed",
-                                        ":red_circle: tests_resources_probes_python_failing.py/bundle failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/show_unit failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/status failed (None)",
-                                    ]
-                                }
-                            }
+                            "🔴 tests_resources_probes_python_failing.py/show_unit failed (None)",
+                            "🟢 tests_resources_probes_python_passing.py/show_unit passed",
                         ]
                     }
                 },
                 {
-                    "Status": {
+                    "status": {
                         "children": [
-                            {
-                                "fail": {
-                                    "children": [
-                                        ":red_circle: tests_resources_probes_python_failing.py/bundle failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/show_unit failed (None)",
-                                        ":red_circle: tests_resources_probes_python_failing.py/status failed (None)",
-                                    ]
-                                }
-                            },
-                            {
-                                "pass": {
-                                    "children": [
-                                        ":green_circle: tests_resources_probes_python_passing.py/bundle passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/show_unit passed",
-                                        ":green_circle: tests_resources_probes_python_passing.py/status passed",
-                                    ]
-                                }
-                            },
+                            "🔴 tests_resources_probes_python_failing.py/status failed (None)",
+                            "🟢 tests_resources_probes_python_passing.py/status passed",
                         ]
                     }
                 },
@@ -152,15 +58,70 @@ def test_assemble_tree_verbose():
 
     # GIVEN The results for 2 python probes (passing and failing)
     mocked_results = []
-    mocked_results.extend(probe_results("/fake/path", "tests_resources_probes_python_failing.py", False))
-    mocked_results.extend(probe_results("/fake/path", "tests_resources_probes_python_passing.py", True))
+    mocked_results.extend(
+        probe_results("/fake/path", "tests_resources_probes_python_failing.py", False)
+    )
+    mocked_results.extend(
+        probe_results("/fake/path", "tests_resources_probes_python_passing.py", True)
+    )
     # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
-    output_fmt = OutputFormat(False, "json", ProbeResultAggregator.groups, exception_logging=False)
+    output_fmt = OutputFormat(False, False, "json", [Group.ARTIFACT.value])
     aggregator = ProbeResultAggregator(mocked_results, output_fmt)
     aggregator.assemble_trees()
     # THEN We get all the groupings
-    assert json.loads(aggregator.tree.to_json()) == expected_json
+    actual_json = json.loads(aggregator.tree.to_json())["Results"]["children"]
+    assert actual_json == [expected_json]
+
+
+def test_assemble_tree_directory_group():
+    # TODO Update this test to use ProbeResult from some directories
+    pass
+
+
+def test_assemble_tree_status_group():
+    expected_json = {
+        "Status": {
+            "children": [
+                {
+                    "fail": {
+                        "children": [
+                            "🔴 tests_resources_probes_python_failing.py/bundle failed (None)",
+                            "🔴 tests_resources_probes_python_failing.py/show_unit failed (None)",
+                            "🔴 tests_resources_probes_python_failing.py/status failed (None)",
+                        ]
+                    }
+                },
+                {
+                    "pass": {
+                        "children": [
+                            "🟢 tests_resources_probes_python_passing.py/bundle passed",
+                            "🟢 tests_resources_probes_python_passing.py/show_unit passed",
+                            "🟢 tests_resources_probes_python_passing.py/status passed",
+                        ]
+                    }
+                },
+            ]
+        }
+    }
+
+    # GIVEN The results for 2 python probes (passing and failing)
+    mocked_results = []
+    mocked_results.extend(
+        probe_results("/fake/path", "tests_resources_probes_python_failing.py", False)
+    )
+    mocked_results.extend(
+        probe_results("/fake/path", "tests_resources_probes_python_passing.py", True)
+    )
+    # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
+    output_fmt = OutputFormat(False, False, "json", [Group.STATUS.value])
+    aggregator = ProbeResultAggregator(mocked_results, output_fmt)
+    aggregator.assemble_trees()
+    # THEN We get all the groupings
+    actual_json = json.loads(aggregator.tree.to_json())["Results"]["children"]
+    assert actual_json == [expected_json]
 
 
 if __name__ == "__main__":
-    test_assemble_tree_verbose()
+    test_assemble_tree_artifact_group()
+    test_assemble_tree_directory_group()
+    test_assemble_tree_status_group()

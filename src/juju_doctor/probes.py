@@ -5,7 +5,7 @@ import inspect
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
@@ -17,11 +17,7 @@ from rich.logging import RichHandler
 from juju_doctor.artifacts import Artifacts
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
-SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
-EMOJI_MAP = {
-    "green": "🟢",
-    "red": "🔴",
-}
+SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -30,7 +26,7 @@ console = Console()
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
-    """Read a file into a string."""
+    """Read a yaml probe file into a dict."""
     try:
         with open(str(filename), "r") as f:
             return yaml.safe_load(f)
@@ -44,28 +40,28 @@ def _read_file(filename: Path) -> Optional[Dict]:
 
 
 @dataclass
-class OutputFormat:
-    """Track the output format for the application."""
-    verbose: bool
-    format: Optional[str]
-    grouping: List[str]
-    exception_logging: bool
-
-
-@dataclass
 class Probe:
     """A probe that can be executed via juju-doctor.
 
-    For example, instantiate a Probe with:
-        Probe(
-            path=PosixPath('/tmp/probes_passing.py')
-            probes_root=PosixPath('/tmp')
-        )
+    Since a Python probe can be executed multiple times, we need a way to differentiate between
+    the call paths. Each probe is instantiated with a UUID which is appended to the `probes_chain`
+    to identify the top-level probe (and subsequent probes) that lead to this probe's execution.
+
+    For example, for 2 probes: A and B inside a directory which is executed by probe C, their
+    probe chains would be
+        /UUID(C)/UUID(A)
+        /UUID(C)/UUID(B)
+
+    Alternatively, for 2 probes: D and E which both call probe F, their probe chains would be
+        /UUID(D)/UUID(F)
+        /UUID(E)/UUID(F)
+
+    The probe chain ends when the probe does not call another probe.
     """
 
     path: Path  # relative path in the temporary folder
-    probes_root: Path  # temporary folder
-    probes_chain: str = ""  # probe call chain with format /uuid/uuid/uuid
+    probes_root: Path  # temporary folder for all probes
+    probes_chain: str = ""  # probe call chain with format /UUID/UUID/UUID
     uuid: UUID = field(default_factory=uuid4)
 
     @property
@@ -78,7 +74,7 @@ class Probe:
         return self.path.relative_to(self.probes_root).as_posix()
 
     def get_chain(self) -> str:
-        """Append the current probes uuid to the chain."""
+        """Append the current probe's UUID to the chain."""
         return f"{self.probes_chain}/{self.uuid}"
 
     @staticmethod
@@ -119,7 +115,7 @@ class Probe:
         probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
             probe = Probe(probe_path, probes_root, probes_chain)
-            if probe.path.suffix.lower() in FileExtensions.ruleset:
+            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
                 ruleset_probes = ruleset.aggregate_probes()
                 log.info(f"Fetched probes: {ruleset_probes}")
@@ -151,19 +147,19 @@ class Probe:
         return {
             name: func
             for name, func in inspect.getmembers(module, inspect.isfunction)
-            if name in SUPPORTED_PROBE_TYPES
+            if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts) -> List["ProbeResults"]:
-        """Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`."""
+    def run(self, artifacts: Artifacts) -> List["ProbeResult"]:
+        """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
-        results: List[ProbeResults] = []
+        results: List[ProbeResult] = []
         for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
                 results.append(
-                    ProbeResults(
+                    ProbeResult(
                         probe=self,
                         func_name=func_name,
                         passed=False,
@@ -175,15 +171,17 @@ class Probe:
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(ProbeResults(probe=self, func_name=func_name, passed=False, exception=e))
+                results.append(
+                    ProbeResult(probe=self, func_name=func_name, passed=False, exception=e)
+                )
             else:
-                results.append(ProbeResults(probe=self, func_name=func_name, passed=True))
+                results.append(ProbeResult(probe=self, func_name=func_name, passed=True))
         return results
 
 
 @dataclass
-class ProbeResults:
-    """A helper class to wrap results for a Probe."""
+class ProbeResult:
+    """A helper class to wrap results for a Probe's functions."""
 
     probe: Probe
     func_name: str
@@ -206,19 +204,21 @@ class ProbeResults:
             return msg[: width - 3] + "..."
         return msg
 
-    def text(self, output_fmt: OutputFormat) -> str:
+    def get_text(self, output_fmt) -> Tuple[str, Optional[str]]:
         """Probe results (formatted as Pretty-print) as a string."""
-        green = EMOJI_MAP["green"]
-        red = EMOJI_MAP["red"]
+        exception_msg = None
+        green = output_fmt.rich_map["green"]
+        red = output_fmt.rich_map["red"]
         if self.passed:
-            return f"{green} {self.probe_name} passed"
+            return f"{green} {self.probe_name} passed", exception_msg
         # If the probe failed
+        probe_name = f"{red} {self.probe_name} failed"
         if output_fmt.verbose:
             if output_fmt.exception_logging:
-                console.print(f"[b]Exception[/b] ({self.probe_name}): {self.exception}")
-            return f"{red} {self.probe_name} failed"
-        msg = self.truncate_exception_msg(str(self.exception), width=40)
-        return f"{red} {self.probe_name} failed ({msg})"
+                exception_msg = f"[b]Exception[/b] ({self.probe_name}): {self.exception}"
+            return probe_name, exception_msg
+        truncated_exception = self.truncate_exception_msg(str(self.exception))
+        return f"{probe_name} ({truncated_exception})", exception_msg
 
 
 class RuleSet:
@@ -254,7 +254,9 @@ class RuleSet:
                 #   i.e. we trust an author to put a ruleset if they specify type: ruleset
                 case "scriptlet":
                     probes.extend(
-                        Probe.from_url(ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain())
+                        Probe.from_url(
+                            ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
+                        )
                     )
                 case "ruleset":
                     if ruleset_probe.get("url", None):
@@ -263,7 +265,8 @@ class RuleSet:
                             self.probe.probes_root,
                             self.probe.get_chain(),
                         )
-                        # If the probe is a directory of probes, append and continue to the next probe
+                        # If the probe is a directory of probes, capture it and continue to the
+                        # next probe since it's not actually a Ruleset
                         if len(nested_ruleset_probes) > 1:
                             probes.extend(nested_ruleset_probes)
                             continue
@@ -274,8 +277,10 @@ class RuleSet:
                             log.info(f"Fetched probes: {derived_ruleset_probes}")
                             probes.extend(derived_ruleset_probes)
                     else:
-                        # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
-                        log.info(f"Found built-in probe config: \n{ruleset_probe.get('with', None)}")
+                        # TODO "built-in" directives, e.g. "apps/has-relation"
+                        log.info(
+                            f"Found built-in probe config: \n{ruleset_probe.get('with', None)}"
+                        )
                         raise NotImplementedError
 
                 case _:

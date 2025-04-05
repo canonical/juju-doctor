@@ -75,26 +75,20 @@ class ProbeResultAggregator:
         self.tree.create_node("Results", "root")  # root node
         self.grouped_by_status = defaultdict(list)
         self.grouped_by_artifact = defaultdict(list)
-        self.grouped_by_directory = defaultdict(list)
         self._group_results()
 
     def _group_results(self):
         # TODO Improve the docstring since dynamic grouped_by_ building is confusing
-        """Group results by status, parent directory, and probe type."""
+        """Group results by status, and probe type."""
         for result in self.results:
             self.grouped_by_status[result.status].append(result)
             self.grouped_by_artifact[result.func_name].append(result)
-            self.grouped_by_directory[result.probe.path.parent].append(result)
-
 
     def _get_by_status(self, status: str) -> List[Dict]:
         return self.grouped_by_status.get(status, [])
 
     def _get_by_artifact(self, probe_type: str) -> List[Dict]:
         return self.grouped_by_artifact.get(probe_type, [])
-
-    def _get_by_parent(self, parent: Path) -> List[Dict]:
-        return self.grouped_by_directory.get(parent, [])
 
     def _build_tree(self, group: str) -> Tree:
         # TODO Add doctsring
@@ -103,12 +97,28 @@ class ProbeResultAggregator:
         grouped_attr = getattr(self, f"grouped_by_{group}")
         for key, values in grouped_attr.items():
             tree.create_node(str(key), f"{group}-{key}", parent=group)
+            store = {}
             for probe_result in values:
-                probe_name, probe_exception = probe_result.get_text(self.output_fmt)
+                node_name, probe_exception = probe_result.get_text(self.output_fmt)
                 if probe_exception:
                     self.exceptions.append(probe_exception)
+
+                def sort_and_group_by_parent(store: Dict, probe_result: ProbeResult):
+                    # TODO Improve the grouping of the Directory probes
+                    # -p "file://tests/resources/probes/python" -p "file://tests/resources/probes/ruleset/small-dir"
+                    # TODO We need to really re-think this.
+                    #   Maybe grouping by directory is default with .split("/") for each lowest-level "children" in tree
+                    #   sort the probe names and split for common parent paths
+                    #   This assumes that the tree is already created, but we likely want to do this before
+                    for part in probe_result.probe_name.split("/"):
+                        store[part] = probe_result
+                    return store
+
+                store = sort_and_group_by_parent(store, probe_result)
+                # To ensure the node ID is unique across all trees, we build a string including the
+                # probe chain, grouping, and probe function
                 tree.create_node(
-                    probe_name,
+                    node_name,
                     f"{group}|{probe_result.func_name}" + probe_result.probe.get_chain(),
                     parent=f"{group}-{key}",
                 )

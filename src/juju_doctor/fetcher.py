@@ -4,6 +4,7 @@
 """Helper module to fetch probes from local or remote endpoints."""
 
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import List, Tuple
 from urllib.error import URLError
@@ -13,15 +14,19 @@ import fsspec
 log = logging.getLogger(__name__)
 
 
-class FileExtensions:
-    """Source of truth for all supported Probe file extensions."""
-    python = {".py"}
-    ruleset = {".yaml", ".yml"}
+class FileExtensions(Enum):
+    """Supported Probe file extensions."""
 
-    @classmethod
-    def all(cls):
+    PYTHON = {".py"}
+    RULESET = {".yaml", ".yml"}
+
+    @staticmethod
+    def all():
         """Return all file extensions."""
-        return cls.python | cls.ruleset
+        all = set()
+        for f in FileExtensions:
+            all = all | f.value
+        return all
 
 
 def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
@@ -49,7 +54,9 @@ def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
     return org, repo, path
 
 
-def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path) -> List[Path]:
+def copy_probes(
+    filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path
+) -> List[Path]:
     """Scan a path for probes from a generic filesystem and cop them to a destination.
 
     Args:
@@ -65,7 +72,9 @@ def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destin
         # If path ends with a "/", it will be assumed to be a directory
         # Can submit a list of paths, which may be glob-patterns and will be expanded.
         # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
-        filesystem.get(path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True)
+        filesystem.get(
+            path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True
+        )
     except FileNotFoundError as e:
         log.warning(
             f"{e} file not found when attempting to copy "

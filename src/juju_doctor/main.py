@@ -11,8 +11,8 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import OutputFormat, Probe, ProbeResults
-from juju_doctor.tree import ProbeResultAggregator
+from juju_doctor.probes import Probe, ProbeResult
+from juju_doctor.tree import Group, OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -59,20 +59,17 @@ def check(
         typer.Option(
             "--grouping",
             "-g",
-            help=f"Specify the grouping type ({', '.join(ProbeResultAggregator.groups)}) in the result tree.",
+            help=f"Specify the grouping type ({', '.join(Group.all())}) in the result tree.",
         ),
     ] = ["status"],
 ):
     """Run checks on a certain model."""
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
-        raise typer.BadParameter("If you pass a live model with --model, you cannot pass static files.")
-    if verbose and format == "json":
         raise typer.BadParameter(
-            "If you set the format to JSON with --json, you can no longer use --verbose."
+            "If you pass a live model with --model, you cannot pass static files."
         )
-    if any(g not in ProbeResultAggregator.groups for g in grouping):
-        raise typer.BadParameter(f"Grouping type is not in supported types: {ProbeResultAggregator.groups}.")
+    log.info(f"Results are grouped by: {[Group(g) for g in grouping]}")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -105,12 +102,12 @@ def check(
                 )
 
         # Run the probes
-        probe_results: List[ProbeResults] = []
+        probe_results: List[ProbeResult] = []
         for probe in probes:
-            current_results: List[ProbeResults] = probe.run(artifacts)
+            current_results: List[ProbeResult] = probe.run(artifacts)
             probe_results.extend(current_results)
 
-        output_fmt = OutputFormat(verbose, format, grouping, exception_logging=True)
+        output_fmt = OutputFormat(verbose, True, format, grouping)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)
         aggregator.print_results()
 
