@@ -29,11 +29,12 @@ format:
 test: unit solution
 
 # Run unit tests
-unit:
-  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit
+# TODO test that the "$@" works for files and dirs
+unit *args='':
+  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/unit "$@"
   uv run $uv_flags coverage report
 
 # Run solution tests
-solution:
-  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/solution
+solution *args='':
+  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest tests/solution "$@"
   uv run $uv_flags coverage report
