@@ -28,6 +28,7 @@ console = Console()
 
 class AssertionStatus(Enum):
     """Result of the probe's assertion."""
+
     PASS = "pass"
     FAIL = "fail"
 
@@ -179,7 +180,9 @@ class Probe:
                 func(artifact)
             except BaseException as e:
                 results.append(
-                    ProbeAssertionResult(probe=self, func_name=func_name, passed=False, exception=e)
+                    ProbeAssertionResult(
+                        probe=self, func_name=func_name, passed=False, exception=e
+                    )
                 )
             else:
                 results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))

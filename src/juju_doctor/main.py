@@ -93,7 +93,9 @@ def check(
                 )
 
         # Run the probes
-        probe_results: Dict[str, List[ProbeAssertionResult]] = {}  # TODO Do we need a type hint here? Check with static test
+        probe_results: Dict[
+            str, List[ProbeAssertionResult]
+        ] = {}  # TODO Do we need a type hint here? Check with static test
         for probe in probes:
             current_results: List[ProbeAssertionResult] = probe.run(artifacts)
             probe_results[probe.name] = current_results
