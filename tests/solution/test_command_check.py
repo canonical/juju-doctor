@@ -69,6 +69,8 @@ def test_check_multiple_file_probes():
     assert json.loads(result.stdout)["failed"] == 3
     assert json.loads(result.stdout)["passed"] == 3
 
+# TODO Create a test for duplicate probes -p "probes/python", -p "probes/python" or -p "python/failing.py" -p "python/failing.py"
+
 def test_check_returns_valid_json():
     # GIVEN a CLI Typer app
     runner = CliRunner()

@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from juju_doctor.probes import Probe, ProbeResult
-from juju_doctor.tree import Group, OutputFormat, ProbeResultAggregator
+from juju_doctor.probes import Probe, ProbeAssertionResult
+from juju_doctor.tree import Group, OutputFormat, ProbeAssertionResultAggregator
 
 # TODO Add a docstring to each tests file
 
@@ -12,7 +12,7 @@ def probe_results(tmp_path: str, flattened_path: str, passed: bool):
     results = []
     for func_name in ["status", "bundle", "show_unit"]:
         results.append(
-            ProbeResult(
+            ProbeAssertionResult(
                 probe=Probe(
                     path=Path(f"{tmp_path}/probes/{flattened_path}"),
                     probes_root=Path(f"{tmp_path}/probes"),
@@ -25,6 +25,7 @@ def probe_results(tmp_path: str, flattened_path: str, passed: bool):
 
 
 def test_build_tree_status_group():
+    # TODO replace "pass" and "fail" with AssertionStatus.FAIL.value
     expected_json = {
         "Status": {
             "children": [
@@ -59,8 +60,8 @@ def test_build_tree_status_group():
         probe_results("/fake/path", "tests_resources_probes_python_passing.py", True)
     )
     # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
-    output_fmt = OutputFormat(False, False, "json", [Group.STATUS.value])
-    aggregator = ProbeResultAggregator(mocked_results, output_fmt)
+    output_fmt = OutputFormat(False, False, "json")
+    aggregator = ProbeAssertionResultAggregator(mocked_results, output_fmt)
     aggregator._build_tree()
     # THEN We get all the groupings
     actual_json = json.loads(aggregator.tree.to_json())["Results"]["children"]

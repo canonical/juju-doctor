@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import logging
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
@@ -23,6 +24,12 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 console = Console()
+
+
+class AssertionStatus(Enum):
+    """Result of the probe's assertion."""
+    PASS = "pass"
+    FAIL = "fail"
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
@@ -150,16 +157,16 @@ class Probe:
             if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts) -> List["ProbeResult"]:
+    def run(self, artifacts: Artifacts) -> List["ProbeAssertionResult"]:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
-        results: List[ProbeResult] = []
+        results: List[ProbeAssertionResult] = []
         for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
                 results.append(
-                    ProbeResult(
+                    ProbeAssertionResult(
                         probe=self,
                         func_name=func_name,
                         passed=False,
@@ -172,15 +179,15 @@ class Probe:
                 func(artifact)
             except BaseException as e:
                 results.append(
-                    ProbeResult(probe=self, func_name=func_name, passed=False, exception=e)
+                    ProbeAssertionResult(probe=self, func_name=func_name, passed=False, exception=e)
                 )
             else:
-                results.append(ProbeResult(probe=self, func_name=func_name, passed=True))
+                results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))
         return results
 
 
 @dataclass
-class ProbeResult:
+class ProbeAssertionResult:
     """A helper class to wrap results for a Probe's functions."""
 
     probe: Probe
@@ -189,20 +196,9 @@ class ProbeResult:
     exception: Optional[BaseException] = None
 
     @property
-    def probe_name(self) -> str:
-        """Probe name and the function name, matching a supported artifact."""
-        return f"{self.probe.name}/{self.func_name}"
-
-    @property
     def status(self) -> str:
         """Result of the probe."""
-        return "pass" if self.passed else "fail"
-
-    def truncate_exception_msg(self, msg: str, width: int = 40) -> str:
-        """Truncate the exception message to fit within the specified width."""
-        if len(msg) > width - 3:  # -3 for "..."
-            return msg[: width - 3] + "..."
-        return msg
+        return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
     def get_text(self, output_fmt) -> Tuple[str, Optional[str]]:
         """Probe results (formatted as Pretty-print) as a string."""
@@ -210,16 +206,15 @@ class ProbeResult:
         green = output_fmt.rich_map["green"]
         red = output_fmt.rich_map["red"]
         if self.passed:
-            return f"{green} {self.probe_name} passed", exception_msg
+            return f"{green} {self.probe.name}", exception_msg
         # If the probe failed
-        probe_name = f"{red} {self.probe_name} failed"
-        if output_fmt.verbose:
-            if output_fmt.exception_logging:
-                # TODO remove the [b] bold formatting in JSON
-                exception_msg = f"[b]Exception[/b] ({self.probe_name}): {self.exception}"
-            return probe_name, exception_msg
-        truncated_exception = self.truncate_exception_msg(str(self.exception))
-        return f"{probe_name} ({truncated_exception})", exception_msg
+        exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
+        if output_fmt.format == "json":
+            exception_msg = f"Exception {exception_suffix}"
+        else:
+            if output_fmt.verbose:
+                exception_msg = f"[b]Exception[/b] {exception_suffix}"
+        return f"{red} {self.probe.name}", exception_msg
 
 
 class RuleSet:

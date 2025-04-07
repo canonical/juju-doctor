@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe, ProbeResult
+from juju_doctor.probes import Probe, ProbeAssertionResult
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
@@ -93,12 +93,12 @@ def check(
                 )
 
         # Run the probes
-        probe_results: List[ProbeResult] = []
+        probe_results: Dict[str, List[ProbeAssertionResult]] = {}  # TODO Do we need a type hint here? Check with static test
         for probe in probes:
-            current_results: List[ProbeResult] = probe.run(artifacts)
-            probe_results.extend(current_results)
+            current_results: List[ProbeAssertionResult] = probe.run(artifacts)
+            probe_results[probe.name] = current_results
 
-        output_fmt = OutputFormat(verbose, True, format)
+        output_fmt = OutputFormat(verbose, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)
         aggregator.print_results()
 

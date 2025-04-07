@@ -57,7 +57,11 @@ def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
 def copy_probes(
     filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path
 ) -> List[Path]:
-    """Scan a path for probes from a generic filesystem and cop them to a destination.
+    """Scan a path for probes from a generic filesystem and copy them to a destination.
+
+    If the same probe is specified multiple times, then the last instance of that probe overwrites
+    the previous ones. Specifying duplicate probes is likely an accident by the user, but can occur
+    with directories of probes or nesting of probes in Ruleset call paths.
 
     Args:
         filesystem: the abstraction of the filesystem containing the probe
@@ -72,22 +76,22 @@ def copy_probes(
         # If path ends with a "/", it will be assumed to be a directory
         # Can submit a list of paths, which may be glob-patterns and will be expanded.
         # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
-        filesystem.get(
-            path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True
-        )
+        rpath = f"{path.as_posix()}/" if path.is_dir() else path.as_posix()
+        lpath = probes_destination.as_posix()
+        filesystem.get(rpath, lpath, recursive=True, auto_mkdir=True)
     except FileNotFoundError as e:
         log.warning(
             f"{e} file not found when attempting to copy "
-            f"'{path.as_posix()}' to '{probes_destination.as_posix()}'"
+            f"'{rpath}' to '{lpath}'"
         )
 
     # Create a Probe for each file in 'probes_destination' if it's a folder, else create just one
-    if filesystem.isfile(path.as_posix()):
+    if filesystem.isfile(rpath):
         probe_files: List[Path] = [probes_destination]
     else:
         probe_files: List[Path] = [
             f for f in probes_destination.rglob("*") if f.suffix.lower() in FileExtensions.all()
         ]
-        log.info(f"copying {path.as_posix()} to {probes_destination.as_posix()} recursively")
+        log.info(f"copying {rpath} to {lpath} recursively")
 
     return probe_files
