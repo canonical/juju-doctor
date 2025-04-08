@@ -26,8 +26,8 @@ def test_parse_dir():
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
         probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
-        # THEN 2 probes exist
-        assert len(probes) == 2
+        # THEN 3 probes exist
+        assert len(probes) == 3
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
         # AND the Probe was correctly parsed as passing

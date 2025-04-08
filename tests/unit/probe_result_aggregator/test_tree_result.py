@@ -3,10 +3,9 @@
 import json
 from pathlib import Path
 
-from juju_doctor.probes import Probe, ProbeAssertionResult
-from juju_doctor.tree import Group, OutputFormat, ProbeAssertionResultAggregator
+from juju_doctor.probes import AssertionStatus, Probe, ProbeAssertionResult
+from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
-# TODO Add a docstring to each tests file
 
 def probe_results(tmp_path: str, flattened_path: str, passed: bool):
     results = []
@@ -21,51 +20,42 @@ def probe_results(tmp_path: str, flattened_path: str, passed: bool):
                 passed=passed,
             )
         )
-    return results
+    return {flattened_path: results}
 
 
 def test_build_tree_status_group():
-    # TODO replace "pass" and "fail" with AssertionStatus.FAIL.value
-    expected_json = {
-        "Status": {
-            "children": [
-                {
-                    "fail": {
-                        "children": [
-                            "🔴 tests_resources_probes_python_failing.py/bundle failed (None)",
-                            "🔴 tests_resources_probes_python_failing.py/show_unit failed (None)",
-                            "🔴 tests_resources_probes_python_failing.py/status failed (None)",
-                        ]
-                    }
-                },
-                {
-                    "pass": {
-                        "children": [
-                            "🟢 tests_resources_probes_python_passing.py/bundle passed",
-                            "🟢 tests_resources_probes_python_passing.py/show_unit passed",
-                            "🟢 tests_resources_probes_python_passing.py/status passed",
-                        ]
-                    }
-                },
-            ]
+    expected_json = [
+        {
+            AssertionStatus.FAIL.value: {
+                "children": [
+                    '🔴 tests_resources_probes_python_failing.py (status, bundle, show_unit)'
+                ]
+            }
+        },
+        {
+            AssertionStatus.PASS.value: {
+                "children": [
+                    '🟢 tests_resources_probes_python_passing.py'
+                ]
+            }
         }
-    }
+    ]
 
     # GIVEN The results for 2 python probes (passing and failing)
-    mocked_results = []
-    mocked_results.extend(
+    mocked_results = {}
+    mocked_results.update(
         probe_results("/fake/path", "tests_resources_probes_python_failing.py", False)
     )
-    mocked_results.extend(
+    mocked_results.update(
         probe_results("/fake/path", "tests_resources_probes_python_passing.py", True)
     )
-    # WHEN the probe results are aggregated and placed in a tree with the `--verbose` option
-    output_fmt = OutputFormat(False, False, "json")
-    aggregator = ProbeAssertionResultAggregator(mocked_results, output_fmt)
+    # WHEN The probe results are aggregated and placed in a tree
+    output_fmt = OutputFormat(False, "json")
+    aggregator = ProbeResultAggregator(mocked_results, output_fmt)
     aggregator._build_tree()
-    # THEN We get all the groupings
-    actual_json = json.loads(aggregator.tree.to_json())["Results"]["children"]
-    assert actual_json == [expected_json]
+    # THEN The tree result is correctly grouped and the probe assertions are displ
+    actual_json = json.loads(aggregator._tree.to_json())["Results"]["children"]
+    assert actual_json == expected_json
 
 
 if __name__ == "__main__":

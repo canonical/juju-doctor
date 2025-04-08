@@ -32,9 +32,6 @@ class OutputFormat:
 class RichTree(Tree):
     """A subclass of treelib.Tree that renders styled text from shortcodes."""
 
-    red = ":red_circle:"
-    green = ":green_circle:"
-
     def show(self, *args, **kwargs):
         """Overrides Tree::show to replace shortcodes with styled text."""
         output = super().show(*args, stdout=False)  # Get tree output as string
@@ -63,7 +60,7 @@ class ProbeResultAggregator:
 
     def _group_results(self, probe_results: Dict[str, List[ProbeAssertionResult]]):
         """Group each probe assertion result by pass/fail."""
-        for probe_result in probe_results:
+        for probe_result in probe_results.values():
             status = (
                 AssertionStatus.FAIL.value
                 if any(p.status == AssertionStatus.FAIL.value for p in probe_result)
@@ -71,49 +68,49 @@ class ProbeResultAggregator:
             )
             self._grouped_by_status[status].append(probe_result)
 
-    def _get_total_by_status(self, status: AssertionStatus) -> List[List[ProbeAssertionResult]]:
-        # TODO This is unnecessary computation when we could just track the results within the loop in _build_tree
-        # TODO It is also incorrect and should count the total assertions pass/fail regardless of the overall probe's success
-        results = [
-            [assertion_result.status for assertion_result in probe_result]
-            for probe_result in self._grouped_by_status.get(status, [])
-        ]
-        return sum(entry.count(status) for entry in results)
+    def _build_tree(self) -> Dict[str, int]:
+        """Create the tree structure for aggregated results.
 
-    def _build_tree(self):
-        # TODO Add doctsring
+        Create a new node in the tree once per defined probe with an assertion summary.
+        """
+        results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
         for status, probe_results in self._grouped_by_status.items():
             self._tree.create_node(str(status), status, parent="root")
-            # create a new node once per defined probe instead of per function name
             for probe_result in probe_results:
+                node_tag = ""
                 function_statuses = {"pass": [], "fail": []}
+                # gather failed assertions and exceptions
                 for assertion_result in probe_result:
                     node_tag, probe_exception = assertion_result.get_text(self._output_fmt)
+                    results[assertion_result.status] += 1
                     if probe_exception:
                         self._exceptions.append(probe_exception)
-                    status = "pass" if assertion_result.passed else "fail"
-                    function_statuses[status].append(assertion_result.func_name)
-                node_tag = node_tag + f" ({', '.join(function_statuses[status])})"
+                    function_statuses[assertion_result.status].append(assertion_result.func_name)
+                    if not assertion_result.passed:
+                        node_tag += f" ({', '.join(function_statuses[status])})"
                 self._tree.create_node(node_tag, assertion_result.probe.get_chain(), status)
+
+        return results
 
     def print_results(self):
         """Handle the formating and logging of probe results."""
-        total_passed = self._get_total_by_status(AssertionStatus.PASS.value)
-        total_failed = self._get_total_by_status(AssertionStatus.FAIL.value)
+        results = self._build_tree()
+        passed = results[AssertionStatus.PASS.value]
+        failed = results[AssertionStatus.FAIL.value]
         match self._output_fmt.format:
             case None:
-                self._build_tree()
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)
-                console.print(f"\nTotal: 🟢 {total_passed} 🔴 {total_failed}")
+                console.print(
+                    f"\nTotal: 🟢 {passed} 🔴 {failed}"
+                )
             case "json":
-                self._build_tree()
                 tree_json = json.loads(self._tree.to_json())
                 # TODO see if treelib.Tree.to_json has an option to remove the "children" keys
                 meta_json = {
-                    "passed": total_passed,
-                    "failed": total_failed,
+                    "passed": passed,
+                    "failed": failed,
                 }
                 if self._output_fmt.verbose:
                     meta_json.update({"exceptions": self._exceptions})

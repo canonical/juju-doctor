@@ -134,7 +134,7 @@ class Probe:
 
         return probes
 
-    def get_functions(self) -> Dict:
+    def _get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -162,7 +162,7 @@ class Probe:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeAssertionResult] = []
-        for func_name, func in self.get_functions().items():
+        for func_name, func in self._get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
