@@ -17,6 +17,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Auto set pyproject.toml version from tag
+        # Ref: https://github.com/grst/python-ci-versioneer
+        run: |
+          # from refs/tags/1.2.3 get 1.2.3
+          VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
+          if [[ -z "$VERSION" ]]; then
+              echo "❌ ERROR: Could not extract version from GITHUB_REF ($ref)"
+              exit 1
+          fi
+          echo "Setting version to $VERSION"
+          PLACEHOLDER='^version\s*=.*'
+          # ensure the placeholder is there. If grep doesn't find the placeholder
+          # it exits with exit code 1 and github actions aborts the build.
+          grep -E "$PLACEHOLDER" pyproject.toml
+          sed -i -e "s/^\(version\s*=\).*/\1 \"${VERSION}\"/g" pyproject.toml
+        shell: bash
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -46,21 +62,6 @@ jobs:
     permissions:
       id-token: write  # mandatory for trusted publishing
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-    - name: Auto set pyproject.toml version from tag
-      # Ref: https://github.com/grst/python-ci-versioneer
-      run: |
-        # from refs/tags/1.2.3 get 1.2.3
-        VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
-        echo "Setting version to $VERSION"
-        PLACEHOLDER='^version\s*=.*'
-        # ensure the placeholder is there. If grep doesn't find the placeholder
-        # it exits with exit code 1 and github actions aborts the build.
-        grep -E "$PLACEHOLDER" pyproject.toml
-        sed -i -e "s/^\(version\s*=\).*/\1 \"${VERSION}\"/g" pyproject.toml
-      shell: bash
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:

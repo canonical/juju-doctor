@@ -1,7 +1,9 @@
-# juju-doctor
-![PyPI](https://img.shields.io/pypi/v/juju-doctor)
+# 🩺 juju-doctor 🩺
 
-You deploy, we validate, you fix it :)
+[![PyPI](https://img.shields.io/pypi/v/juju-doctor)](https://pypi.org/project/juju-doctor/)
+[![Release](https://github.com/canonical/juju-doctor/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/loki-k8s-operator/actions/workflows/release.yaml)
+
+Run a configurable set of `probes` (assertions) against Juju deployment `artifacts`, which are the output of other tools like `juju`, `sosreport`, and `kubectl`. To enforce best practices, these probes are organized into a `ruleset`, which acts as a guide for correct deployment configurations.
 
 ## Usage
 
@@ -41,7 +43,7 @@ Total: 🟢 3 🔴 3
 ```
 
 The path to a probe can also be a url:
-```
+```bash
 # Run a remote probe against a live model
 ∮ juju-doctor check --model cos --probe github://canonical/grafana-k8s-operator//probes/some_probe.py
 ```
