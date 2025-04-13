@@ -31,15 +31,10 @@ If you have a live deplyoment, you can also run `juju-doctor` against that:
 In either case, the output will look like so (configurable with `--format` and `--verbose`):
 ```
 Results
-└── Status
-    ├── fail
-    │   ├── 🔴 tests_resources_probes_python_failing.py/bundle failed (Bundle probe here, something went wro...)
-    │   ├── 🔴 tests_resources_probes_python_failing.py/show_unit failed (I'm the show-unit probe, bad things h...)
-    │   └── 🔴 tests_resources_probes_python_failing.py/status failed (I'm the status probe, and I failed)
-    └── pass
-        ├── 🟢 tests_resources_probes_python_passing.py/bundle passed
-        ├── 🟢 tests_resources_probes_python_passing.py/show_unit passed
-        └── 🟢 tests_resources_probes_python_passing.py/status passed
+├── fail
+│   └── 🔴 tests_resources_probes_python_failing.py (bundle, show_unit, status)
+└── pass
+    └── 🟢 tests_resources_probes_python_passing.py
 
 
 Total: 🟢 3 🔴 3
