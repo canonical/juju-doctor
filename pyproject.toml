@@ -56,3 +56,8 @@ extend-select = ["I"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+markers = [
+    "github: mark tests which use probes in GitHub remotes",
+]

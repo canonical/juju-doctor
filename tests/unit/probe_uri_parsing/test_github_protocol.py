@@ -1,9 +1,12 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from juju_doctor.probes import Probe
 
 
+@pytest.mark.github
 def test_parse_file():
     # GIVEN a probe file specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python/failing.py"
@@ -19,6 +22,7 @@ def test_parse_file():
         assert probe.path == Path(tmpdir) / probe.name
 
 
+@pytest.mark.github
 def test_parse_dir():
     # GIVEN a probe directory specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python"

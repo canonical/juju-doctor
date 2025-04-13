@@ -27,28 +27,16 @@ def test_build_tree_status_group():
     expected_json = [
         {
             AssertionStatus.FAIL.value: {
-                "children": [
-                    '🔴 tests_resources_probes_python_failing.py (status, bundle, show_unit)'
-                ]
+                "children": ["🔴 probes_python_failing.py (status, bundle, show_unit)"]
             }
         },
-        {
-            AssertionStatus.PASS.value: {
-                "children": [
-                    '🟢 tests_resources_probes_python_passing.py'
-                ]
-            }
-        }
+        {AssertionStatus.PASS.value: {"children": ["🟢 probes_python_passing.py"]}},
     ]
 
     # GIVEN The results for 2 python probes (passing and failing)
     mocked_results = {}
-    mocked_results.update(
-        probe_results("/fake/path", "tests_resources_probes_python_failing.py", False)
-    )
-    mocked_results.update(
-        probe_results("/fake/path", "tests_resources_probes_python_passing.py", True)
-    )
+    mocked_results.update(probe_results("/fake/path", "probes_python_failing.py", False))
+    mocked_results.update(probe_results("/fake/path", "probes_python_passing.py", True))
     # WHEN The probe results are aggregated and placed in a tree
     output_fmt = OutputFormat(False, "json")
     aggregator = ProbeResultAggregator(mocked_results, output_fmt)
@@ -56,7 +44,3 @@ def test_build_tree_status_group():
     # THEN The tree result is correctly grouped and the probe assertions are displ
     actual_json = json.loads(aggregator._tree.to_json())["Results"]["children"]
     assert actual_json == expected_json
-
-
-if __name__ == "__main__":
-    test_build_tree_status_group()
