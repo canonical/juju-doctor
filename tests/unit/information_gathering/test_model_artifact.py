@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock, mock_open, patch
 
 import yaml
@@ -128,7 +127,11 @@ k6/0:
   address: 10.1.15.172
 """
 
-FILES = {"status.yaml": JUJU_STATUS, "bundle.yaml": JUJU_EXPORT_BUNDLE, "show-unit.yaml": JUJU_SHOW_UNIT}
+FILES = {
+    "status.yaml": JUJU_STATUS,
+    "bundle.yaml": JUJU_EXPORT_BUNDLE,
+    "show-unit.yaml": JUJU_SHOW_UNIT,
+}
 
 
 def test_model_artifact_parsing_from_file():
@@ -185,7 +188,9 @@ def test_model_artifacts_is_equivalent():
             juju_mock.side_effect = _juju_side_effect
 
             from_files_artifact = ModelArtifact.from_files(
-                status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
+                status_file="status.yaml",
+                bundle_file="bundle.yaml",
+                show_unit_file="show-unit.yaml",
             )
 
             from_live_model_artifact = ModelArtifact.from_live_model(model="some-model")

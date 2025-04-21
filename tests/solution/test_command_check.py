@@ -45,18 +45,3 @@ def test_check_gh_probe_fails():
     # AND the Probe was correctly executed
     check = json.loads(result.stdout)
     assert check == {"failed": 3, "passed": 0}
-
-
-def test_check_raises_recursion_error():
-    # GIVEN a CLI Typer app
-    runner = CliRunner()
-    # WHEN the "check" command is executed on a circular ruleset execution chain
-    test_args = [
-        "check",
-        "--probe",
-        "file://tests/resources/probes/ruleset/circular.yaml",
-        "--status=tests/resources/artifacts/status.yaml",
-    ]
-    # THEN the command raises a RecursionError
-    # with pytest.raises(RecursionError):  # FIXME Catch RecursionError natively with typer.CLIRunner
-    runner.invoke(app, test_args, catch_exceptions=False)

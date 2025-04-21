@@ -52,6 +52,7 @@ class ProbeResults:
             )
             console.print(")")
 
+
 @dataclass
 class Probe:
     """A probe that can be executed via juju-doctor.
@@ -148,7 +149,7 @@ class Probe:
         }
 
     def run(self, artifacts: Artifacts) -> List[ProbeResults]:
-        """Execute each Probe function that matches the names: `status`, `bundle`, or `show_unit`."""
+        """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeResults] = []
         for func_name, func in self.get_functions().items():
@@ -167,7 +168,9 @@ class Probe:
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=False, exception=e))
+                results.append(
+                    ProbeResults(probe_name=f"{self.name}/{func_name}", passed=False, exception=e)
+                )
             else:
                 results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=True))
         return results
@@ -218,12 +221,17 @@ class RuleSet:
             match ruleset_probe["type"]:
                 # TODO We currently do not handle file extension validation.
                 #   i.e. we trust an author to put a ruleset if they specify type: ruleset
-                case "directory" | "scriptlet":  # TODO Support a dir type since UX feels weird without?
+                case (
+                    "directory" | "scriptlet"
+                ):  # TODO Support a dir type since UX feels weird without?
                     probes.extend(Probe.from_url(ruleset_probe["url"], self.probe.probes_root))
                 case "ruleset":
                     if ruleset_probe.get("url", None):
-                        nested_ruleset_probes = Probe.from_url(ruleset_probe["url"], self.probe.probes_root)
-                        # If the probe is a directory of probes, append and continue to the next probe
+                        nested_ruleset_probes = Probe.from_url(
+                            ruleset_probe["url"], self.probe.probes_root
+                        )
+                        # If the probe is a directory of probes, capture it and continue to the
+                        # next probe since it's not actually a Ruleset
                         if len(nested_ruleset_probes) > 1:
                             probes.extend(nested_ruleset_probes)
                             continue
@@ -234,8 +242,10 @@ class RuleSet:
                             log.info(f"Fetched probes: {derived_ruleset_probes}")
                             probes.extend(derived_ruleset_probes)
                     else:
-                        # TODO "built-in" directives, e.g. "apps/has-relation" or "apps/has-subordinate"
-                        log.info(f'Found built-in probe config: \n{ruleset_probe.get("with", None)}')
+                        # TODO "built-in" directives, e.g. "apps/has-relation"
+                        log.info(
+                            f"Found built-in probe config: \n{ruleset_probe.get('with', None)}"
+                        )
                         raise NotImplementedError
 
                 case _:

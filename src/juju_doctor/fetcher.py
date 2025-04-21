@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 class FileExtensions:
     """Source of truth for all supported Probe file extensions."""
+
     python = {".py"}
     ruleset = {".yaml", ".yml"}
 
@@ -49,7 +50,9 @@ def parse_terraform_notation(url_without_scheme: str) -> Tuple[str, str, str]:
     return org, repo, path
 
 
-def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path) -> List[Path]:
+def copy_probes(
+    filesystem: fsspec.AbstractFileSystem, path: Path, probes_destination: Path
+) -> List[Path]:
     """Scan a path for probes from a generic filesystem and cop them to a destination.
 
     Args:
@@ -65,7 +68,9 @@ def copy_probes(filesystem: fsspec.AbstractFileSystem, path: Path, probes_destin
         # If path ends with a "/", it will be assumed to be a directory
         # Can submit a list of paths, which may be glob-patterns and will be expanded.
         # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
-        filesystem.get(path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True)
+        filesystem.get(
+            path.as_posix(), probes_destination.as_posix(), recursive=True, auto_mkdir=True
+        )
     except FileNotFoundError as e:
         log.warning(
             f"{e} file not found when attempting to copy "

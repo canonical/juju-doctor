@@ -31,8 +31,12 @@ def test_parse_dir():
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
         # AND the Probe was correctly parsed as passing
-        assert passing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/passing.py"
+        assert (
+            passing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/passing.py"
+        )
         assert passing_probe.path == Path(tmpdir) / passing_probe.name
         # AND the Probe was correctly parsed as failing
-        assert failing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/failing.py"
+        assert (
+            failing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/failing.py"
+        )
         assert failing_probe.path == Path(tmpdir) / failing_probe.name
