@@ -2,25 +2,31 @@
 
 import json
 from pathlib import Path
+from typing import Dict, List
 
-from juju_doctor.probes import AssertionStatus, Probe, ProbeAssertionResult
+from juju_doctor.probes import (
+    SUPPORTED_PROBE_FUNCTIONS,
+    AssertionStatus,
+    Probe,
+    ProbeAssertionResult,
+)
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 
-def probe_results(tmp_path: str, flattened_path: str, passed: bool):
+def probe_results(tmp_path: str, probe_name: str, passed: bool):
     results = []
-    for func_name in ["status", "bundle", "show_unit"]:
+    for func_name in SUPPORTED_PROBE_FUNCTIONS:
         results.append(
             ProbeAssertionResult(
                 probe=Probe(
-                    path=Path(f"{tmp_path}/probes/{flattened_path}"),
+                    path=Path(f"{tmp_path}/probes/{probe_name}"),
                     probes_root=Path(f"{tmp_path}/probes"),
                 ),
                 func_name=func_name,
                 passed=passed,
             )
         )
-    return {flattened_path: results}
+    return {probe_name: results}
 
 
 def test_build_tree_status_group():
@@ -34,7 +40,7 @@ def test_build_tree_status_group():
     ]
 
     # GIVEN The results for 2 python probes (passing and failing)
-    mocked_results = {}
+    mocked_results: Dict[str, List[ProbeAssertionResult]] = {}
     mocked_results.update(probe_results("/fake/path", "probes_python_failing.py", False))
     mocked_results.update(probe_results("/fake/path", "probes_python_passing.py", True))
     # WHEN The probe results are aggregated and placed in a tree

@@ -95,8 +95,7 @@ def check(
         # Run the probes
         probe_results = {}
         for probe in probes:
-            current_results = probe.run(artifacts)
-            probe_results[probe.name] = current_results
+            probe_results[probe.name] = probe.run(artifacts)
 
         output_fmt = OutputFormat(verbose, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)

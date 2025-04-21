@@ -71,6 +71,7 @@ def copy_probes(
     Returns:
         A list of paths to the probes files copied over to 'probes_destination'
     """
+    rpath, lpath = None, None
     # Copy the probes to the 'probes_destination' folder
     try:
         # If path ends with a "/", it will be assumed to be a directory

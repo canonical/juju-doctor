@@ -80,6 +80,7 @@ class ProbeResultAggregator:
                 node_tag = ""
                 function_statuses = {"pass": [], "fail": []}
                 # gather failed assertions and exceptions
+                assertion_result = None
                 for assertion_result in probe_result:
                     node_tag, probe_exception = assertion_result.get_text(self._output_fmt)
                     results[assertion_result.status] += 1
@@ -88,7 +89,10 @@ class ProbeResultAggregator:
                     function_statuses[assertion_result.status].append(assertion_result.func_name)
                     if not assertion_result.passed:
                         node_tag += f" ({', '.join(function_statuses[status])})"
-                self._tree.create_node(node_tag, assertion_result.probe.get_chain(), status)
+                # The `probe` attribute for each `assertion_result` in a given `probe_result` will
+                # be identical, so we can create the tree node with the last `assertion_result`
+                if assertion_result:
+                    self._tree.create_node(node_tag, assertion_result.probe.get_chain(), status)
 
         return results
 
@@ -113,7 +117,7 @@ class ProbeResultAggregator:
                     "failed": failed,
                 }
                 if self._output_fmt.verbose:
-                    meta_json.update({"exceptions": self._exceptions})
+                    tree_json["exceptions"] = self._exceptions
                 tree_json.update(meta_json)
                 print(json.dumps(tree_json))
             case _:
