@@ -249,15 +249,33 @@ class RuleSet:
         probes = []
         for ruleset_probe in ruleset_probes:
             match ruleset_probe["type"]:
-                # TODO We currently do not handle file extension validation.
-                #   i.e. we trust an author to put a ruleset if they specify type: ruleset
+                # If the probe URL is not a directory and the path's suffix does not match the
+                # expected type, warn and return no probes
                 case "scriptlet":
+                    if (
+                        Path(ruleset_probe["url"]).suffix.lower()
+                        and Path(ruleset_probe["url"]).suffix.lower()
+                        not in FileExtensions.PYTHON.value
+                    ):
+                        log.warn(
+                            f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
+                        )
+                        return []
                     probes.extend(
                         Probe.from_url(
                             ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
                         )
                     )
                 case "ruleset":
+                    if (
+                        Path(ruleset_probe["url"]).suffix.lower()
+                        and Path(ruleset_probe["url"]).suffix.lower()
+                        not in FileExtensions.RULESET.value
+                    ):
+                        log.warn(
+                            f"{ruleset_probe['url']} is not a ruleset but was specified as such."
+                        )
+                        return []
                     if ruleset_probe.get("url", None):
                         nested_ruleset_probes = Probe.from_url(
                             ruleset_probe["url"],

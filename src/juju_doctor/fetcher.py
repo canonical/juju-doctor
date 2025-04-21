@@ -79,7 +79,8 @@ def copy_probes(
         # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
         rpath = f"{path.as_posix()}/" if path.is_dir() else path.as_posix()
         lpath = probes_destination.as_posix()
-        # TODO Add a warning when we overwrite with a duplicate probe
+        if Path(lpath).exists():
+            log.warn(f"Duplicate file ({rpath}) detected, its contents will be overwritten.")
         filesystem.get(rpath, lpath, recursive=True, auto_mkdir=True)
     except FileNotFoundError as e:
         log.warning(
