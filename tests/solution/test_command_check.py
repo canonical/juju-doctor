@@ -1,7 +1,9 @@
 import json
 
-from main import app
+import pytest
 from typer.testing import CliRunner
+
+from juju_doctor.main import app
 
 
 def test_check_file_probe_fails():
@@ -26,6 +28,7 @@ def test_check_file_probe_fails():
     assert check == {"failed": 3, "passed": 0}
 
 
+@pytest.mark.github
 def test_check_gh_probe_fails():
     # GIVEN a CLI Typer app
     runner = CliRunner()

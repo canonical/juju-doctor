@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 
 [[package]]
@@ -195,7 +196,7 @@ wheels = [
 
 [[package]]
 name = "juju-doctor"
-version = "0.1.2"
+version = "0.1.4"
 source = { editable = "." }
 dependencies = [
     { name = "fsspec" },
@@ -225,6 +226,7 @@ requires-dist = [
     { name = "sh" },
     { name = "typer" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "markdown-it-py"
