@@ -47,7 +47,9 @@ class ModelArtifact:
                     if "subordinates" in unit_status:
                         units.extend(unit_status["subordinates"].keys())
         for unit in units:
-            show_unit = yaml.safe_load(sh.juju("show-unit", unit, model=model, format="yaml", _tty_out=False))
+            show_unit = yaml.safe_load(
+                sh.juju("show-unit", unit, model=model, format="yaml", _tty_out=False)
+            )
             show_units.update(show_unit)
 
         return ModelArtifact(status=juju_status, bundle=bundle, show_units=show_units)

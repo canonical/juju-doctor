@@ -1,9 +1,12 @@
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from juju_doctor.probes import Probe
 
 
+@pytest.mark.github
 def test_parse_file():
     # GIVEN a probe file specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python/failing.py"
@@ -19,6 +22,7 @@ def test_parse_file():
         assert probe.path == Path(tmpdir) / probe.name
 
 
+@pytest.mark.github
 def test_parse_dir():
     # GIVEN a probe directory specified in a Github remote on the main branch
     path_str = "tests/resources/probes/python"
@@ -31,8 +35,12 @@ def test_parse_dir():
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
         # AND the Probe was correctly parsed as passing
-        assert passing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/passing.py"
+        assert (
+            passing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/passing.py"
+        )
         assert passing_probe.path == Path(tmpdir) / passing_probe.name
         # AND the Probe was correctly parsed as failing
-        assert failing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/failing.py"
+        assert (
+            failing_probe.name == "canonical_juju-doctor__tests_resources_probes_python/failing.py"
+        )
         assert failing_probe.path == Path(tmpdir) / failing_probe.name
