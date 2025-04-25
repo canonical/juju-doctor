@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "juju-doctor"
-version = "0.1.4"
+version = "0.1.5"
 description = "Juju-doctor is a pypi package which helps validate Juju deployments using probes."
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -21,6 +21,7 @@ dependencies = [
   # Fetcher
   "fsspec",
   "requests",
+  "treelib",
 ]
 
 [project.optional-dependencies]

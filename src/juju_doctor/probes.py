@@ -3,10 +3,12 @@
 import importlib.util
 import inspect
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
+from uuid import UUID, uuid4
 
 import fsspec
 import yaml
@@ -16,7 +18,7 @@ from rich.logging import RichHandler
 from juju_doctor.artifacts import Artifacts
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
-SUPPORTED_PROBE_TYPES = ["status", "bundle", "show_unit"]
+SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -24,48 +26,52 @@ log = logging.getLogger(__name__)
 console = Console()
 
 
-@dataclass
-class ProbeResults:
-    """A helper class to wrap results for a Probe."""
+class AssertionStatus(Enum):
+    """Result of the probe's assertion."""
 
-    probe_name: str
-    passed: bool
-    exception: Optional[BaseException] = None
+    PASS = "pass"
+    FAIL = "fail"
 
-    def print(self, verbose: bool):
-        """Pretty-print the Probe results."""
-        if self.passed:
-            console.print(f":green_circle: {self.probe_name} passed")
-            return
-        # or else, if the probe failed
-        if verbose:
-            console.print(f":red_circle: {self.probe_name} failed")
-            console.print(f"[b]Exception[/b]: {self.exception}")
-        else:
-            console.print(f":red_circle: {self.probe_name} failed ", end="")
-            console.print(
-                f"({self.exception}",
-                overflow="ellipsis",
-                no_wrap=True,
-                width=40,
-                end="",
-            )
-            console.print(")")
+
+def _read_file(filename: Path) -> Optional[Dict]:
+    """Read a yaml probe file into a dict."""
+    try:
+        with open(str(filename), "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        log.warning(f"Error: File '{filename}' not found.")
+    except yaml.YAMLError as e:
+        log.warning(f"Error: Failed to parse YAML in '{filename}': {e}")
+    except Exception as e:
+        log.warning(f"Unexpected error while reading '{filename}': {e}")
+    return None
+
 
 
 @dataclass
 class Probe:
     """A probe that can be executed via juju-doctor.
 
-    For example, instantiate a Probe with:
-        Probe(
-            path=PosixPath('/tmp/probes_passing.py')
-            probes_root=PosixPath('/tmp')
-        )
+    Since a Python probe can be executed multiple times, we need a way to differentiate between
+    the call paths. Each probe is instantiated with a UUID which is appended to the `probes_chain`
+    to identify the top-level probe (and subsequent probes) that lead to this probe's execution.
+
+    For example, for 2 probes: A and B inside a directory which is executed by probe C, their
+    probe chains would be
+        /UUID(C)/UUID(A)
+        /UUID(C)/UUID(B)
+
+    Alternatively, for 2 probes: D and E which both call probe F, their probe chains would be
+        /UUID(D)/UUID(F)
+        /UUID(E)/UUID(F)
+
+    The probe chain ends when the probe does not call another probe.
     """
 
     path: Path  # relative path in the temporary folder
-    probes_root: Path  # temporary folder
+    probes_root: Path  # temporary folder for all probes
+    probes_chain: str = ""  # probe call chain with format /UUID/UUID/UUID
+    uuid: UUID = field(default_factory=uuid4)
 
     @property
     def name(self) -> str:
@@ -76,8 +82,12 @@ class Probe:
         """
         return self.path.relative_to(self.probes_root).as_posix()
 
+    def get_chain(self) -> str:
+        """Append the current probe's UUID to the chain."""
+        return f"{self.probes_chain}/{self.uuid}"
+
     @staticmethod
-    def from_url(url: str, probes_root: Path) -> List["Probe"]:
+    def from_url(url: str, probes_root: Path, probes_chain: str = "") -> List["Probe"]:
         """Build a set of Probes from a URL.
 
         This function parses the URL to construct a generic 'filesystem' object,
@@ -90,6 +100,7 @@ class Probe:
         Args:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
+            probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
         # Get the fsspec.AbstractFileSystem for the Probe's protocol
         parsed_url = urlparse(url)
@@ -112,8 +123,8 @@ class Probe:
         probes = []
         probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
-            probe = Probe(probe_path, probes_root)
-            if probe.path.suffix.lower() in FileExtensions.ruleset:
+            probe = Probe(probe_path, probes_root, probes_chain)
+            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
                 ruleset_probes = ruleset.aggregate_probes()
                 log.info(f"Fetched probes: {ruleset_probes}")
@@ -124,7 +135,7 @@ class Probe:
 
         return probes
 
-    def get_functions(self) -> Dict:
+    def _get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -145,20 +156,21 @@ class Probe:
         return {
             name: func
             for name, func in inspect.getmembers(module, inspect.isfunction)
-            if name in SUPPORTED_PROBE_TYPES
+            if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts) -> List[ProbeResults]:
+    def run(self, artifacts: Artifacts) -> List["ProbeAssertionResult"]:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
-        results: List[ProbeResults] = []
-        for func_name, func in self.get_functions().items():
+        results: List[ProbeAssertionResult] = []
+        for func_name, func in self._get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
                 results.append(
-                    ProbeResults(
-                        probe_name=f"{self.name}/{func_name}",
+                    ProbeAssertionResult(
+                        probe=self,
+                        func_name=func_name,
                         passed=False,
                         exception=Exception(f"No '{func_name}' artifacts have been provided."),
                     )
@@ -169,25 +181,44 @@ class Probe:
                 func(artifact)
             except BaseException as e:
                 results.append(
-                    ProbeResults(probe_name=f"{self.name}/{func_name}", passed=False, exception=e)
+                    ProbeAssertionResult(
+                        probe=self, func_name=func_name, passed=False, exception=e
+                    )
                 )
             else:
-                results.append(ProbeResults(probe_name=f"{self.name}/{func_name}", passed=True))
+                results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))
         return results
 
 
-def _read_file(filename: Path) -> Optional[Dict]:
-    """Read a file into a string."""
-    try:
-        with open(str(filename), "r") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        log.warning(f"Error: File '{filename}' not found.")
-    except yaml.YAMLError as e:
-        log.warning(f"Error: Failed to parse YAML in '{filename}': {e}")
-    except Exception as e:
-        log.warning(f"Unexpected error while reading '{filename}': {e}")
-    return None
+@dataclass
+class ProbeAssertionResult:
+    """A helper class to wrap results for a Probe's functions."""
+
+    probe: Probe
+    func_name: str
+    passed: bool
+    exception: Optional[BaseException] = None
+
+    @property
+    def status(self) -> str:
+        """Result of the probe."""
+        return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
+
+    def get_text(self, output_fmt) -> Tuple[str, Optional[str]]:
+        """Probe results (formatted as Pretty-print) as a string."""
+        exception_msg = None
+        green = output_fmt.rich_map["green"]
+        red = output_fmt.rich_map["red"]
+        if self.passed:
+            return f"{green} {self.probe.name}", exception_msg
+        # If the probe failed
+        exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
+        if output_fmt.format == "json":
+            exception_msg = f"Exception {exception_suffix}"
+        else:
+            if output_fmt.verbose:
+                exception_msg = f"[b]Exception[/b] {exception_suffix}"
+        return f"{red} {self.probe.name}", exception_msg
 
 
 class RuleSet:
@@ -200,8 +231,8 @@ class RuleSet:
         """Initialize a RuleSet instance.
 
         Args:
-            probe (Probe): The Probe representing the ruleset configuration file.
-            name (str): The name of the ruleset.
+            probe: The Probe representing the ruleset configuration file.
+            name: The name of the ruleset.
         """
         self.probe = probe
         self.name = name or self.probe.name
@@ -219,16 +250,38 @@ class RuleSet:
         probes = []
         for ruleset_probe in ruleset_probes:
             match ruleset_probe["type"]:
-                # TODO We currently do not handle file extension validation.
-                #   i.e. we trust an author to put a ruleset if they specify type: ruleset
-                case (
-                    "directory" | "scriptlet"
-                ):  # TODO Support a dir type since UX feels weird without?
-                    probes.extend(Probe.from_url(ruleset_probe["url"], self.probe.probes_root))
+                # If the probe URL is not a directory and the path's suffix does not match the
+                # expected type, warn and return no probes
+                case "scriptlet":
+                    if (
+                        Path(ruleset_probe["url"]).suffix.lower()
+                        and Path(ruleset_probe["url"]).suffix.lower()
+                        not in FileExtensions.PYTHON.value
+                    ):
+                        log.warn(
+                            f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
+                        )
+                        return []
+                    probes.extend(
+                        Probe.from_url(
+                            ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
+                        )
+                    )
                 case "ruleset":
+                    if (
+                        Path(ruleset_probe["url"]).suffix.lower()
+                        and Path(ruleset_probe["url"]).suffix.lower()
+                        not in FileExtensions.RULESET.value
+                    ):
+                        log.warn(
+                            f"{ruleset_probe['url']} is not a ruleset but was specified as such."
+                        )
+                        return []
                     if ruleset_probe.get("url", None):
                         nested_ruleset_probes = Probe.from_url(
-                            ruleset_probe["url"], self.probe.probes_root
+                            ruleset_probe["url"],
+                            self.probe.probes_root,
+                            self.probe.get_chain(),
                         )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset

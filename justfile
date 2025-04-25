@@ -32,7 +32,7 @@ test: unit solution
 unit *args='':
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/unit}"
   uv run $uv_flags coverage report
-
+  
 # Run solution tests
 solution *args='':
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/solution}"

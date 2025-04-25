@@ -1,6 +1,5 @@
 """Main Typer application to assemble the CLI."""
 
-import json
 import logging
 import sys
 import tempfile
@@ -12,7 +11,8 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe, ProbeResults
+from juju_doctor.probes import Probe
+from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -58,7 +58,9 @@ def check(
     """Run checks on a certain model."""
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
-        raise Exception("If you pass a live model with --model, you cannot pass static files.")
+        raise typer.BadParameter(
+            "If you pass a live model with --model, you cannot pass static files."
+        )
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -91,22 +93,13 @@ def check(
                 )
 
         # Run the probes
-        probe_results: List[ProbeResults] = []
+        probe_results = {}
         for probe in probes:
-            current_results: List[ProbeResults] = probe.run(artifacts)
-            for r in current_results:
-                if not format:
-                    r.print(verbose=verbose)
-            probe_results.extend(current_results)
+            probe_results[probe.name] = probe.run(artifacts)
 
-    total_passed = len([pr for pr in probe_results if pr.passed])
-    total_failed = len([pr for pr in probe_results if not pr.passed])
-    match format:
-        case "json":
-            json_result = {"passed": total_passed, "failed": total_failed}
-            console.print(json.dumps(json_result))
-        case _:
-            console.print(f"\nTotal: :green_circle: {total_passed} :red_circle: {total_failed}")
+        output_fmt = OutputFormat(verbose, format)
+        aggregator = ProbeResultAggregator(probe_results, output_fmt)
+        aggregator.print_results()
 
 
 @app.command()

@@ -5,7 +5,7 @@ from typing import List
 from juju_doctor.probes import Probe
 
 
-def contains_only_passing_and_failing_probes(probes: List[Probe]):
+def contains_only_one_passing_and_failing_probe(probes: List[Probe]):
     # Ensure that there are only 2 probes in the list
     assert len(probes) == 2
     passing_probe = next((probe.name for probe in probes if "passing.py" in probe.name), None)
@@ -23,7 +23,7 @@ def test_ruleset_calls_scriptlet():
         # WHEN the probe is fetched to a local filesystem
         found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
-        contains_only_passing_and_failing_probes(found_probes)
+        contains_only_one_passing_and_failing_probe(found_probes)
 
 
 def test_ruleset_calls_nested():
@@ -33,7 +33,7 @@ def test_ruleset_calls_nested():
         # WHEN the probe is fetched to a local filesystem
         found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
-        contains_only_passing_and_failing_probes(found_probes)
+        contains_only_one_passing_and_failing_probe(found_probes)
 
 
 def test_ruleset_calls_dir():
@@ -43,4 +43,4 @@ def test_ruleset_calls_dir():
         # WHEN the probe is fetched to a local filesystem
         found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
         # THEN probes are found
-        contains_only_passing_and_failing_probes(found_probes)
+        contains_only_one_passing_and_failing_probe(found_probes)
