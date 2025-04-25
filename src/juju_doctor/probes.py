@@ -47,6 +47,7 @@ def _read_file(filename: Path) -> Optional[Dict]:
     return None
 
 
+
 @dataclass
 class Probe:
     """A probe that can be executed via juju-doctor.
