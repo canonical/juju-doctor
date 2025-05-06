@@ -16,17 +16,16 @@ def test_check_multiple_artifacts():
         "--format",
         "json",
         "--probe",
-        "file://tests/resources/probes/python/failing.py",
+        "file://tests/resources/probes/python/passing.py",
         "--status=tests/resources/artifacts/status.yaml",
         "--bundle=tests/resources/artifacts/bundle.yaml",
-        "--show-unit=tests/resources/artifacts/show-unit.yaml",
     ]
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
-    # AND the Probe was correctly executed
-    assert json.loads(result.stdout)["failed"] == 3
-    assert json.loads(result.stdout)["passed"] == 0
+    # AND only the status and bundle functions pass, since they were supplied an artifact
+    assert json.loads(result.stdout)["failed"] == 1
+    assert json.loads(result.stdout)["passed"] == 2
 
 
 def test_check_multiple_file_probes():
@@ -46,9 +45,9 @@ def test_check_multiple_file_probes():
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
-    # AND the Probe was correctly executed
-    assert json.loads(result.stdout)["failed"] == 3
-    assert json.loads(result.stdout)["passed"] == 3
+    # AND only the status function passes, since it was supplied an artifact
+    assert json.loads(result.stdout)["failed"] == 5
+    assert json.loads(result.stdout)["passed"] == 1
 
 
 def test_check_returns_valid_json():
@@ -96,10 +95,10 @@ def test_duplicate_file_probes_are_excluded():
 
 
 @pytest.mark.github
-def test_check_gh_probe_fails():
+def test_check_gh_probe_at_branch():
     # GIVEN a CLI Typer app
     runner = CliRunner()
-    # WHEN the "check" command is executed on a failing GitHub probe
+    # WHEN the "check" command executes a GitHub probe on the main branch
     test_args = [
         "check",
         "--format",
