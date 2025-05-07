@@ -1,0 +1,31 @@
+alertmanager-k8s/0:
+  workload-version: 0.27.0
+  opened-ports: []
+  charm: ch:amd64/alertmanager-k8s-157
+  leader: true
+  life: alive
+  relation-info:
+  - relation-id: 2
+    endpoint: alerting
+    related-endpoint: alertmanager
+    application-data: {}
+    related-units:
+      prometheus-k8s/0:
+        in-scope: true
+        data:
+          egress-subnets: 10.152.183.185/32
+          ingress-address: 10.152.183.185
+          private-address: 10.152.183.185
+  - relation-id: 0
+    endpoint: replicas
+    related-endpoint: replicas
+    application-data: {}
+    local-unit:
+      in-scope: true
+      data:
+        egress-subnets: 10.152.183.51/32
+        ingress-address: 10.152.183.51
+        private-address: 10.152.183.51
+        private_address: http://alertmanager-k8s-0.alertmanager-k8s-endpoints.doctor.svc.cluster.local:9093
+  provider-id: alertmanager-k8s-0
+  address: 10.1.185.28

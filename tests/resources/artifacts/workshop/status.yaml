@@ -1,0 +1,219 @@
+model:
+  name: doctor
+  type: caas
+  controller: microk8s-1
+  cloud: microk8s
+  region: localhost
+  version: 3.6.5
+  model-status:
+    current: available
+    since: 07 May 2025 14:01:00-04:00
+  sla: unsupported
+machines: {}
+applications:
+  alertmanager-k8s:
+    charm: alertmanager-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: alertmanager-k8s
+    charm-rev: 157
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: dc8be3fe-c2c6-4fc0-a650-4fdacbcaae0e
+    address: 10.152.183.51
+    exposed: false
+    application-status:
+      current: active
+      since: 07 May 2025 14:02:09-04:00
+    relations:
+      alerting:
+      - related-application: prometheus-k8s
+        interface: alertmanager_dispatch
+        scope: global
+      replicas:
+      - related-application: alertmanager-k8s
+        interface: alertmanager_replica
+        scope: global
+    units:
+      alertmanager-k8s/0:
+        workload-status:
+          current: active
+          since: 07 May 2025 14:02:09-04:00
+        juju-status:
+          current: idle
+          since: 07 May 2025 16:24:19-04:00
+          version: 3.6.5
+        leader: true
+        address: 10.1.185.28
+        provider-id: alertmanager-k8s-0
+    version: 0.27.0
+    endpoint-bindings:
+      "": alpha
+      alerting: alpha
+      catalogue: alpha
+      certificates: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      karma-dashboard: alpha
+      remote-configuration: alpha
+      replicas: alpha
+      self-metrics-endpoint: alpha
+      tracing: alpha
+  prometheus-k8s:
+    charm: prometheus-k8s
+    base:
+      name: ubuntu
+      channel: "20.04"
+    charm-origin: charmhub
+    charm-name: prometheus-k8s
+    charm-rev: 234
+    charm-channel: latest/stable
+    scale: 1
+    provider-id: 2119a36a-c37b-4517-b063-7c4b9b8f7d65
+    address: 10.152.183.185
+    exposed: false
+    application-status:
+      current: active
+      since: 07 May 2025 14:02:41-04:00
+    relations:
+      alertmanager:
+      - related-application: alertmanager-k8s
+        interface: alertmanager_dispatch
+        scope: global
+      prometheus-peers:
+      - related-application: prometheus-k8s
+        interface: prometheus_peers
+        scope: global
+    units:
+      prometheus-k8s/0:
+        workload-status:
+          current: active
+          since: 07 May 2025 14:02:41-04:00
+        juju-status:
+          current: idle
+          since: 07 May 2025 15:52:19-04:00
+          version: 3.6.5
+        leader: true
+        address: 10.1.185.58
+        provider-id: prometheus-k8s-0
+    version: 2.52.0
+    endpoint-bindings:
+      "": alpha
+      alertmanager: alpha
+      catalogue: alpha
+      certificates: alpha
+      charm-tracing: alpha
+      grafana-dashboard: alpha
+      grafana-source: alpha
+      ingress: alpha
+      metrics-endpoint: alpha
+      prometheus-peers: alpha
+      receive-remote-write: alpha
+      self-metrics-endpoint: alpha
+      send-datasource: alpha
+      workload-tracing: alpha
+storage:
+  storage:
+    data/0:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 15:52:12-04:00
+      persistent: false
+      attachments:
+        units:
+          alertmanager-k8s/0:
+            life: alive
+    database/1:
+      kind: filesystem
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 15:52:12-04:00
+      persistent: false
+      attachments:
+        units:
+          prometheus-k8s/0:
+            life: alive
+  filesystems:
+    "0":
+      provider-id: cbaf9baf-2205-4da6-a67e-6a80c100d562
+      volume: "0"
+      storage: data/0
+      attachments:
+        containers:
+          alertmanager-k8s/0:
+            mount-point: /var/lib/juju/storage/data/0
+            read-only: false
+            life: alive
+        units:
+          alertmanager-k8s/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 15:52:12-04:00
+    "1":
+      provider-id: a41dfb77-d09e-487f-b808-51f1eea2deda
+      volume: "1"
+      storage: database/1
+      attachments:
+        containers:
+          prometheus-k8s/0:
+            mount-point: /var/lib/juju/storage/database/0
+            read-only: false
+            life: alive
+        units:
+          prometheus-k8s/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 15:52:12-04:00
+  volumes:
+    "0":
+      provider-id: pvc-cbaf9baf-2205-4da6-a67e-6a80c100d562
+      storage: data/0
+      attachments:
+        containers:
+          alertmanager-k8s/0:
+            read-only: false
+            life: alive
+        units:
+          alertmanager-k8s/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 14:01:37-04:00
+    "1":
+      provider-id: pvc-a41dfb77-d09e-487f-b808-51f1eea2deda
+      storage: database/1
+      attachments:
+        containers:
+          prometheus-k8s/0:
+            read-only: false
+            life: alive
+        units:
+          prometheus-k8s/0:
+            life: alive
+      pool: kubernetes
+      size: 1024
+      persistent: true
+      life: alive
+      status:
+        current: attached
+        since: 07 May 2025 14:01:57-04:00
+controller:
+  timestamp: 16:36:24-04:00
