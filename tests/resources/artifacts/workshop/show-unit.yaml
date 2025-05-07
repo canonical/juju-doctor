@@ -13,9 +13,9 @@ alertmanager-k8s/0:
       prometheus-k8s/0:
         in-scope: true
         data:
-          egress-subnets: 10.152.183.185/32
-          ingress-address: 10.152.183.185
-          private-address: 10.152.183.185
+          egress-subnets: 10.152.183.116/32
+          ingress-address: 10.152.183.116
+          private-address: 10.152.183.116
   - relation-id: 0
     endpoint: replicas
     related-endpoint: replicas
@@ -23,9 +23,9 @@ alertmanager-k8s/0:
     local-unit:
       in-scope: true
       data:
-        egress-subnets: 10.152.183.51/32
-        ingress-address: 10.152.183.51
-        private-address: 10.152.183.51
-        private_address: http://alertmanager-k8s-0.alertmanager-k8s-endpoints.doctor.svc.cluster.local:9093
+        egress-subnets: 10.152.183.251/32
+        ingress-address: 10.152.183.251
+        private-address: 10.152.183.251
+        private_address: http://alertmanager-k8s-0.alertmanager-k8s-endpoints.again.svc.cluster.local:9093
   provider-id: alertmanager-k8s-0
-  address: 10.1.185.28
+  address: 10.1.185.63
