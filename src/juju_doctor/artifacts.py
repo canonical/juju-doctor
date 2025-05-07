@@ -80,7 +80,8 @@ class Artifacts:
         """Get the Juju status for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
-            result[model] = model_artifact.status
+            if model_artifact.status:
+                result[model] = model_artifact.status
         return result
 
     @property
@@ -88,7 +89,8 @@ class Artifacts:
         """Get the Juju bundle for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
-            result[model] = model_artifact.bundle
+            if model_artifact.bundle:
+                result[model] = model_artifact.bundle
         return result
 
     @property
@@ -96,5 +98,6 @@ class Artifacts:
         """Get the Juju show-units for all the models."""
         result = {}
         for model, model_artifact in self.artifacts.items():
-            result[model] = model_artifact.show_units
+            if model_artifact.show_units:
+                result[model] = model_artifact.show_units
         return result

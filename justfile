@@ -26,7 +26,7 @@ format:
   uv run $uv_flags ruff check --fix-only
 
 # Run all tests
-test: unit solution
+test: lint static unit solution
 
 # Run unit tests
 unit *args='':

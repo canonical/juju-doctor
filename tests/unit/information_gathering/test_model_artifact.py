@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import yaml
 
-from juju_doctor.artifacts import ModelArtifact
+from juju_doctor.artifacts import Artifacts, ModelArtifact
 
 JUJU_STATUS = """
 model:
@@ -134,20 +134,39 @@ FILES = {
 }
 
 
-def test_model_artifact_parsing_from_file():
-    def _open_side_effect(filename, *args, **kwargs):
-        if filename in FILES:
-            mock = mock_open(read_data=FILES[filename])
-            return mock()
-        raise FileNotFoundError(f"No such file: '{filename}'")
+def _open_side_effect(filename, *args, **kwargs):
+    if filename in FILES:
+        mock = mock_open(read_data=FILES[filename])
+        return mock()
+    raise FileNotFoundError(f"No such file: '{filename}'")
 
-    with patch("builtins.open", side_effect=_open_side_effect):
+
+def test_model_artifact_parsing_from_file():
+     with patch("builtins.open", side_effect=_open_side_effect):
         model_artifact = ModelArtifact.from_files(
             status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
         )
         assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
         assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
         assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+
+
+def test_only_supplied_artifacts():
+    with patch("builtins.open", side_effect=_open_side_effect):
+        # GIVEN only some (omitting show_unit) artifacts are supplied
+        status_artifact = ModelArtifact.from_files(status_file="status.yaml")
+        bundle_artifact = ModelArtifact.from_files(bundle_file="bundle.yaml")
+        # WHEN the artifacts are aggregated
+        artifacts = Artifacts(
+            {
+                "some_path/status.yaml": status_artifact,
+                "some_path/bundle.yaml": bundle_artifact,
+            }
+        )
+        # THEN the ommitted artifact is empty
+        assert not artifacts.show_unit
+        assert artifacts.status
+        assert artifacts.bundle
 
 
 def test_model_artifact_parsing_from_live_model():
@@ -168,7 +187,7 @@ def test_model_artifact_parsing_from_live_model():
         assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
 
 
-def test_model_artifacts_is_equivalent():
+def test_model_artifacts_are_equivalent():
     def _open_side_effect(filename, *args, **kwargs):
         if filename in FILES:
             mock = mock_open(read_data=FILES[filename])
