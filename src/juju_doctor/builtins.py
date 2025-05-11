@@ -29,7 +29,7 @@ class _Builtin(object):
     """
 
     # TODO How can I type hint here "Probe" without a circular dep
-    def __init__(self, probe, schema_file: Path, assertion: dict = None):
+    def __init__(self, probe, schema_file: Path, assertion: Optional[dict] = None):
         self.probe = probe
         self.schema_file = schema_file
         self.assertion = assertion
@@ -53,45 +53,42 @@ class _Builtin(object):
 
 class Applications(_Builtin):
     # TODO Can I use kwargs or args here to make it cleaner?
-    def __init__(self, probe, schema_file: Path, assertion: dict = None):
+    def __init__(self, probe, schema_file: Path, assertion: Optional[dict] = None):
         super().__init__(probe, schema_file, assertion)
 
     def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         results: List[AssertionResult] = []
+        if not self.assertion:
+            return results
+
+        passed = True
+        func_name = f"builtin:{Builtins.APPLICATIONS.name.lower()}"
         for app in self.assertion:
-            # TODO Flatten this list comprehension like [a for a in b for b in something]
-            bundle_apps = [bundle["applications"].keys() for bundle in artifacts.bundle.values()]
+            bundle_apps = [
+                app
+                for bundle in artifacts.bundle.values()
+                for app in bundle["applications"].keys()
+            ]
             if app["name"] not in bundle_apps:
-                exception = f"{app['name']} was not found in bundle apps: {bundle_apps}"
-                results.append(
-                    AssertionResult(
-                        self.probe,
-                        func_name=f"builtin:{Builtins.APPLICATIONS.name.lower()}",
-                        passed=False,
-                        exception=exception,
-                    )
-                )
-            app_scale = [bundle["applications"][app["name"]]["scale"] for bundle in artifacts.bundle.values()][0]
+                passed = False
+                exception = Exception(f"{app['name']} was not found in bundle apps: {bundle_apps}")
+                results.append(AssertionResult(self.probe, func_name, passed, exception))
+            # app_scale = [app["name"]["scale"] for bundle in artifacts.bundle.values() for app in bundle["applications"]]
+            # TODO Fix this so the result is not a list and we don't hardcode [0]
+            app_scale = [
+                bundle["applications"][app["name"]]["scale"]
+                for bundle in artifacts.bundle.values()
+            ][0]
             if "minimum" in app and app_scale < app["minimum"]:
-                exception = f'{app["name"]} scale is below the allowable limit: {app["minimum"]}'
-                results.append(
-                    AssertionResult(
-                        self.probe,
-                        func_name=f"builtin:{Builtins.APPLICATIONS.name.lower()}",
-                        passed=False,
-                        exception=exception,
-                    )
-                )
+                passed=False
+                exception = Exception(f"{app['name']} scale is below the allowable limit: {app['minimum']}")
+                results.append(AssertionResult(self.probe, func_name, passed, exception))
             if "maximum" in app and app_scale > app["maximum"]:
-                exception = f'{app["name"]} scale exceeds the allowable limit: {app["maximum"]}'
-                results.append(
-                    AssertionResult(
-                        self.probe,
-                        func_name=f"builtin:{Builtins.APPLICATIONS.name.lower()}",
-                        passed=False,
-                        exception=exception,
-                    )
-                )
+                passed=False
+                exception = Exception(f"{app['name']} scale exceeds the allowable limit: {app['maximum']}")
+                results.append(AssertionResult(self.probe, func_name, passed, exception))
+        if passed:
+            results.append(AssertionResult(self.probe, func_name, passed))
         return results
 
 
@@ -101,21 +98,27 @@ class Relations(_Builtin):
 
     def validate(self, artifacts: Artifacts):
         results: List[AssertionResult] = []
+        if not self.assertion:
+            return results
+
+        passed = True
+        func_name = f"builtin:{Builtins.RELATIONS.name.lower()}"
         for relation in self.assertion:
-            # TODO Flatten this list comprehension like [a for a in b for b in something]
-            bundle_relations = [bundle["relations"] for bundle in artifacts.bundle.values()]
-            if [relation["provides"], relation["requires"]] not in bundle_relations:
+            bundle_relations = [
+                relation
+                for bundle in artifacts.bundle.values()
+                for relation in bundle["relations"]
+            ]
+            # TODO Is this robust? Does Juju always place requires before provides?
+            if [relation["requires"], relation["provides"]] not in bundle_relations:
+                passed = False
                 exception = Exception(
-                    f'Relation ({[relation["provides"], relation["requires"]]}) not found in {bundle_relations}'
+                    f"Relation ({[relation['provides'], relation['requires']]}) not found in {bundle_relations}"
                 )
-                results.append(
-                    AssertionResult(
-                        self.probe,
-                        func_name=f"builtin:{Builtins.RELATIONS.name.lower()}",
-                        passed=False,
-                        exception=exception,
-                    )
-                )
+                results.append(AssertionResult(self.probe, func_name, passed, exception))
+        if passed:
+            results.append(AssertionResult(self.probe, func_name, passed))
+
         return results
 
 
@@ -127,6 +130,7 @@ class Offers(_Builtin):
         results: List[AssertionResult] = []
         # TODO We cut the multi-doc containing offers in artifacts.py: https://github.com/canonical/juju-doctor/issues/10
         return results
+
 
 class Consumes(_Builtin):
     def __init__(self, probe, schema_file: Path, assertion: dict = None):
@@ -168,7 +172,7 @@ class AssertionResult:
         green = output_fmt.rich_map["green"]
         red = output_fmt.rich_map["red"]
         if self.passed:
-            return f"{green} {self.probe.name}", exception_msg
+            return SimpleNamespace(node_tag=f"{green} {self.probe.name}", exception_msg=exception_msg)
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
         if output_fmt.format == "json":

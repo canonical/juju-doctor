@@ -88,7 +88,7 @@ def check(
             try:
                 aggregation = Probe.from_url(url=probe_url, probes_root=probes_folder)
                 probes.extend(aggregation.probes)
-                # TODO It would be great if we could output the combined result from multiple probes.abs
+                # TODO It would be great if we could output the combined result from multiple probes to show the user what they created
                 # E.g. 2 Rulesets: Applications: AM & Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
                 builtins.append(aggregation.builtins)
             except RecursionError:
