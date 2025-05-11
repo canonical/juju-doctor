@@ -97,17 +97,18 @@ def check(
                     "Try reducing the intensity of probe chaining!"
                 )
 
+        probe_results = {}
         for builtin in builtins:
             for name, builtin_obj in builtin.items():
                 # TODO Combine this with probe_results
-                builtin_obj.validate(artifacts)
+                # TODO I think probe_results and builtin_results differ here because in probes we have Python as the lowest level which
+                # Means probe.name -> [ProbeAggregationResults] makes sense. For the Builtins, we iterate through each one in main.py instead of appending to the list inside the .validate
+                if builtin_obj.probe.name not in probe_results:
+                    probe_results[builtin_obj.probe.name] = builtin_obj.validate(artifacts)
+                else:
+                    probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
 
-        probe_results = {}
         for probe in probes:
-            # Validate builtin assertions
-            for builtin in builtins.values():
-                # TODO Mention the mechanism for validation, we iterate over each builtin assertion (per probe in a list) and then validate
-                continue
             # Run the probes
             probe_results[probe.name] = probe.run(artifacts)
 

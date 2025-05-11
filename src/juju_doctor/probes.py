@@ -4,10 +4,9 @@ import importlib.util
 import inspect
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
@@ -17,7 +16,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import Builtins
+from juju_doctor.builtins import AssertionStatus, Builtins
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
@@ -26,13 +25,6 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 console = Console()
-
-
-class AssertionStatus(Enum):
-    """Result of the probe's assertion."""
-
-    PASS = "pass"
-    FAIL = "fail"
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
@@ -47,7 +39,6 @@ def _read_file(filename: Path) -> Optional[Dict]:
     except Exception as e:
         log.warning(f"Unexpected error while reading '{filename}': {e}")
     return None
-
 
 
 @dataclass
@@ -131,13 +122,16 @@ class Probe:
             if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
                 # Gather builtins
+                # FIXME too many vars using the word "builtin", make it more clear what I am doing or docstring
                 rulset_builtins = ruleset.builtins
                 for builtin in rulset_builtins:
                     if builtin not in builtins:
                         builtins[builtin] = rulset_builtins[builtin]
                     else:
                         builtins[builtin].append(rulset_builtins[builtin])
-                log.info(f"Fetched builtin assertions for {probe.name}: {builtins}")  # TODO Is this logging too noisy/large?
+                log.info(
+                    f"Fetched builtin assertions for {probe.name}: {builtins}"
+                )  # TODO Is this logging too noisy/large?
                 # Gather probes
                 ruleset_probes = ruleset.aggregate_probes()
                 log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
@@ -180,24 +174,14 @@ class Probe:
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                results.append(
-                    ProbeAssertionResult(
-                        probe=self,
-                        func_name=func_name,
-                        passed=False,
-                        exception=Exception(f"No '{func_name}' artifacts have been provided."),
-                    )
-                )
+                e = Exception(f"No '{func_name}' artifacts have been provided.")
+                results.append(ProbeAssertionResult(self, func_name, passed=False, exception=e))
                 continue
             # Run the probe fucntion, and record its result
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(
-                    ProbeAssertionResult(
-                        probe=self, func_name=func_name, passed=False, exception=e
-                    )
-                )
+                results.append(ProbeAssertionResult(self, func_name, passed=False, exception=e))
             else:
                 results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))
         return results
@@ -217,7 +201,8 @@ class ProbeAssertionResult:
         """Result of the probe."""
         return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
-    def get_text(self, output_fmt) -> Tuple[str, Optional[str]]:
+    # TODO Type hinting SimpleNameSpace
+    def get_text(self, output_fmt):
         """Probe results (formatted as Pretty-print) as a string."""
         exception_msg = None
         green = output_fmt.rich_map["green"]
@@ -231,7 +216,7 @@ class ProbeAssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return f"{red} {self.probe.name}", exception_msg
+        return SimpleNamespace(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
 
 
 class RuleSet:
@@ -270,7 +255,10 @@ class RuleSet:
         for builtin in Builtins:
             if builtin.name.lower() not in content:
                 continue
-            builtin_objs[builtin.name.lower()] = builtin.value(Path(""), content[builtin.name.lower()])
+            # TODO I need to pass in the probe object somehow
+            builtin_objs[builtin.name.lower()] = builtin.value(
+                self.probe, Path(""), content[builtin.name.lower()]
+            )
         return builtin_objs
 
     def aggregate_probes(self) -> List[Probe]:

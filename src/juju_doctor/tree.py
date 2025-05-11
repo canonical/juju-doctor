@@ -82,10 +82,12 @@ class ProbeResultAggregator:
                 # gather failed assertions and exceptions
                 assertion_result = None
                 for assertion_result in probe_result:
-                    node_tag, probe_exception = assertion_result.get_text(self._output_fmt)
+                    text = assertion_result.get_text(self._output_fmt)
+                    node_tag = text.node_tag
                     results[assertion_result.status] += 1
-                    if probe_exception:
-                        self._exceptions.append(probe_exception)
+                    if text.exception_msg:
+                        self._exceptions.append(text.exception_msg)
+                    # TODO for builtins we append multiple times getting duplicate func_name
                     function_statuses[assertion_result.status].append(assertion_result.func_name)
                     if not assertion_result.passed:
                         node_tag += f" ({', '.join(function_statuses[status])})"

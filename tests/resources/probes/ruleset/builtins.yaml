@@ -5,8 +5,8 @@ applications:
     minimum: 1
     maximum: 4
 relations:
-  - provides: ...
-    requires: ...
+  - provides: alertmanager:alerting
+    requires: loki:alertmanager
 offers:
   - prometheus:something
   - loki:something

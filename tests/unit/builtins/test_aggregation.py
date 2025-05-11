@@ -1,5 +1,6 @@
 def test_unknown_top_level_keys():
     pass
+    # TODO Consider using inline YAML for tests to not pollute the tests/resources
     # GIVEN a Ruleset with unknown top-level keys
     # WHEN the Ruleset executes the builtin assertions
     # THEN the unknown top-level keys are ignored
