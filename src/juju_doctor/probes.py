@@ -95,7 +95,6 @@ class Probe:
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
-        # TODO Add a test to ensure that a probe chain is always unique
         # Get the fsspec.AbstractFileSystem for the Probe's protocol
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
@@ -255,7 +254,6 @@ class RuleSet:
         for builtin in Builtins:
             if builtin.name.lower() not in content:
                 continue
-            # TODO I need to pass in the probe object somehow
             builtin_objs[builtin.name.lower()] = builtin.value(
                 self.probe, Path(""), content[builtin.name.lower()]
             )

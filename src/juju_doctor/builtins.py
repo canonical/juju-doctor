@@ -92,7 +92,6 @@ class Applications(_Builtin):
                         exception=exception,
                     )
                 )
-            # TODO Handle unit counts
         return results
 
 

@@ -9,3 +9,9 @@ def test_builtin_validates_against_artifacts():
     # GIVEN a set of artifacts
     # WHEN a builtin assertion is executed
     # THEN there are no errors
+
+def test_probe_chaining():
+    pass
+    # GIVEN deeply nested probes
+    # WHEN executed
+    # THEN there are no duplicate probe_chains
