@@ -79,22 +79,36 @@ def check(
         artifacts = Artifacts(input)
 
     # Gather the probes
+    builtins: List[dict] = []
     probes: List[Probe] = []
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in probe_urls:
             try:
-                probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
+                aggregation = Probe.from_url(url=probe_url, probes_root=probes_folder)
+                probes.extend(aggregation.probes)
+                # TODO It would be great if we could output the combined result from multiple probes.abs
+                # E.g. 2 Rulesets: Applications: AM & Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
+                builtins.append(aggregation.builtins)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
                     "Try reducing the intensity of probe chaining!"
                 )
 
-        # Run the probes
+        for builtin in builtins:
+            for name, builtin_obj in builtin.items():
+                # TODO Combine this with probe_results
+                builtin_obj.validate(artifacts)
+
         probe_results = {}
         for probe in probes:
+            # Validate builtin assertions
+            for builtin in builtins.values():
+                # TODO Mention the mechanism for validation, we iterate over each builtin assertion (per probe in a list) and then validate
+                continue
+            # Run the probes
             probe_results[probe.name] = probe.run(artifacts)
 
         output_fmt = OutputFormat(verbose, format)

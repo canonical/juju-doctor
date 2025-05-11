@@ -1,5 +1,16 @@
-name: A declarative deployment RuleSet
-probes:
-  - name: Local probe - builtins
-    type: ruleset
-    with: something  # TODO Should you be able to supply a "url" and "with"?
+name: A RuleSet which uses native Juju Doctor probes 
+applications:
+  - name: alertmanager
+  - name: prometheus
+    minimum: 1
+    maximum: 4
+relations:
+  - provides: ...
+    requires: ...
+offers:
+  - prometheus:something
+  - loki:something
+consumes:
+  - mysql:something
+# probes:
+#   - something

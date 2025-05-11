@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
@@ -16,6 +17,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
+from juju_doctor.builtins import Builtins
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
@@ -102,6 +104,7 @@ class Probe:
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
+        # TODO Add a test to ensure that a probe chain is always unique
         # Get the fsspec.AbstractFileSystem for the Probe's protocol
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
@@ -121,19 +124,29 @@ class Probe:
                 raise NotImplementedError
 
         probes = []
+        builtins = {}
         probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
             probe = Probe(probe_path, probes_root, probes_chain)
             if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
+                # Gather builtins
+                rulset_builtins = ruleset.builtins
+                for builtin in rulset_builtins:
+                    if builtin not in builtins:
+                        builtins[builtin] = rulset_builtins[builtin]
+                    else:
+                        builtins[builtin].append(rulset_builtins[builtin])
+                log.info(f"Fetched builtin assertions for {probe.name}: {builtins}")  # TODO Is this logging too noisy/large?
+                # Gather probes
                 ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probes: {ruleset_probes}")
+                log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
                 probes.extend(ruleset_probes)
             else:
-                log.info(f"Fetched probe: {probe}")
+                log.info(f"Fetched probe(s) for {probe.name}: {probe}")
                 probes.append(probe)
 
-        return probes
+        return SimpleNamespace(probes=probes, builtins=builtins)
 
     def _get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
@@ -237,6 +250,29 @@ class RuleSet:
         self.probe = probe
         self.name = name or self.probe.name
 
+    @property
+    def builtins(self) -> Optional[Dict[str, List]]:
+        """Obtain all the builtin assertions from the RuleSet.
+
+        Returns a mapping of builtin name to builtin assertion for the Ruleset.
+        """
+        content = _read_file(self.probe.path)
+        if content is None:
+            return None
+
+        schema_valid = True
+        if not schema_valid:
+            log.warn(f"Failed to validate schema for {self.probe.name}")
+            return None
+
+        # FIXME Can we one-line this?
+        builtin_objs = {}
+        for builtin in Builtins:
+            if builtin.name.lower() not in content:
+                continue
+            builtin_objs[builtin.name.lower()] = builtin.value(Path(""), content[builtin.name.lower()])
+        return builtin_objs
+
     def aggregate_probes(self) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
 
@@ -265,7 +301,7 @@ class RuleSet:
                     probes.extend(
                         Probe.from_url(
                             ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
-                        )
+                        ).probes
                     )
                 case "ruleset":
                     if (
@@ -282,7 +318,7 @@ class RuleSet:
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
-                        )
+                        ).probes
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
                         if len(nested_ruleset_probes) > 1:
