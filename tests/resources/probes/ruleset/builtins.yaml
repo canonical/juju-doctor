@@ -1,4 +1,4 @@
-name: A RuleSet which uses native Juju Doctor probes 
+name: A RuleSet which uses native Juju Doctor probes
 applications:
   - name: alertmanager
   - name: prometheus
