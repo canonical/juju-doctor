@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Annotated, Dict, List, Optional
 
 import typer
-from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
@@ -19,9 +18,15 @@ from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-app = typer.Typer(pretty_exceptions_show_locals=False)
-console = Console()
+# TODO Add test for no args prints help??
+app = typer.Typer(pretty_exceptions_show_locals=False, no_args_is_help=True)
 sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
+
+
+# Ask Luca why commenting this out fails, works with it
+@app.command()
+def fake():
+    log.warn(f"FAILING")
 
 
 @app.command()
@@ -100,12 +105,6 @@ def check(
         output_fmt = OutputFormat(verbose, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)
         aggregator.print_results()
-
-
-@app.command()
-def help():
-    """Show the help information for juju-doctor."""
-    app().help()
 
 
 if __name__ == "__main__":
