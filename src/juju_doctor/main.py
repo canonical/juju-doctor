@@ -26,7 +26,7 @@ sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increa
 
 @app.callback()
 def callback():
-    """Collect, execute, and aggregate assertions against artifacts, which represent a deployment."""
+    """Collect, execute, and aggregate assertions against artifacts, representing a deployment."""
 
 
 @app.command()
@@ -60,7 +60,12 @@ def check(
         typer.Option("--format", "-o", help="Specify output format."),
     ] = None,
 ):
-    """Validate online or offline deployments, i.e. artifacts against local or remote assertions, i.e. probes."""
+    """Validate deployments, i.e. artifacts against assertions, i.e. probes.
+
+    * Deployments can be (online) a live model or (offline) an artifact file.
+
+    * Assertions can be sourced (local) from the current FS or (remote) from repositories.
+    """
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
         raise typer.BadParameter(
