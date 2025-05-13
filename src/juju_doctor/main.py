@@ -25,11 +25,9 @@ console = Console()
 sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
-@app.command(hidden=True)
-def help():
-    """With only 1 app.command, juju-doctor will not run `--help` by default when no args are supplied."""
-    # TODO Remove this command when a second, valid command is added
-    console.print("Try again without args: [i]juju-doctor[/i] or [i]juju-doctor --help[/i]")  # https://github.com/fastapi/typer/issues/315#issuecomment-903221890
+@app.callback()
+def callback():
+    """Collect, execute, and aggregate assertions against artifacts, which represent a deployment."""
 
 
 @app.command()
@@ -63,7 +61,7 @@ def check(
         typer.Option("--format", "-o", help="Specify output format."),
     ] = None,
 ):
-    """Run checks on a certain model."""
+    """Validate online or offline deployments, i.e. artifacts against local or remote assertions, i.e. probes."""
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
         raise typer.BadParameter(
