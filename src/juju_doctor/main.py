@@ -71,6 +71,10 @@ def check(
         raise typer.BadParameter(
             "If you pass a live model with --model, you cannot pass static files."
         )
+    if not probe_urls:
+        raise typer.BadParameter(
+            "No probes were specified, cannot validate the deployment."
+        )
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
