@@ -19,7 +19,6 @@ from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-# TODO Add test for no args prints help??
 app = typer.Typer(pretty_exceptions_show_locals=False, no_args_is_help=True)
 console = Console()
 sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
