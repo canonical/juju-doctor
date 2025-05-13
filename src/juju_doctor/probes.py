@@ -12,7 +12,6 @@ from uuid import UUID, uuid4
 
 import fsspec
 import yaml
-from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
@@ -22,8 +21,6 @@ SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
-
-console = Console()
 
 
 class AssertionStatus(Enum):

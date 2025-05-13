@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Dict, List, Optional
 
 import typer
+from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
@@ -20,13 +21,15 @@ log = logging.getLogger(__name__)
 
 # TODO Add test for no args prints help??
 app = typer.Typer(pretty_exceptions_show_locals=False, no_args_is_help=True)
+console = Console()
 sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
 
 
-# Ask Luca why commenting this out fails, works with it
-@app.command()
-def fake():
-    log.warn(f"FAILING")
+@app.command(hidden=True)
+def help():
+    """With only 1 app.command, juju-doctor will not run `--help` by default when no args are supplied."""
+    # TODO Remove this command when a second, valid command is added
+    console.print("Try again without args: [i]juju-doctor[/i] or [i]juju-doctor --help[/i]")  # https://github.com/fastapi/typer/issues/315#issuecomment-903221890
 
 
 @app.command()
