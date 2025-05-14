@@ -162,8 +162,10 @@ class Probe:
         results: List[ProbeAssertionResult] = []
         for func_name, func in self._get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
+            # TODO If none of the probes actually use the supplied artifact, warn the user
             artifact = getattr(artifacts, func_name)
             if not artifact:
+                # TODO Should this be an exception or should we warn/error from the CLI context?
                 results.append(
                     ProbeAssertionResult(
                         probe=self,
