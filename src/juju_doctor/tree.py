@@ -101,13 +101,14 @@ class ProbeResultAggregator:
         results = self._build_tree()
         passed = results[AssertionStatus.PASS.value]
         failed = results[AssertionStatus.FAIL.value]
+        total = passed + failed
         match self._output_fmt.format:
             case None:
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)
                 console.print(
-                    f"\nTotal: 🟢 {passed} 🔴 {failed}"
+                    f"\nTotal: 🟢 {passed}/{total} 🔴 {failed}/{total}"
                 )
             case "json":
                 tree_json = json.loads(self._tree.to_json())

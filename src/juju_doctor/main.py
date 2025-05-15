@@ -19,9 +19,14 @@ from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-app = typer.Typer(pretty_exceptions_show_locals=False)
+app = typer.Typer(pretty_exceptions_show_locals=False, no_args_is_help=True)
 console = Console()
 sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
+
+
+@app.callback()
+def callback():
+    """Collect, execute, and aggregate assertions against artifacts, representing a deployment."""
 
 
 @app.command()
@@ -55,11 +60,20 @@ def check(
         typer.Option("--format", "-o", help="Specify output format."),
     ] = None,
 ):
-    """Run checks on a certain model."""
+    """Validate deployments, i.e. artifacts against assertions, i.e. probes.
+
+    * Deployments can be (online) a live model or (offline) an artifact file.
+
+    * Assertions can be sourced (local) from the current FS or (remote) from repositories.
+    """
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
         raise typer.BadParameter(
             "If you pass a live model with --model, you cannot pass static files."
+        )
+    if not probe_urls:
+        raise typer.BadParameter(
+            "No probes were specified, cannot validate the deployment."
         )
 
     # Gather the input
@@ -100,12 +114,6 @@ def check(
         output_fmt = OutputFormat(verbose, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt)
         aggregator.print_results()
-
-
-@app.command()
-def help():
-    """Show the help information for juju-doctor."""
-    app().help()
 
 
 if __name__ == "__main__":
