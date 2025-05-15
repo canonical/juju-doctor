@@ -3,7 +3,7 @@ def status(juju_statuses):
 
 
 def bundle(juju_bundles):
-    assert True
+    assert False, "This should be False!"
 
 
 def show_unit(juju_show_units):
