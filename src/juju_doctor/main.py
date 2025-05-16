@@ -4,7 +4,7 @@ import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Annotated, Dict, List, Optional
+from typing import Annotated, Dict, List, Optional, Set
 
 import typer
 from rich.console import Console
@@ -72,9 +72,13 @@ def check(
             "If you pass a live model with --model, you cannot pass static files."
         )
     if not probe_urls:
-        raise typer.BadParameter(
-            "No probes were specified, cannot validate the deployment."
-        )
+        raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
+    unique_probe_urls: Set[str] = set()
+    for probe_url in probe_urls:
+        if probe_url not in unique_probe_urls:
+            unique_probe_urls.add(probe_url)
+        else:
+            log.warning(f"Duplicate probe detected: {probe_url}")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -97,7 +101,7 @@ def check(
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
-        for probe_url in probe_urls:
+        for probe_url in unique_probe_urls:
             try:
                 probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
             except RecursionError:
