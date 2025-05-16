@@ -29,7 +29,7 @@ def callback():
     """Collect, execute, and aggregate assertions against artifacts, representing a deployment."""
 
 
-@app.command()
+@app.command(no_args_is_help=True)
 def check(
     probe_urls: Annotated[
         List[str],
