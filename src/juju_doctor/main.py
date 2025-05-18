@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 app = typer.Typer(pretty_exceptions_show_locals=False, no_args_is_help=True)
 console = Console()
-sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions, increase if needed
+sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions
 
 
 @app.callback()
@@ -68,9 +68,10 @@ def check(
     """
     # Input validation
     if models and any([status_files, bundle_files, show_unit_files]):
-        raise typer.BadParameter(
-            "If you pass a live model with --model, you cannot pass static files."
-        )
+        raise typer.BadParameter("Live models and static files are mutually exclusive.")
+    if not any([models, status_files, bundle_files, show_unit_files]):
+        raise typer.BadParameter("No artifacts were specified, cannot validate the deployment.")
+
     if not probe_urls:
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
     unique_probe_urls: Set[str] = set()
