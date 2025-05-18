@@ -78,7 +78,7 @@ def check(
         if probe_url not in unique_probe_urls:
             unique_probe_urls.add(probe_url)
         else:
-            log.warning(f"Duplicate probe detected: {probe_url}")
+            log.warning(f"Duplicate probe detected: {probe_url}, it will be skipped.")
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
