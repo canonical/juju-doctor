@@ -6,8 +6,9 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
 import fsspec
@@ -42,7 +43,6 @@ def _read_file(filename: Path) -> Optional[Dict]:
     except Exception as e:
         log.warning(f"Unexpected error while reading '{filename}': {e}")
     return None
-
 
 
 @dataclass
@@ -99,10 +99,31 @@ class Probe:
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
-        # Get the fsspec.AbstractFileSystem for the Probe's protocol
+        probes = []
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
         url_flattened = url_without_scheme.replace("/", "_")
+        fs = Probe._get_fs_from_protocol(parsed_url, url_without_scheme)
+
+        probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
+        for probe_path in probe_paths:
+            probe = Probe(probe_path, probes_root, probes_chain)
+            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
+                ruleset = RuleSet(probe)
+                ruleset_probes = ruleset.aggregate_probes()
+                log.info(f"Fetched probes: {ruleset_probes}")
+                probes.extend(ruleset_probes)
+            else:
+                log.info(f"Fetched probe: {probe}")
+                probes.append(probe)
+
+        return probes
+
+    @staticmethod
+    def _get_fs_from_protocol(
+        parsed_url: ParseResult, url_without_scheme: str
+    ) -> fsspec.AbstractFileSystem:
+        """Get the fsspec::AbstractFileSystem for the Probe's protocol."""
         match parsed_url.scheme:
             case "file":
                 path = Path(url_without_scheme)
@@ -117,20 +138,7 @@ class Probe:
             case _:
                 raise NotImplementedError
 
-        probes = []
-        probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
-        for probe_path in probe_paths:
-            probe = Probe(probe_path, probes_root, probes_chain)
-            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
-                ruleset = RuleSet(probe)
-                ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probes: {ruleset_probes}")
-                probes.extend(ruleset_probes)
-            else:
-                log.info(f"Fetched probe: {probe}")
-                probes.append(probe)
-
-        return probes
+        return SimpleNamespace(fs=filesystem, path=path)
 
     def _get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
@@ -164,13 +172,8 @@ class Probe:
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                results.append(
-                    ProbeAssertionResult(
-                        probe=self,
-                        func_name=func_name,
-                        passed=False,
-                        exception=Exception(f"No '{func_name}' artifacts have been provided."),
-                    )
+                log.warning(
+                    f"No '{func_name}' artifacts have been provided for probe: {self.path}."
                 )
                 continue
             # Run the probe fucntion, and record its result
