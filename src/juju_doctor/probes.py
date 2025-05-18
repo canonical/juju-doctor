@@ -258,7 +258,7 @@ class RuleSet:
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.PYTHON.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
                         return []
@@ -273,7 +273,7 @@ class RuleSet:
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.RULESET.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
                         return []
