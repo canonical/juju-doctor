@@ -35,13 +35,19 @@ class ProbeResultAggregator:
     """Aggregate and group probe results based on metadata."""
 
     def __init__(
-        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat
+        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat, root_tree: Tree = None
     ):
-        """Prepare the aggregated results and its tree representation."""
+        """Prepare the aggregated results and its tree representation.
+        
+        TODO root_tree docstring"""
         self._output_fmt = output_fmt
         self._exceptions = []
-        self._tree = Tree()
-        self._tree.create_node("Results", "root")  # root node
+        # TODO We have to be careful to test this or we can be opinionated and say that we always accept an external root. Docstring this, but it will make ProbeResultAggregator less usable standalone
+        if not root_tree:
+            self._tree = Tree()
+            self._tree.create_node("Results", "root")  # root node
+        else:
+            self._tree = root_tree
         self._grouped_by_status = defaultdict(list)
         self._group_results(probe_results)
 
@@ -62,7 +68,6 @@ class ProbeResultAggregator:
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
         for probe_status, probe_results in self._grouped_by_status.items():
-            self._tree.create_node(str(probe_status), probe_status, parent="root")
             for probe_result in probe_results:
                 node_tag = ""
                 func_statuses = []
@@ -84,9 +89,20 @@ class ProbeResultAggregator:
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
-                    self._tree.create_node(
-                        node_tag, assertion_result.probe.get_chain(), probe_status
-                    )
+                    # TODO We need to check if the probe is already added before adding since it may be a root probe
+                    if not assertion_result.probe.is_root:
+                        self._tree.create_node(
+                            node_tag, assertion_result.probe.get_chain(), assertion_result.probe.root_uuid
+                        )
+                    else:
+                        self._tree.update_node(assertion_result.probe.get_chain(), tag=node_tag)
+
+# Sometimes we see that probe_chain is actually a chain, but why am I getting "parent node not in tree"
+# Check the value of ruleset_probe_uuid in the breakpoint above and see if it works for the first probe, and why not the second?
+
+# We currently iterate over all probe results and assign to pass/fail which is easy, but with the Ruleset grouping, we should
+# consider to create objects associated with each probe in the probe chain so that we can iterate over each UUID in the chain
+# and use that to look up the probe and its parent/child to build the tree
 
         return results
 

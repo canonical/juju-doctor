@@ -9,6 +9,7 @@ from typing import Annotated, Dict, List, Optional, Set
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
+from treelib import Tree
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
 from juju_doctor.probes import Probe
@@ -99,13 +100,16 @@ def check(
         artifacts = Artifacts(input)
 
     # Gather the probes
+    tree = Tree()
+    tree.create_node("Results", "root")  # root node
     probes: List[Probe] = []
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
+                from_url = Probe.from_url(tree, url=probe_url, probes_root=probes_folder)
+                probes.extend(from_url.probes)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
@@ -119,7 +123,7 @@ def check(
             probe_results[probe.name] = probe.run(artifacts)
 
         output_fmt = OutputFormat(verbose, format)
-        aggregator = ProbeResultAggregator(probe_results, output_fmt)
+        aggregator = ProbeResultAggregator(probe_results, output_fmt, from_url.tree)
         aggregator.print_results()
 
 

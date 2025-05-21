@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 import fsspec
 import yaml
 from rich.logging import RichHandler
+from treelib import Tree
 
 from juju_doctor.artifacts import Artifacts
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
@@ -55,20 +56,20 @@ class Probe:
 
     For example, for 2 probes: A and B inside a directory which is executed by probe C, their
     probe chains would be
-        /UUID(C)/UUID(A)
-        /UUID(C)/UUID(B)
+        UUID(C)/UUID(A)
+        UUID(C)/UUID(B)
 
     Alternatively, for 2 probes: D and E which both call probe F, their probe chains would be
-        /UUID(D)/UUID(F)
-        /UUID(E)/UUID(F)
+        UUID(D)/UUID(F)
+        UUID(E)/UUID(F)
 
     The probe chain ends when the probe does not call another probe.
     """
 
     path: Path  # relative path in the temporary folder
     probes_root: Path  # temporary folder for all probes
-    probes_chain: str = ""  # probe call chain with format /UUID/UUID/UUID
-    uuid: UUID = field(default_factory=uuid4)
+    probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
+    uuid: UUID = field(default_factory=uuid4)  # TODO Maybe a linkedlist is actually best here
 
     @property
     def name(self) -> str:
@@ -77,14 +78,26 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
+        # TODO Consider adding "name" as an arg to the Probe class so we can override using paths in node_tag
         return self.path.relative_to(self.probes_root).as_posix()
+
+    @property
+    def is_root(self) -> bool:
+        # TODO This seems more robust return self.uuid == self.root_uuid
+        return len(self.get_chain().split("/")) == 1
+
+    @property
+    def root_uuid(self) -> str:
+        return self.get_chain().split("/")[0]
 
     def get_chain(self) -> str:
         """Append the current probe's UUID to the chain."""
-        return f"{self.probes_chain}/{self.uuid}"
+        if self.probes_chain:
+            return f"{self.probes_chain}/{self.uuid}"
+        return str(self.uuid)
 
     @staticmethod
-    def from_url(url: str, probes_root: Path, probes_chain: str = "") -> List["Probe"]:
+    def from_url(tree: Tree, url: str, probes_root: Path, probes_chain: str = "") -> List["Probe"]:
         """Build a set of Probes from a URL.
 
         This function parses the URL to construct a generic 'filesystem' object,
@@ -95,6 +108,7 @@ class Probe:
         return a list of Probe items for each probe that was copied.
 
         Args:
+            tree: a treelib::Tree representing the check result.
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
@@ -110,14 +124,18 @@ class Probe:
             probe = Probe(probe_path, probes_root, probes_chain)
             if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
-                ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probes: {ruleset_probes}")
-                probes.extend(ruleset_probes)
+                aggregated_ruleset = ruleset.aggregate_probes(tree)
+                log.info(f"Fetched probes: {aggregated_ruleset.probes}")
+                probes.extend(aggregated_ruleset.probes)
             else:
+                if probe.is_root:
+                    # FIXME We do not have the context yet to determine PASS/FAIL so I have 2 choices:
+                    # - Add the probe and then in the build_tree, if the probe_chain already exists, overwrite the node_tag with assertion result
+                    tree.create_node(probe.name, probe.get_chain(), "root")
                 log.info(f"Fetched probe: {probe}")
                 probes.append(probe)
 
-        return probes
+        return SimpleNamespace(tree=tree, probes=probes)
 
     @staticmethod
     def _get_fs_from_protocol(
@@ -237,7 +255,7 @@ class RuleSet:
         self.probe = probe
         self.name = name or self.probe.name
 
-    def aggregate_probes(self) -> List[Probe]:
+    def aggregate_probes(self, tree: Tree) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
 
         This method is recursive when it finds another RuleSet probe and returns
@@ -246,8 +264,14 @@ class RuleSet:
         content = _read_file(self.probe.path)
         if not content:
             return []
-        ruleset_probes = content.get("probes", [])
+
+        ruleset_name = content.get("name", None)
+        # Only add the source ruleset probe to the tree's root node
+        if self.probe.is_root:
+            tree.create_node(ruleset_name, self.probe.get_chain(), "root")
+
         probes = []
+        ruleset_probes = content.get("probes", [])
         for ruleset_probe in ruleset_probes:
             match ruleset_probe["type"]:
                 # If the probe URL is not a directory and the path's suffix does not match the
@@ -258,40 +282,40 @@ class RuleSet:
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.PYTHON.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
                         return []
-                    probes.extend(
-                        Probe.from_url(
-                            ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
-                        )
+                    from_url = Probe.from_url(
+                        tree, ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
                     )
+                    probes.extend(from_url.probes)
                 case "ruleset":
                     if (
                         Path(ruleset_probe["url"]).suffix.lower()
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.RULESET.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
                         return []
                     if ruleset_probe.get("url", None):
-                        nested_ruleset_probes = Probe.from_url(
+                        from_url = Probe.from_url(
+                            tree,
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
                         )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
-                        if len(nested_ruleset_probes) > 1:
-                            probes.extend(nested_ruleset_probes)
+                        if len(from_url.probes) > 1:
+                            probes.extend(from_url.probes)
                             continue
                         # Recurses until we no longer have Ruleset probes
-                        for nested_ruleset_probe in nested_ruleset_probes:
+                        for nested_ruleset_probe in from_url.probes:
                             ruleset = RuleSet(nested_ruleset_probe)
-                            derived_ruleset_probes = ruleset.aggregate_probes()
+                            derived_ruleset_probes = ruleset.aggregate_probes(from_url.tree)
                             log.info(f"Fetched probes: {derived_ruleset_probes}")
                             probes.extend(derived_ruleset_probes)
                     else:
@@ -304,4 +328,4 @@ class RuleSet:
                 case _:
                     raise NotImplementedError
 
-        return probes
+        return SimpleNamespace(tree=from_url.tree, probes=probes)  # TODO This is the same as from_url, make it a generic namespace
