@@ -26,22 +26,9 @@ class OutputFormat:
     rich_map = {
         "green": "🟢",
         "red": "🔴",
+        "check_mark": "✔️",
+        "multiply": "✖️",
     }
-
-
-class RichTree(Tree):
-    """A subclass of treelib.Tree that renders styled text from shortcodes."""
-
-    def show(self, *args, **kwargs):
-        """Overrides Tree::show to replace shortcodes with styled text."""
-        output = super().show(*args, stdout=False)  # Get tree output as string
-        if output:
-            for shortcode, styled_text in OutputFormat.rich_map.items():
-                output = output.replace(shortcode, styled_text)
-        else:
-            output = "Error: No tree output available."
-        if kwargs.get("stdout", True):
-            console.print(output)
 
 
 class ProbeResultAggregator:
@@ -53,7 +40,7 @@ class ProbeResultAggregator:
         """Prepare the aggregated results and its tree representation."""
         self._output_fmt = output_fmt
         self._exceptions = []
-        self._tree = RichTree()
+        self._tree = Tree()
         self._tree.create_node("Results", "root")  # root node
         self._grouped_by_status = defaultdict(list)
         self._group_results(probe_results)
@@ -74,43 +61,50 @@ class ProbeResultAggregator:
         Create a new node in the tree once per defined probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
-        for status, probe_results in self._grouped_by_status.items():
-            self._tree.create_node(str(status), status, parent="root")
+        for probe_status, probe_results in self._grouped_by_status.items():
+            self._tree.create_node(str(probe_status), probe_status, parent="root")
             for probe_result in probe_results:
                 node_tag = ""
-                function_statuses = {"pass": [], "fail": []}
-                # gather failed assertions and exceptions
+                func_statuses = []
                 assertion_result = None
+                # gather failed assertions and exceptions
                 for assertion_result in probe_result:
-                    text = assertion_result.get_text(self._output_fmt)
-                    node_tag = text.node_tag
+                    node_tag, probe_exception = assertion_result.get_text(self._output_fmt)
                     results[assertion_result.status] += 1
-                    if text.exception_msg:
-                        self._exceptions.append(text.exception_msg)
-                    # TODO for builtins we append multiple times getting duplicate func_name
-                    function_statuses[assertion_result.status].append(assertion_result.func_name)
-                    if not assertion_result.passed:
-                        node_tag += f" ({', '.join(function_statuses[status])})"
+                    if probe_exception:
+                        self._exceptions.append(probe_exception)
+                    symbol = (
+                        self._output_fmt.rich_map["check_mark"]
+                        if assertion_result.status == AssertionStatus.PASS.value
+                        else self._output_fmt.rich_map["multiply"]
+                    )
+                    func_statuses.append(f"{symbol} {assertion_result.func_name}")
+
+                if self._output_fmt.verbose:
+                    node_tag += f" ({', '.join(func_statuses)})"
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
-                    self._tree.create_node(node_tag, assertion_result.probe.get_chain(), status)
+                    self._tree.create_node(
+                        node_tag, assertion_result.probe.get_chain(), probe_status
+                    )
 
         return results
 
     def print_results(self):
-        """Handle the formating and logging of probe results."""
+        """Handle the formatting and logging of probe results."""
         results = self._build_tree()
         passed = results[AssertionStatus.PASS.value]
         failed = results[AssertionStatus.FAIL.value]
+        total = passed + failed
         match self._output_fmt.format:
             case None:
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)
-                console.print(
-                    f"\nTotal: 🟢 {passed} 🔴 {failed}"
-                )
+                pass_string = f"🟢 {passed}/{total}" if passed != 0 else ""
+                fail_string = f"🔴 {failed}/{total}" if failed != 0 else ""
+                console.print(f"\nTotal: {pass_string} {fail_string}")
             case "json":
                 tree_json = json.loads(self._tree.to_json())
                 # TODO see if treelib.Tree.to_json has an option to remove the "children" keys

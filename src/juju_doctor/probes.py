@@ -7,12 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
 import fsspec
 import yaml
-from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
@@ -24,7 +23,13 @@ SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
-console = Console()
+
+@dataclass
+class FileSystem:
+    """Class for probe filesystem information."""
+
+    fs: fsspec.AbstractFileSystem
+    path: Path
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
@@ -95,10 +100,44 @@ class Probe:
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
-        # Get the fsspec.AbstractFileSystem for the Probe's protocol
+        probes = []
+        builtins = {}
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
         url_flattened = url_without_scheme.replace("/", "_")
+        fs = Probe._get_fs_from_protocol(parsed_url, url_without_scheme)
+
+        probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
+        for probe_path in probe_paths:
+            probe = Probe(probe_path, probes_root, probes_chain)
+            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
+                ruleset = RuleSet(probe)
+
+                # Gather builtins
+                # FIXME too many vars using the word "builtin", make it more clear what I am doing or docstring
+                rulset_builtins = ruleset.builtins
+                for builtin in rulset_builtins:
+                    if builtin not in builtins:
+                        builtins[builtin] = rulset_builtins[builtin]
+                    else:
+                        builtins[builtin].append(rulset_builtins[builtin])
+                log.info(
+                    f"Fetched builtin assertions for {probe.name}: {builtins}"
+                )  # TODO Is this logging too noisy/large?
+
+                ruleset_probes = ruleset.aggregate_probes()
+                log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
+                probes.extend(ruleset_probes)
+            else:
+                log.info(f"Fetched probe(s) for {probe.name}: {probe}")
+                probes.append(probe)
+
+        # FIXME make dataclass
+        return SimpleNamespace(probes=probes, builtins=builtins)
+
+    @staticmethod
+    def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
+        """Get the fsspec::AbstractFileSystem for the Probe's protocol."""
         match parsed_url.scheme:
             case "file":
                 path = Path(url_without_scheme)
@@ -113,35 +152,9 @@ class Probe:
             case _:
                 raise NotImplementedError
 
-        probes = []
-        builtins = {}
-        probe_paths = copy_probes(filesystem, path, probes_destination=probes_root / url_flattened)
-        for probe_path in probe_paths:
-            probe = Probe(probe_path, probes_root, probes_chain)
-            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
-                ruleset = RuleSet(probe)
-                # Gather builtins
-                # FIXME too many vars using the word "builtin", make it more clear what I am doing or docstring
-                rulset_builtins = ruleset.builtins
-                for builtin in rulset_builtins:
-                    if builtin not in builtins:
-                        builtins[builtin] = rulset_builtins[builtin]
-                    else:
-                        builtins[builtin].append(rulset_builtins[builtin])
-                log.info(
-                    f"Fetched builtin assertions for {probe.name}: {builtins}"
-                )  # TODO Is this logging too noisy/large?
-                # Gather probes
-                ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
-                probes.extend(ruleset_probes)
-            else:
-                log.info(f"Fetched probe(s) for {probe.name}: {probe}")
-                probes.append(probe)
+        return FileSystem(fs=filesystem, path=path)
 
-        return SimpleNamespace(probes=probes, builtins=builtins)
-
-    def _get_functions(self) -> Dict:
+    def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -169,12 +182,13 @@ class Probe:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeAssertionResult] = []
-        for func_name, func in self._get_functions().items():
+        for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                e = Exception(f"No '{func_name}' artifacts have been provided.")
-                results.append(ProbeAssertionResult(self, func_name, passed=False, exception=e))
+                log.warning(
+                    f"No '{func_name}' artifacts have been provided for probe: {self.path}."
+                )
                 continue
             # Run the probe fucntion, and record its result
             try:
@@ -280,7 +294,7 @@ class RuleSet:
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.PYTHON.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
                         return []
@@ -295,7 +309,7 @@ class RuleSet:
                         and Path(ruleset_probe["url"]).suffix.lower()
                         not in FileExtensions.RULESET.value
                     ):
-                        log.warn(
+                        log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
                         return []
