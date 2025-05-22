@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import sh
 import yaml
+from jubilant import Status
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -63,7 +64,8 @@ class ModelArtifact:
     ) -> "ModelArtifact":
         """Gather information from static files."""
         return ModelArtifact(
-            status=_read_file(status_file) or None,
+            status=Status._from_dict(_read_file(status_file)) if status_file else None or None,
+            # status=_read_file(status_file) or None,
             bundle=_read_file(bundle_file) or None,
             show_units=_read_file(show_unit_file) or None,
         )
