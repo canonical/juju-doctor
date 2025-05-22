@@ -107,21 +107,35 @@ def check(
         artifacts = Artifacts(input)
 
     # Gather the probes
+    builtins: List[dict] = []
     probes: List[Probe] = []
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                probes.extend(Probe.from_url(url=probe_url, probes_root=probes_folder))
+                aggregation = Probe.from_url(url=probe_url, probes_root=probes_folder)
+                probes.extend(aggregation.probes)
+                # TODO It would be great if we could output the combined result from multiple probes to show the user what they created
+                # E.g. 2 Rulesets: Applications: AM & Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
+                builtins.append(aggregation.builtins)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
                     "Try reducing the intensity of probe chaining!"
                 )
 
-        # Run the probes
         probe_results = {}
+        for builtin in builtins:
+            for name, builtin_obj in builtin.items():
+                # TODO Combine this with probe_results
+                # TODO I think probe_results and builtin_results differ here because in probes we have Python as the lowest level which
+                # Means probe.name -> [ProbeAggregationResults] makes sense. For the Builtins, we iterate through each one in main.py instead of appending to the list inside the .validate
+                if builtin_obj.probe.name not in probe_results:
+                    probe_results[builtin_obj.probe.name] = builtin_obj.validate(artifacts)
+                else:
+                    probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
+
         check_functions = set()
         for probe in probes:
             check_functions |= set(probe.get_functions().keys())

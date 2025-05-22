@@ -1,0 +1,16 @@
+name: A RuleSet which uses native Juju Doctor probes
+applications:
+  - name: alertmanager
+  - name: prometheus
+    minimum: 1
+    maximum: 4
+relations:
+  - provides: alertmanager:alerting
+    requires: loki:alertmanager
+# offers:
+#   - prometheus:something
+#   - loki:something
+# consumes:
+#   - mysql:something
+# probes:
+#   - something

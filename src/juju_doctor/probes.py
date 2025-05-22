@@ -4,9 +4,9 @@ import importlib.util
 import inspect
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from types import SimpleNamespace
+from typing import Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
@@ -15,6 +15,7 @@ import yaml
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
+from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
@@ -29,13 +30,6 @@ class FileSystem:
 
     fs: fsspec.AbstractFileSystem
     path: Path
-
-
-class AssertionStatus(Enum):
-    """Result of the probe's assertion."""
-
-    PASS = "pass"
-    FAIL = "fail"
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
@@ -107,6 +101,7 @@ class Probe:
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
         """
         probes = []
+        builtins = {}
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
         url_flattened = url_without_scheme.replace("/", "_")
@@ -117,14 +112,28 @@ class Probe:
             probe = Probe(probe_path, probes_root, probes_chain)
             if probe.path.suffix.lower() in FileExtensions.RULESET.value:
                 ruleset = RuleSet(probe)
+
+                # Gather builtins
+                # FIXME too many vars using the word "builtin", make it more clear what I am doing or docstring
+                rulset_builtins = ruleset.builtins
+                for builtin in rulset_builtins:
+                    if builtin not in builtins:
+                        builtins[builtin] = rulset_builtins[builtin]
+                    else:
+                        builtins[builtin].append(rulset_builtins[builtin])
+                log.info(
+                    f"Fetched builtin assertions for {probe.name}: {builtins}"
+                )  # TODO Is this logging too noisy/large?
+
                 ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probes: {ruleset_probes}")
+                log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
                 probes.extend(ruleset_probes)
             else:
-                log.info(f"Fetched probe: {probe}")
+                log.info(f"Fetched probe(s) for {probe.name}: {probe}")
                 probes.append(probe)
 
-        return probes
+        # FIXME make dataclass
+        return SimpleNamespace(probes=probes, builtins=builtins)
 
     @staticmethod
     def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
@@ -185,11 +194,7 @@ class Probe:
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(
-                    ProbeAssertionResult(
-                        probe=self, func_name=func_name, passed=False, exception=e
-                    )
-                )
+                results.append(ProbeAssertionResult(self, func_name, passed=False, exception=e))
             else:
                 results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))
         return results
@@ -209,7 +214,7 @@ class ProbeAssertionResult:
         """Result of the probe."""
         return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
-    def get_text(self, output_fmt) -> Tuple[str, Optional[str]]:
+    def get_text(self, output_fmt):
         """Probe results (formatted as Pretty-print) as a string."""
         exception_msg = None
         green = output_fmt.rich_map["green"]
@@ -223,7 +228,7 @@ class ProbeAssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return f"{red} {self.probe.name}", exception_msg
+        return ResultInfo(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
 
 
 class RuleSet:
@@ -241,6 +246,31 @@ class RuleSet:
         """
         self.probe = probe
         self.name = name or self.probe.name
+
+    @property
+    def builtins(self) -> Optional[Dict[str, List]]:
+        """Obtain all the builtin assertions from the RuleSet.
+
+        Returns a mapping of builtin name to builtin assertion for the Ruleset.
+        """
+        content = _read_file(self.probe.path)
+        if content is None:
+            return None
+
+        schema_valid = True
+        if not schema_valid:
+            log.warn(f"Failed to validate schema for {self.probe.name}")
+            return None
+
+        # FIXME Can we one-line this?
+        builtin_objs = {}
+        for builtin in Builtins:
+            if builtin.name.lower() not in content:
+                continue
+            builtin_objs[builtin.name.lower()] = builtin.value(
+                self.probe, Path(""), content[builtin.name.lower()]
+            )
+        return builtin_objs
 
     def aggregate_probes(self) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
@@ -270,7 +300,7 @@ class RuleSet:
                     probes.extend(
                         Probe.from_url(
                             ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
-                        )
+                        ).probes
                     )
                 case "ruleset":
                     if (
@@ -287,7 +317,7 @@ class RuleSet:
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
-                        )
+                        ).probes
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
                         if len(nested_ruleset_probes) > 1:
