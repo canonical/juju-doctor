@@ -1,9 +1,7 @@
-def status(juju_statuses):
-    raise Exception("I'm the status probe, and I failed")
-
+# This is intentionally missing the status function
 
 def bundle(juju_bundles):
-    assert True
+    assert False, "This should be False!"
 
 
 def show_unit(juju_show_units):
