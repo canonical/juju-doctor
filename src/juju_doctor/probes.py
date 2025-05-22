@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
@@ -22,6 +21,14 @@ SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class FileSystem:
+    """Class for probe filesystem information."""
+
+    fs: fsspec.AbstractFileSystem
+    path: Path
 
 
 class AssertionStatus(Enum):
@@ -120,9 +127,7 @@ class Probe:
         return probes
 
     @staticmethod
-    def _get_fs_from_protocol(
-        parsed_url: ParseResult, url_without_scheme: str
-    ) -> fsspec.AbstractFileSystem:
+    def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
         """Get the fsspec::AbstractFileSystem for the Probe's protocol."""
         match parsed_url.scheme:
             case "file":
@@ -138,9 +143,9 @@ class Probe:
             case _:
                 raise NotImplementedError
 
-        return SimpleNamespace(fs=filesystem, path=path)
+        return FileSystem(fs=filesystem, path=path)
 
-    def _get_functions(self) -> Dict:
+    def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We need to import the module dynamically with the 'spec' mechanism because the path
@@ -168,7 +173,7 @@ class Probe:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeAssertionResult] = []
-        for func_name, func in self._get_functions().items():
+        for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:

@@ -80,7 +80,8 @@ class ProbeResultAggregator:
                     )
                     func_statuses.append(f"{symbol} {assertion_result.func_name}")
 
-                node_tag += f" ({', '.join(func_statuses)})"
+                if self._output_fmt.verbose:
+                    node_tag += f" ({', '.join(func_statuses)})"
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
@@ -101,7 +102,9 @@ class ProbeResultAggregator:
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)
-                console.print(f"\nTotal: 🟢 {passed}/{total} 🔴 {failed}/{total}")
+                pass_string = f"🟢 {passed}/{total}" if passed != 0 else ""
+                fail_string = f"🔴 {failed}/{total}" if failed != 0 else ""
+                console.print(f"\nTotal: {pass_string} {fail_string}")
             case "json":
                 tree_json = json.loads(self._tree.to_json())
                 # TODO see if treelib.Tree.to_json has an option to remove the "children" keys
