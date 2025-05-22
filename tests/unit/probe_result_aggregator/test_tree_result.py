@@ -31,12 +31,8 @@ def probe_results(tmp_path: str, probe_name: str, passed: bool):
 
 def test_build_tree_status_group():
     expected_json = [
-        {
-            AssertionStatus.FAIL.value: {
-                "children": ["🔴 probes_python_failing.py (✖️ status, ✖️ bundle, ✖️ show_unit)"]
-            }
-        },
-        {AssertionStatus.PASS.value: {"children": ["🟢 probes_python_passing.py (✔️ status, ✔️ bundle, ✔️ show_unit)"]}},
+        {AssertionStatus.FAIL.value: {"children": ["🔴 probes_python_failing.py"]}},
+        {AssertionStatus.PASS.value: {"children": ["🟢 probes_python_passing.py"]}},
     ]
 
     # GIVEN The results for 2 python probes (passing and failing)
