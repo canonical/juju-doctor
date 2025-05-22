@@ -27,11 +27,14 @@ sys.setrecursionlimit(150)  # Protect against cirular RuleSet executions
 
 @app.callback()
 def callback():
+    # When only 1 app.command exists, it is executed with `juju-doctor`, instead of the intended
+    # help menu. app.callback overrides the CLI parameters for (without args) `juju-doctor`.
     """Collect, execute, and aggregate assertions against artifacts, representing a deployment."""
 
 
 @app.command(no_args_is_help=True)
 def check(
+    ctx: typer.Context,
     probe_urls: Annotated[
         List[str],
         typer.Option("--probe", "-p", help="URL of a probe containing probes to execute."),
@@ -81,7 +84,13 @@ def check(
         if probe_url not in unique_probe_urls:
             unique_probe_urls.add(probe_url)
         else:
-            log.warning(f"Duplicate probe detected: {probe_url}, it will be skipped.")
+            log.warning(f"Duplicate probe arg detected: {probe_url}, it will be skipped.")
+
+    supplied_artifacts = {
+        key.removesuffix("_files")
+        for key, param in ctx.params.items()
+        if key.endswith("_files") and param
+    }
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -118,9 +127,16 @@ def check(
 
         # Run the probes
         probe_results = {}
-        # TODO Explain in PR and issue that checking for "artifact supplied, but no probes use it" is not really helpful bc then we would need a way to know which probes do not use this artifact, but this is also useless bc if a new probe gets added which does use the artifact, then the ERROR is gone. This also add computational effort.
+        check_functions = set()
         for probe in probes:
+            check_functions |= set(probe.get_functions().keys())
             probe_results[probe.name] = probe.run(artifacts)
+
+        if not supplied_artifacts.issubset(check_functions):
+            useless_artifacts = ", ".join(supplied_artifacts - check_functions)
+            log.warning(
+                f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
+            )
 
         output_fmt = OutputFormat(verbose, format)
         aggregator = ProbeResultAggregator(probe_results, output_fmt, from_url.tree)
