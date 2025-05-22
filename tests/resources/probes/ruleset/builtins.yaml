@@ -7,10 +7,10 @@ applications:
 relations:
   - provides: alertmanager:alerting
     requires: loki:alertmanager
-offers:
-  - prometheus:something
-  - loki:something
-consumes:
-  - mysql:something
+# offers:
+#   - prometheus:something
+#   - loki:something
+# consumes:
+#   - mysql:something
 # probes:
 #   - something

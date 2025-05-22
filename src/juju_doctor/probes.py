@@ -15,7 +15,7 @@ import yaml
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import AssertionStatus, Builtins
+from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
@@ -214,7 +214,6 @@ class ProbeAssertionResult:
         """Result of the probe."""
         return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
-    # TODO Type hinting SimpleNameSpace
     def get_text(self, output_fmt):
         """Probe results (formatted as Pretty-print) as a string."""
         exception_msg = None
@@ -229,7 +228,7 @@ class ProbeAssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return SimpleNamespace(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
+        return ResultInfo(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
 
 
 class RuleSet:

@@ -19,7 +19,7 @@ class AssertionStatus(Enum):
 class _Builtin(object):
     """Baseclass for builtin assertions.
 
-    Each builtin validates its assertions against a schema and then the assertions against artifacts.
+    Each builtin validates its assertions against a schema and the assertions against artifacts.
 
     # We need to create a schema and if its not used, Raise error
     # Parse the YAML for predefined top-level keys: applications, relations, offers, consumes, probes
@@ -80,12 +80,16 @@ class Applications(_Builtin):
                 for bundle in artifacts.bundle.values()
             ][0]
             if "minimum" in app and app_scale < app["minimum"]:
-                passed=False
-                exception = Exception(f"{app['name']} scale is below the allowable limit: {app['minimum']}")
+                passed = False
+                exception = Exception(
+                    f"{app['name']} scale is below the allowable limit: {app['minimum']}"
+                )
                 results.append(AssertionResult(self.probe, func_name, passed, exception))
             if "maximum" in app and app_scale > app["maximum"]:
-                passed=False
-                exception = Exception(f"{app['name']} scale exceeds the allowable limit: {app['maximum']}")
+                passed = False
+                exception = Exception(
+                    f"{app['name']} scale exceeds the allowable limit: {app['maximum']}"
+                )
                 results.append(AssertionResult(self.probe, func_name, passed, exception))
         if passed:
             results.append(AssertionResult(self.probe, func_name, passed))
@@ -127,9 +131,8 @@ class Offers(_Builtin):
         super().__init__(probe, schema_file, assertion)
 
     def validate(self, artifacts: Artifacts):
-        results: List[AssertionResult] = []
         # TODO We cut the multi-doc containing offers in artifacts.py: https://github.com/canonical/juju-doctor/issues/10
-        return results
+        raise NotImplementedError
 
 
 class Consumes(_Builtin):
@@ -138,7 +141,7 @@ class Consumes(_Builtin):
 
     def validate(self, artifacts: Artifacts):
         # TODO The artifacts were not generated with a CMR, so we are missing SAAS
-        return []
+        raise NotImplementedError
 
 
 class Builtins(Enum):
@@ -148,6 +151,14 @@ class Builtins(Enum):
     RELATIONS = Relations
     OFFERS = Offers
     CONSUMES = Consumes
+
+
+@dataclass
+class ResultInfo:
+    """Class for gathering information needed to display assertions results."""
+
+    node_tag: str
+    exception_msg: str
 
 
 # TODO Try to combine this with ProbeAssertionResult
@@ -165,14 +176,15 @@ class AssertionResult:
         """Result of the probe."""
         return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
-    # TODO Type hinting SimpleNameSpace
-    def get_text(self, output_fmt):
+    def get_text(self, output_fmt) -> ResultInfo:
         """Probe results (formatted as Pretty-print) as a string."""
         exception_msg = None
         green = output_fmt.rich_map["green"]
         red = output_fmt.rich_map["red"]
         if self.passed:
-            return SimpleNamespace(node_tag=f"{green} {self.probe.name}", exception_msg=exception_msg)
+            return SimpleNamespace(
+                node_tag=f"{green} {self.probe.name}", exception_msg=exception_msg
+            )
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
         if output_fmt.format == "json":
@@ -180,4 +192,4 @@ class AssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return SimpleNamespace(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
+        return ResultInfo(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)

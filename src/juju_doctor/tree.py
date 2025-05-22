@@ -64,15 +64,14 @@ class ProbeResultAggregator:
         for probe_status, probe_results in self._grouped_by_status.items():
             self._tree.create_node(str(probe_status), probe_status, parent="root")
             for probe_result in probe_results:
-                node_tag = ""
                 func_statuses = []
                 assertion_result = None
                 # gather failed assertions and exceptions
                 for assertion_result in probe_result:
-                    node_tag, probe_exception = assertion_result.get_text(self._output_fmt)
+                    result_info = assertion_result.get_text(self._output_fmt)
                     results[assertion_result.status] += 1
-                    if probe_exception:
-                        self._exceptions.append(probe_exception)
+                    if result_info.exception_msg:
+                        self._exceptions.append(result_info.exception_msg)
                     symbol = (
                         self._output_fmt.rich_map["check_mark"]
                         if assertion_result.status == AssertionStatus.PASS.value
@@ -81,12 +80,12 @@ class ProbeResultAggregator:
                     func_statuses.append(f"{symbol} {assertion_result.func_name}")
 
                 if self._output_fmt.verbose:
-                    node_tag += f" ({', '.join(func_statuses)})"
+                    result_info.node_tag += f" ({', '.join(func_statuses)})"
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
                     self._tree.create_node(
-                        node_tag, assertion_result.probe.get_chain(), probe_status
+                        result_info.node_tag, assertion_result.probe.get_chain(), probe_status
                     )
 
         return results
