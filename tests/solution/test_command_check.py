@@ -24,7 +24,6 @@ def test_no_probes():
     assert "No probes were specified" in result.output
 
 
-
 def test_no_artifacts():
     # GIVEN no artifacts were supplied
     # WHEN `juju-doctor check` is executed
@@ -169,9 +168,10 @@ def test_duplicate_gh_probes_are_excluded():
     assert len(failing["children"]) == 1
 
 
-# TODO These tests are not isolated: check_result = json.loads(result.output) has context from previous tests
+# TODO These tests are not isolated: check_result = json.loads(result.output)
+# has context from previous tests
 def test_check_groups_by_parent():
-    # GIVEN any probe
+    # GIVEN multiple Ruleset probes
     # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
@@ -184,9 +184,18 @@ def test_check_groups_by_parent():
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
-    # AND there is one parent node (with children nodes) per Ruleset in all.yaml
     check_result = json.loads(result.output)
-    children = check_result[ROOT_NODE_TAG]["children"]
-    assert any(" - dir" in key for child in children if isinstance(child, dict) for key in child.keys())
-    assert any(" - scriptlet" in key for child in children if isinstance(child, dict) for key in child.keys())
-
+    # AND there is one parent node (with children nodes) per Ruleset
+    probes = check_result[ROOT_NODE_TAG]["children"]
+    assert any(
+        " - dir" in key and len(probe.values()) > 0
+        for probe in probes
+        if isinstance(probe, dict)
+        for key in probe.keys()
+    )
+    assert any(
+        " - scriptlet" in key and len(probe.values()) > 0
+        for probe in probes
+        if isinstance(probe, dict)
+        for key in probe.keys()
+    )

@@ -9,7 +9,6 @@ from typing import Annotated, Dict, List, Optional, Set
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
-from treelib import Tree
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
 from juju_doctor.probes import Probe
@@ -71,7 +70,6 @@ def check(
     * Assertions can be sourced (local) from the current FS or (remote) from repositories.
     """
     # Input validation
-    # TODO We need a way to make the artifact names dynamic. We have this with SUPPORTED_PROBE_FUNCTIONS, maybe a good time to introduce a constants.py?
     if models and any([status_files, bundle_files, show_unit_files]):
         raise typer.BadParameter("Live models (--model) and static files are mutually exclusive.")
     if not any([models, status_files, bundle_files, show_unit_files]):

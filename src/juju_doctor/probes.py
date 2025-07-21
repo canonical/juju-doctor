@@ -88,15 +88,18 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
-        # TODO Consider adding "name" as an arg to the Probe class so we can override using paths in node_tag
+        # TODO Consider adding "name" as an arg to the Probe class so we can override using paths
+        # in node_tag so that both Ruleset and probe names are respected. Future PR?
         return self.path.relative_to(self.probes_root).as_posix()
 
     @property
     def is_root_node(self) -> bool:
+        """A root node is a probe in a tree which was not called by another probe."""
         return self.uuid == self.root_node_uuid
 
     @property
     def root_node_uuid(self) -> str:
+        """Unique identifier of this root probe."""
         return UUID(self.get_chain().split("/")[0])
 
     def get_chain(self) -> str:
@@ -106,17 +109,19 @@ class Probe:
         return str(self.uuid)
 
     @staticmethod
-    def from_url(url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()) -> List["Probe"]:
+    def from_url(
+        url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()
+    ) -> List["Probe"]:
         """Build a set of Probes from a URL.
 
-        This function parses the URL to construct a generic 'filesystem' object,
-        that allows us to interact with files regardless of whether they are on
-        local disk or on GitHub.
+        This function parses the URL to construct a generic 'filesystem' object, that allows us to
+        interact with files regardless of whether they are on local disk or on GitHub.
 
-        Then, it copies the parsed probes to a subfolder inside 'probes_root', and
-        return a list of Probe items for each probe that was copied.
+        Then, it copies the parsed probes to a subfolder inside 'probes_root', and return a list of
+        Probe items for each probe that was copied.
 
-        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from the root of the tree for each probe result.
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
+        the root of the tree for each probe result.
 
         Args:
             url: a string representing the Probe's URL.
@@ -172,8 +177,8 @@ class Probe:
     def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
-        We need to import the module dynamically with the 'spec' mechanism because the path
-        of the probe is only known at runtime.
+        We need to import the module dynamically with the 'spec' mechanism because the path of the
+        probe is only known at runtime.
 
         Only returns the supported 'status', 'bundle', and 'show_unit' functions (if present).
         """
@@ -269,10 +274,11 @@ class RuleSet:
     def aggregate_probes(self, tree: Tree = Tree()) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
 
-        This method is recursive when it finds another RuleSet probe and returns
-        a list of probes that were found after traversing all the probes in the ruleset.
+        This method is recursive when it finds another RuleSet probe and returns a list of probes
+        that were found after traversing all the probes in the ruleset.
 
-        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from the root of the tree for each probe result.
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
+        the root of the tree for each probe result.
         """
         content = _read_file(self.probe.path)
         if not content:
@@ -345,4 +351,5 @@ class RuleSet:
                 case _:
                     raise NotImplementedError
 
-        return SimpleNamespace(tree=from_url.tree, probes=probes)  # TODO This is the same as from_url, make it a generic namespace
+        # TODO This is the same as from_url, make it a dataclass
+        return SimpleNamespace(tree=from_url.tree, probes=probes)

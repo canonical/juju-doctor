@@ -35,7 +35,10 @@ class ProbeResultAggregator:
     """Aggregate and group probe results based on metadata."""
 
     def __init__(
-        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat, tree = Tree()
+        self,
+        probe_results: Dict[str, List[ProbeAssertionResult]],
+        output_fmt: OutputFormat,
+        tree=Tree(),
     ):
         """Prepare the aggregated results and its tree representation.
 
@@ -84,7 +87,6 @@ class ProbeResultAggregator:
                     )
                     func_statuses.append(f"{symbol} {assertion_result.func_name}")
 
-
                 if self._output_fmt.verbose:
                     node_tag += f" ({', '.join(func_statuses)})"
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
@@ -92,13 +94,19 @@ class ProbeResultAggregator:
                 if assertion_result:
                     if not assertion_result.probe.is_root_node:
                         self._tree.create_node(
-                            node_tag, assertion_result.probe.get_chain(), str(assertion_result.probe.root_node_uuid)
+                            node_tag,
+                            assertion_result.probe.get_chain(),
+                            str(assertion_result.probe.root_node_uuid),
                         )
                     else:
                         if assertion_result.probe.get_chain() in self._tree:
-                            self._tree.update_node(assertion_result.probe.get_chain(), tag=node_tag)
+                            self._tree.update_node(
+                                assertion_result.probe.get_chain(), tag=node_tag
+                            )
                         else:
-                            self._tree.create_node(node_tag, assertion_result.probe.get_chain(), self._tree.root)
+                            self._tree.create_node(
+                                node_tag, assertion_result.probe.get_chain(), self._tree.root
+                            )
         return results
 
     def print_results(self):
