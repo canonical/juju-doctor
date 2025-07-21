@@ -20,6 +20,8 @@ from juju_doctor.artifacts import Artifacts
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
+ROOT_NODE_ID = "root"
+ROOT_NODE_TAG = "Results"
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -77,7 +79,7 @@ class Probe:
     path: Path  # relative path in the temporary folder
     probes_root: Path  # temporary folder for all probes
     probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
-    uuid: UUID = field(default_factory=uuid4)  # TODO Maybe a linkedlist is actually best here
+    uuid: UUID = field(default_factory=uuid4)
 
     @property
     def name(self) -> str:
@@ -90,13 +92,12 @@ class Probe:
         return self.path.relative_to(self.probes_root).as_posix()
 
     @property
-    def is_root(self) -> bool:
-        # TODO This seems more robust return self.uuid == self.root_uuid
-        return len(self.get_chain().split("/")) == 1
+    def is_root_node(self) -> bool:
+        return self.uuid == self.root_node_uuid
 
     @property
-    def root_uuid(self) -> str:
-        return self.get_chain().split("/")[0]
+    def root_node_uuid(self) -> str:
+        return UUID(self.get_chain().split("/")[0])
 
     def get_chain(self) -> str:
         """Append the current probe's UUID to the chain."""
@@ -105,7 +106,7 @@ class Probe:
         return str(self.uuid)
 
     @staticmethod
-    def from_url(tree: Tree, url: str, probes_root: Path, probes_chain: str = "") -> List["Probe"]:
+    def from_url(url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()) -> List["Probe"]:
         """Build a set of Probes from a URL.
 
         This function parses the URL to construct a generic 'filesystem' object,
@@ -115,12 +116,18 @@ class Probe:
         Then, it copies the parsed probes to a subfolder inside 'probes_root', and
         return a list of Probe items for each probe that was copied.
 
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from the root of the tree for each probe result.
+
         Args:
-            tree: a treelib::Tree representing the check result.
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
+            tree: a treelib::Tree representing the probe results.
         """
+        # Create a root node if it does not exist
+        if not tree:
+            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+
         probes = []
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
@@ -136,10 +143,8 @@ class Probe:
                 log.info(f"Fetched probes: {aggregated_ruleset.probes}")
                 probes.extend(aggregated_ruleset.probes)
             else:
-                if probe.is_root:
-                    # FIXME We do not have the context yet to determine PASS/FAIL so I have 2 choices:
-                    # - Add the probe and then in the build_tree, if the probe_chain already exists, overwrite the node_tag with assertion result
-                    tree.create_node(probe.name, probe.get_chain(), "root")
+                if probe.is_root_node:
+                    tree.create_node(probe.name, probe.get_chain(), tree.root)
                 log.info(f"Fetched probe: {probe}")
                 probes.append(probe)
 
@@ -200,7 +205,7 @@ class Probe:
                     f"No '{func_name}' artifacts have been provided for probe: {self.path}."
                 )
                 continue
-            # Run the probe fucntion, and record its result
+            # Run the probe function, and record its result
             try:
                 func(artifact)
             except BaseException as e:
@@ -261,20 +266,26 @@ class RuleSet:
         self.probe = probe
         self.name = name or self.probe.name
 
-    def aggregate_probes(self, tree: Tree) -> List[Probe]:
+    def aggregate_probes(self, tree: Tree = Tree()) -> List[Probe]:
         """Obtain all the probes from the RuleSet.
 
         This method is recursive when it finds another RuleSet probe and returns
         a list of probes that were found after traversing all the probes in the ruleset.
+
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from the root of the tree for each probe result.
         """
         content = _read_file(self.probe.path)
         if not content:
             return []
 
+        # Create a root node if it does not exist
+        if not tree:
+            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+
         ruleset_name = content.get("name", None)
         # Only add the source ruleset probe to the tree's root node
-        if self.probe.is_root:
-            tree.create_node(ruleset_name, self.probe.get_chain(), "root")
+        if self.probe.is_root_node:
+            tree.create_node(ruleset_name, self.probe.get_chain(), tree.root)
 
         probes = []
         ruleset_probes = content.get("probes", [])
@@ -293,7 +304,7 @@ class RuleSet:
                         )
                         return []
                     from_url = Probe.from_url(
-                        tree, ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
+                        ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain(), tree
                     )
                     probes.extend(from_url.probes)
                 case "ruleset":
@@ -308,10 +319,10 @@ class RuleSet:
                         return []
                     if ruleset_probe.get("url", None):
                         from_url = Probe.from_url(
-                            tree,
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
+                            tree,
                         )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset

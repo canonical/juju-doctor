@@ -1,4 +1,4 @@
-name: A declarative deployment RuleSet
+name: A declarative deployment RuleSet - scriptlet
 probes:
   - name: Local probe - passing
     type: scriptlet

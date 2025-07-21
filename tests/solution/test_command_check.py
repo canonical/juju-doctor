@@ -5,7 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from juju_doctor.main import app
-from juju_doctor.probes import AssertionStatus
+from juju_doctor.probes import ROOT_NODE_TAG, AssertionStatus
 
 
 def test_no_probes():
@@ -167,3 +167,26 @@ def test_duplicate_gh_probes_are_excluded():
     # AND the second Probe overwrote the first, i.e. only 1 exists
     failing = json.loads(result.stdout)["Results"]["children"][0][AssertionStatus.FAIL.value]
     assert len(failing["children"]) == 1
+
+
+# TODO These tests are not isolated: check_result = json.loads(result.output) has context from previous tests
+def test_check_groups_by_parent():
+    # GIVEN any probe
+    # WHEN `juju-doctor check` is executed
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/ruleset/dir.yaml",
+        "--probe=file://tests/resources/probes/ruleset/scriptlet.yaml",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND there is one parent node (with children nodes) per Ruleset in all.yaml
+    check_result = json.loads(result.output)
+    children = check_result[ROOT_NODE_TAG]["children"]
+    assert any(" - dir" in key for child in children if isinstance(child, dict) for key in child.keys())
+    assert any(" - scriptlet" in key for child in children if isinstance(child, dict) for key in child.keys())
+

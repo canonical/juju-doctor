@@ -109,15 +109,13 @@ def check(
         artifacts = Artifacts(input)
 
     # Gather the probes
-    tree = Tree()
-    tree.create_node("Results", "root")  # root node
     probes: List[Probe] = []
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                from_url = Probe.from_url(tree, url=probe_url, probes_root=probes_folder)
+                from_url = Probe.from_url(url=probe_url, probes_root=probes_folder)
                 probes.extend(from_url.probes)
             except RecursionError:
                 log.error(

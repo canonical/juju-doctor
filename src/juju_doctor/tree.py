@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
-from juju_doctor.probes import AssertionStatus, ProbeAssertionResult
+from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, ProbeAssertionResult
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -35,19 +35,18 @@ class ProbeResultAggregator:
     """Aggregate and group probe results based on metadata."""
 
     def __init__(
-        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat, root_tree: Tree = None
+        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat, tree = Tree()
     ):
         """Prepare the aggregated results and its tree representation.
-        
-        TODO root_tree docstring"""
+
+        Leaf nodes will be created from the root of the tree for each probe result.
+        """
         self._output_fmt = output_fmt
         self._exceptions = []
-        # TODO We have to be careful to test this or we can be opinionated and say that we always accept an external root. Docstring this, but it will make ProbeResultAggregator less usable standalone
-        if not root_tree:
-            self._tree = Tree()
-            self._tree.create_node("Results", "root")  # root node
-        else:
-            self._tree = root_tree
+        self._tree = tree
+        # Create a root node if it does not exist
+        if not self._tree:
+            self._tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
         self._grouped_by_status = defaultdict(list)
         self._group_results(probe_results)
 
@@ -67,7 +66,7 @@ class ProbeResultAggregator:
         Create a new node in the tree once per defined probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
-        for probe_status, probe_results in self._grouped_by_status.items():
+        for probe_results in self._grouped_by_status.values():
             for probe_result in probe_results:
                 node_tag = ""
                 func_statuses = []
@@ -91,14 +90,15 @@ class ProbeResultAggregator:
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
-                    # TODO We need to check if the probe is already added before adding since it may be a root probe
-                    if not assertion_result.probe.is_root:
+                    if not assertion_result.probe.is_root_node:
                         self._tree.create_node(
-                            node_tag, assertion_result.probe.get_chain(), assertion_result.probe.root_uuid
+                            node_tag, assertion_result.probe.get_chain(), str(assertion_result.probe.root_node_uuid)
                         )
                     else:
-                        self._tree.update_node(assertion_result.probe.get_chain(), tag=node_tag)
-
+                        if assertion_result.probe.get_chain() in self._tree:
+                            self._tree.update_node(assertion_result.probe.get_chain(), tag=node_tag)
+                        else:
+                            self._tree.create_node(node_tag, assertion_result.probe.get_chain(), self._tree.root)
         return results
 
     def print_results(self):
@@ -117,7 +117,6 @@ class ProbeResultAggregator:
                 console.print(f"\nTotal: {pass_string} {fail_string}")
             case "json":
                 tree_json = json.loads(self._tree.to_json())
-                # TODO see if treelib.Tree.to_json has an option to remove the "children" keys
                 meta_json = {
                     "passed": passed,
                     "failed": failed,
