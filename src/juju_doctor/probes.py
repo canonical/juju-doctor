@@ -5,7 +5,6 @@ import inspect
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
@@ -13,12 +12,15 @@ from uuid import UUID, uuid4
 import fsspec
 import yaml
 from rich.logging import RichHandler
+from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
 from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
+ROOT_NODE_ID = "root"
+ROOT_NODE_TAG = "Results"
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -47,6 +49,16 @@ def _read_file(filename: Path) -> Optional[Dict]:
 
 
 @dataclass
+class ProbeTree:
+    """A collection of Probes in a tree format."""
+
+    probes: List["Probe"]  # list of probes in the tree
+    # TODO Move builtins to last arg and default like tree. Note: this is a nit
+    builtins: Dict[str, List]  # list of collected builtin probes in the tree
+    tree: Tree = Tree()  # Tree containing a probe per node
+
+
+@dataclass
 class Probe:
     """A probe that can be executed via juju-doctor.
 
@@ -56,19 +68,19 @@ class Probe:
 
     For example, for 2 probes: A and B inside a directory which is executed by probe C, their
     probe chains would be
-        /UUID(C)/UUID(A)
-        /UUID(C)/UUID(B)
+        UUID(C)/UUID(A)
+        UUID(C)/UUID(B)
 
     Alternatively, for 2 probes: D and E which both call probe F, their probe chains would be
-        /UUID(D)/UUID(F)
-        /UUID(E)/UUID(F)
+        UUID(D)/UUID(F)
+        UUID(E)/UUID(F)
 
     The probe chain ends when the probe does not call another probe.
     """
 
     path: Path  # relative path in the temporary folder
     probes_root: Path  # temporary folder for all probes
-    probes_chain: str = ""  # probe call chain with format /UUID/UUID/UUID
+    probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
     uuid: UUID = field(default_factory=uuid4)
 
     @property
@@ -80,26 +92,47 @@ class Probe:
         """
         return self.path.relative_to(self.probes_root).as_posix()
 
+    @property
+    def is_root_node(self) -> bool:
+        """A root node is a probe in a tree which was not called by another probe."""
+        return self.uuid == self.root_node_uuid
+
+    @property
+    def root_node_uuid(self) -> UUID:
+        """Unique identifier of this root probe."""
+        return UUID(self.get_chain().split("/")[0])
+
     def get_chain(self) -> str:
         """Append the current probe's UUID to the chain."""
-        return f"{self.probes_chain}/{self.uuid}"
+        if self.probes_chain:
+            return f"{self.probes_chain}/{self.uuid}"
+        return str(self.uuid)
 
     @staticmethod
-    def from_url(url: str, probes_root: Path, probes_chain: str = "") -> List["Probe"]:
+    def from_url(
+        url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()
+    ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
-        This function parses the URL to construct a generic 'filesystem' object,
-        that allows us to interact with files regardless of whether they are on
-        local disk or on GitHub.
+        This function parses the URL to construct a generic 'filesystem' object, that allows us to
+        interact with files regardless of whether they are on local disk or on GitHub.
 
-        Then, it copies the parsed probes to a subfolder inside 'probes_root', and
-        return a list of Probe items for each probe that was copied.
+        Then, it copies the parsed probes to a subfolder inside 'probes_root', and return a list of
+        Probe items for each probe that was copied.
+
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
+        the root of the tree for each probe result.
 
         Args:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
+            tree: a treelib::Tree representing the probe results.
         """
+        # Create a root node if it does not exist
+        if not tree:
+            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+
         probes = []
         builtins = {}
         parsed_url = urlparse(url)
@@ -110,7 +143,8 @@ class Probe:
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
             probe = Probe(probe_path, probes_root, probes_chain)
-            if probe.path.suffix.lower() in FileExtensions.RULESET.value:
+            is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
+            if is_ruleset:
                 ruleset = RuleSet(probe)
 
                 # Gather builtins
@@ -125,15 +159,16 @@ class Probe:
                     f"Fetched builtin assertions for {probe.name}: {builtins}"
                 )  # TODO Is this logging too noisy/large?
 
-                ruleset_probes = ruleset.aggregate_probes()
-                log.info(f"Fetched probe(s) for {probe.name}: {ruleset_probes}")
-                probes.extend(ruleset_probes)
+                probe_tree = ruleset.aggregate_probes(tree)
+                log.info(f"Fetched probe(s) for {probe.name}: {probe_tree.probes}")
+                probes.extend(probe_tree.probes)
             else:
+                if probe.is_root_node:
+                    tree.create_node(probe.name, probe.get_chain(), tree.root)
                 log.info(f"Fetched probe(s) for {probe.name}: {probe}")
                 probes.append(probe)
 
-        # FIXME make dataclass
-        return SimpleNamespace(probes=probes, builtins=builtins)
+        return ProbeTree(probes, builtins, tree)
 
     @staticmethod
     def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
@@ -157,8 +192,8 @@ class Probe:
     def get_functions(self) -> Dict:
         """Dynamically load a Python script from self.path, making its functions available.
 
-        We need to import the module dynamically with the 'spec' mechanism because the path
-        of the probe is only known at runtime.
+        We need to import the module dynamically with the 'spec' mechanism because the path of the
+        probe is only known at runtime.
 
         Only returns the supported 'status', 'bundle', and 'show_unit' functions (if present).
         """
@@ -178,7 +213,7 @@ class Probe:
             if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts) -> List["ProbeAssertionResult"]:
+    def run(self, artifacts: Artifacts, output_fmt) -> List["ProbeAssertionResult"]:  # TODO add a type to output_fmt
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeAssertionResult] = []
@@ -186,11 +221,13 @@ class Probe:
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                log.warning(
-                    f"No '{func_name}' artifacts have been provided for probe: {self.path}."
-                )
+                # TODO Instead of checking for JSON everywhere, we should instead build a {"juju-doctor-exceptions": [], "probe-exceptions": []}
+                if output_fmt.format != "json":
+                    log.warning(
+                        f"No '{func_name}' artifacts have been provided for probe: {self.path}."
+                    )
                 continue
-            # Run the probe fucntion, and record its result
+            # Run the probe function, and record its result
             try:
                 func(artifact)
             except BaseException as e:
@@ -216,11 +253,11 @@ class ProbeAssertionResult:
 
     def get_text(self, output_fmt):
         """Probe results (formatted as Pretty-print) as a string."""
-        exception_msg = None
+        exception_msg = ""
         green = output_fmt.rich_map["green"]
         red = output_fmt.rich_map["red"]
         if self.passed:
-            return f"{green} {self.probe.name}", exception_msg
+            return ResultInfo(f"{green} {self.probe.name}", exception_msg)
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
         if output_fmt.format == "json":
@@ -228,7 +265,7 @@ class ProbeAssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return ResultInfo(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
+        return ResultInfo(f"{red} {self.probe.name}", exception_msg)
 
 
 class RuleSet:
@@ -272,17 +309,30 @@ class RuleSet:
             )
         return builtin_objs
 
-    def aggregate_probes(self) -> List[Probe]:
+    def aggregate_probes(self, tree: Tree = Tree()) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
 
-        This method is recursive when it finds another RuleSet probe and returns
-        a list of probes that were found after traversing all the probes in the ruleset.
+        This method is recursive when it finds another RuleSet probe and returns a list of probes
+        that were found after traversing all the probes in the ruleset.
+
+        While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
+        the root of the tree for each probe result.
         """
         content = _read_file(self.probe.path)
         if not content:
-            return []
-        ruleset_probes = content.get("probes", [])
+            return ProbeTree([], {}, tree)
+
+        # Create a root node if it does not exist
+        if not tree:
+            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+
+        ruleset_name = content.get("name", None)
+        # Only add the source ruleset probe to the tree's root node
+        if self.probe.is_root_node:
+            tree.create_node(ruleset_name, self.probe.get_chain(), tree.root)
+
         probes = []
+        ruleset_probes = content.get("probes", [])
         for ruleset_probe in ruleset_probes:
             match ruleset_probe["type"]:
                 # If the probe URL is not a directory and the path's suffix does not match the
@@ -296,12 +346,11 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
-                        return []
-                    probes.extend(
-                        Probe.from_url(
-                            ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain()
-                        ).probes
+                        return ProbeTree([], {}, tree)
+                    probe_tree = Probe.from_url(
+                        ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain(), tree
                     )
+                    probes.extend(probe_tree.probes)
                 case "ruleset":
                     if (
                         Path(ruleset_probe["url"]).suffix.lower()
@@ -311,24 +360,25 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
-                        return []
+                        return ProbeTree([], {}, tree)
                     if ruleset_probe.get("url", None):
-                        nested_ruleset_probes = Probe.from_url(
+                        probe_tree = Probe.from_url(
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
-                        ).probes
+                            tree,
+                        )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
-                        if len(nested_ruleset_probes) > 1:
-                            probes.extend(nested_ruleset_probes)
+                        if len(probe_tree.probes) > 1:
+                            probes.extend(probe_tree.probes)
                             continue
                         # Recurses until we no longer have Ruleset probes
-                        for nested_ruleset_probe in nested_ruleset_probes:
+                        for nested_ruleset_probe in probe_tree.probes:
                             ruleset = RuleSet(nested_ruleset_probe)
-                            derived_ruleset_probes = ruleset.aggregate_probes()
-                            log.info(f"Fetched probes: {derived_ruleset_probes}")
-                            probes.extend(derived_ruleset_probes)
+                            derived_ruleset_probe_tree = ruleset.aggregate_probes(probe_tree.tree)
+                            log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")
+                            probes.extend(derived_ruleset_probe_tree.probes)
                     else:
                         # TODO "built-in" directives, e.g. "apps/has-relation"
                         log.info(
@@ -339,4 +389,4 @@ class RuleSet:
                 case _:
                     raise NotImplementedError
 
-        return probes
+        return ProbeTree(probes, {}, tree)

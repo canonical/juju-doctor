@@ -178,13 +178,11 @@ class AssertionResult:
 
     def get_text(self, output_fmt) -> ResultInfo:
         """Probe results (formatted as Pretty-print) as a string."""
-        exception_msg = None
+        exception_msg = ""
         green = output_fmt.rich_map["green"]
         red = output_fmt.rich_map["red"]
         if self.passed:
-            return SimpleNamespace(
-                node_tag=f"{green} {self.probe.name}", exception_msg=exception_msg
-            )
+            return ResultInfo(f"{green} {self.probe.name}", exception_msg)
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
         if output_fmt.format == "json":
@@ -192,4 +190,4 @@ class AssertionResult:
         else:
             if output_fmt.verbose:
                 exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return ResultInfo(node_tag=f"{red} {self.probe.name}", exception_msg=exception_msg)
+        return ResultInfo(f"{red} {self.probe.name}", exception_msg)

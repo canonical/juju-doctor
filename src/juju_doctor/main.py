@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe
+from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
@@ -109,16 +109,17 @@ def check(
     # Gather the probes
     builtins: List[dict] = []
     probes: List[Probe] = []
+    probe_tree = ProbeTree([], {})
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                aggregation = Probe.from_url(url=probe_url, probes_root=probes_folder)
-                probes.extend(aggregation.probes)
+                probe_tree = Probe.from_url(url=probe_url, probes_root=probes_folder)
+                probes.extend(probe_tree.probes)
                 # TODO It would be great if we could output the combined result from multiple probes to show the user what they created
                 # E.g. 2 Rulesets: Applications: AM & Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
-                builtins.append(aggregation.builtins)
+                builtins.append(probe_tree.builtins)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
@@ -136,10 +137,11 @@ def check(
                 else:
                     probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
 
+        output_fmt = OutputFormat(verbose, format)
         check_functions = set()
         for probe in probes:
             check_functions |= set(probe.get_functions().keys())
-            probe_results[probe.name] = probe.run(artifacts)
+            probe_results[probe.name] = probe.run(artifacts, output_fmt)
 
         if not supplied_artifacts.issubset(check_functions):
             useless_artifacts = ", ".join(supplied_artifacts - check_functions)
@@ -147,9 +149,9 @@ def check(
                 f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
             )
 
-        output_fmt = OutputFormat(verbose, format)
-        aggregator = ProbeResultAggregator(probe_results, output_fmt)
-        aggregator.print_results()
+        if probe_tree.tree:
+            aggregator = ProbeResultAggregator(probe_results, output_fmt, probe_tree.tree)
+            aggregator.print_results()
 
 
 if __name__ == "__main__":

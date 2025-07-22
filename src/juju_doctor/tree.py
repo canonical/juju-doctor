@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
-from juju_doctor.probes import AssertionStatus, ProbeAssertionResult
+from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, ProbeAssertionResult
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -35,13 +35,21 @@ class ProbeResultAggregator:
     """Aggregate and group probe results based on metadata."""
 
     def __init__(
-        self, probe_results: Dict[str, List[ProbeAssertionResult]], output_fmt: OutputFormat
+        self,
+        probe_results: Dict[str, List[ProbeAssertionResult]],
+        output_fmt: OutputFormat,
+        tree=Tree(),
     ):
-        """Prepare the aggregated results and its tree representation."""
+        """Prepare the aggregated results and its tree representation.
+
+        Leaf nodes will be created from the root of the tree for each probe result.
+        """
         self._output_fmt = output_fmt
         self._exceptions = []
-        self._tree = Tree()
-        self._tree.create_node("Results", "root")  # root node
+        self._tree = tree
+        # Create a root node if it does not exist
+        if not self._tree:
+            self._tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
         self._grouped_by_status = defaultdict(list)
         self._group_results(probe_results)
 
@@ -61,8 +69,7 @@ class ProbeResultAggregator:
         Create a new node in the tree once per defined probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
-        for probe_status, probe_results in self._grouped_by_status.items():
-            self._tree.create_node(str(probe_status), probe_status, parent="root")
+        for probe_results in self._grouped_by_status.values():
             for probe_result in probe_results:
                 func_statuses = []
                 assertion_result = None
@@ -84,10 +91,23 @@ class ProbeResultAggregator:
                 # The `probe` attribute for each `assertion_result` in a given `probe_result` will
                 # be identical, so we can create the tree node with the last `assertion_result`
                 if assertion_result:
-                    self._tree.create_node(
-                        result_info.node_tag, assertion_result.probe.get_chain(), probe_status
-                    )
-
+                    if not assertion_result.probe.is_root_node:
+                        self._tree.create_node(
+                            result_info.node_tag,
+                            assertion_result.probe.get_chain(),
+                            str(assertion_result.probe.root_node_uuid),
+                        )
+                    else:
+                        if assertion_result.probe.get_chain() in self._tree:
+                            self._tree.update_node(
+                                assertion_result.probe.get_chain(), tag=result_info.node_tag
+                            )
+                        else:
+                            self._tree.create_node(
+                                result_info.node_tag,
+                                assertion_result.probe.get_chain(),
+                                self._tree.root,
+                            )
         return results
 
     def print_results(self):
@@ -106,7 +126,6 @@ class ProbeResultAggregator:
                 console.print(f"\nTotal: {pass_string} {fail_string}")
             case "json":
                 tree_json = json.loads(self._tree.to_json())
-                # TODO see if treelib.Tree.to_json has an option to remove the "children" keys
                 meta_json = {
                     "passed": passed,
                     "failed": failed,

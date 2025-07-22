@@ -5,7 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from juju_doctor.main import app
-from juju_doctor.probes import AssertionStatus
+from juju_doctor.probes import ROOT_NODE_TAG
 
 
 def test_no_probes():
@@ -22,7 +22,6 @@ def test_no_probes():
     assert result.exit_code == 2
     # AND the command fails
     assert "No probes were specified" in result.output
-
 
 
 def test_no_artifacts():
@@ -124,8 +123,8 @@ def test_duplicate_file_probes_are_excluded(caplog):
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the second Probe overwrote the first, i.e. only 1 exists
-    failing = json.loads(result.stdout)["Results"]["children"][0][AssertionStatus.FAIL.value]
-    assert len(failing["children"]) == 1
+    failing = json.loads(result.stdout)["Results"]["children"]
+    assert len(failing) == 1
     # AND the user is warned of their mistake
     assert re.search(r"Duplicate probe arg", caplog.text)
 
@@ -165,5 +164,38 @@ def test_duplicate_gh_probes_are_excluded():
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the second Probe overwrote the first, i.e. only 1 exists
-    failing = json.loads(result.stdout)["Results"]["children"][0][AssertionStatus.FAIL.value]
-    assert len(failing["children"]) == 1
+    failing = json.loads(result.stdout)["Results"]["children"]
+    assert len(failing) == 1
+
+
+# TODO These tests are not isolated https://github.com/fastapi/typer/discussions/1259
+# has context from previous tests
+def test_check_groups_by_parent():
+    # GIVEN multiple Ruleset probes
+    # WHEN `juju-doctor check` is executed
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/ruleset/dir.yaml",
+        "--probe=file://tests/resources/probes/ruleset/scriptlet.yaml",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    check_result = json.loads(result.output)
+    # AND there is one parent node (with children nodes) per Ruleset
+    probes = check_result[ROOT_NODE_TAG]["children"]
+    assert any(
+        " - dir" in key and len(probe.values()) > 0
+        for probe in probes
+        if isinstance(probe, dict)
+        for key in probe.keys()
+    )
+    assert any(
+        " - scriptlet" in key and len(probe.values()) > 0
+        for probe in probes
+        if isinstance(probe, dict)
+        for key in probe.keys()
+    )
