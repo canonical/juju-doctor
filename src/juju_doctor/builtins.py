@@ -1,12 +1,19 @@
 """Universal assertions for deployments."""
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from types import SimpleNamespace
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
+
+import jsonschema
+from referencing.jsonschema import Schema
+from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts
+
+logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
+log = logging.getLogger(__name__)
 
 
 class AssertionStatus(Enum):
@@ -29,22 +36,25 @@ class _Builtin(object):
     """
 
     # TODO How can I type hint here "Probe" without a circular dep
-    def __init__(self, probe, schema_file: Path, assertion: Optional[dict] = None):
+    def __init__(self, probe, schema_file: Path, assertion: Dict):
         self.probe = probe
         self.schema_file = schema_file
         self.assertion = assertion
 
-    def validate_schema(self):
+    def is_schema_valid(self, instance: object, schema: Schema) -> bool:
         """Check that the provided schema is valid."""
-        # TODO Use Pydantic? Use Crossplane? Use Otelbin schema approach?
-        pass
+        valid = False
+        try:
+            jsonschema.validate(instance, schema)
+            valid = True
+        except jsonschema.ValidationError as e:
+            log.error(f"Failed to validate schema for {self.probe.name}: {e}")
+        return valid
 
     @property
-    def schema(self):
+    def schema(self) -> Dict[str, Any]:
         """Get the schema definition from file."""
-        # TODO Consolidate the _read_files into fetcher.py?
-        # json.loads(_read_file(self.schema_file))
-        pass
+        raise NotImplementedError
 
     def validate(self, artifacts: Artifacts):
         """Validate assertions against artifacts or live model."""
@@ -53,12 +63,28 @@ class _Builtin(object):
 
 class Applications(_Builtin):
     # TODO Can I use kwargs or args here to make it cleaner?
-    def __init__(self, probe, schema_file: Path, assertion: Optional[dict] = None):
+    def __init__(self, probe, schema_file: Path, assertion: Dict):
         super().__init__(probe, schema_file, assertion)
+
+    @property
+    def schema(self) -> Dict[str, Any]:
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "minimum": {"type": "integer"},
+                    "maximum": {"type": "integer"},
+                },
+                "required": ["name"],
+                "additionalProperties": False,
+            },
+        }
 
     def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         results: List[AssertionResult] = []
-        if not self.assertion:
+        if not self.assertion or not artifacts.bundle:
             return results
 
         passed = True
@@ -97,12 +123,24 @@ class Applications(_Builtin):
 
 
 class Relations(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: dict = None):
+    def __init__(self, probe, schema_file: Path, assertion: Dict):
         super().__init__(probe, schema_file, assertion)
+
+    @property
+    def schema(self) -> Dict[str, Any]:
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"provides": {"type": "string"}, "requires": {"type": "string"}},
+                "required": ["provides", "requires"],
+                "additionalProperties": False,
+            },
+        }
 
     def validate(self, artifacts: Artifacts):
         results: List[AssertionResult] = []
-        if not self.assertion:
+        if not self.assertion or not artifacts.bundle:
             return results
 
         passed = True
@@ -127,7 +165,7 @@ class Relations(_Builtin):
 
 
 class Offers(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: dict = None):
+    def __init__(self, probe, schema_file: Path, assertion: Dict):
         super().__init__(probe, schema_file, assertion)
 
     def validate(self, artifacts: Artifacts):
@@ -136,7 +174,7 @@ class Offers(_Builtin):
 
 
 class Consumes(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: dict = None):
+    def __init__(self, probe, schema_file: Path, assertion: Dict):
         super().__init__(probe, schema_file, assertion)
 
     def validate(self, artifacts: Artifacts):
@@ -157,8 +195,8 @@ class Builtins(Enum):
 class ResultInfo:
     """Class for gathering information needed to display assertions results."""
 
-    node_tag: str
-    exception_msg: str
+    node_tag: str = ""
+    exception_msg: str = ""
 
 
 # TODO Try to combine this with ProbeAssertionResult

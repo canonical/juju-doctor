@@ -7,10 +7,14 @@ applications:
 relations:
   - provides: alertmanager:alerting
     requires: loki:alertmanager
+  - provides: loki:grafana-source
+    requires: grafana:grafana-source
 # offers:
 #   - prometheus:something
 #   - loki:something
 # consumes:
 #   - mysql:something
-# probes:
-#   - something
+probes:
+  - name: Local probe - passing
+    type: scriptlet
+    url: file://tests/resources/probes/python/passing.py

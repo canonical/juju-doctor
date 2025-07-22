@@ -145,6 +145,7 @@ def check(
 
         if not supplied_artifacts.issubset(check_functions):
             useless_artifacts = ", ".join(supplied_artifacts - check_functions)
+            # TODO - Fix this warning when a builtin probe is used because this uses different artifacts depending on the builtin
             log.warning(
                 f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
             )

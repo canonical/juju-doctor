@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
+from juju_doctor.builtins import ResultInfo
 from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, ProbeAssertionResult
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
@@ -69,6 +70,7 @@ class ProbeResultAggregator:
         Create a new node in the tree once per defined probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
+        result_info = ResultInfo()
         for probe_results in self._grouped_by_status.values():
             for probe_result in probe_results:
                 func_statuses = []

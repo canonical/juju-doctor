@@ -1,5 +1,4 @@
 """Helper module to wrap and execute probes."""
-
 import importlib.util
 import inspect
 import logging
@@ -251,7 +250,7 @@ class ProbeAssertionResult:
         """Result of the probe."""
         return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
 
-    def get_text(self, output_fmt):
+    def get_text(self, output_fmt) -> ResultInfo:
         """Probe results (formatted as Pretty-print) as a string."""
         exception_msg = ""
         green = output_fmt.rich_map["green"]
@@ -285,29 +284,29 @@ class RuleSet:
         self.name = name or self.probe.name
 
     @property
-    def builtins(self) -> Optional[Dict[str, List]]:
+    def builtins(self) -> Dict[str, List]:
         """Obtain all the builtin assertions from the RuleSet.
 
         Returns a mapping of builtin name to builtin assertion for the Ruleset.
         """
         content = _read_file(self.probe.path)
         if content is None:
-            return None
+            return {}
 
-        schema_valid = True
-        if not schema_valid:
-            log.warn(f"Failed to validate schema for {self.probe.name}")
-            return None
-
-        # FIXME Can we one-line this?
         builtin_objs = {}
         for builtin in Builtins:
             if builtin.name.lower() not in content:
                 continue
-            builtin_objs[builtin.name.lower()] = builtin.value(
+
+            builtin_class = builtin.value
+            builtin_obj = builtin_class(
                 self.probe, Path(""), content[builtin.name.lower()]
             )
+            builtin_objs[builtin.name.lower()] = builtin_obj
+            builtin_obj.is_schema_valid(content[builtin.name.lower()], builtin_obj.schema)
+
         return builtin_objs
+
 
     def aggregate_probes(self, tree: Tree = Tree()) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
