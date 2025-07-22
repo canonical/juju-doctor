@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe
+from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
@@ -108,13 +108,14 @@ def check(
 
     # Gather the probes
     probes: List[Probe] = []
+    probe_tree = ProbeTree([])
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                from_url = Probe.from_url(url=probe_url, probes_root=probes_folder)
-                probes.extend(from_url.probes)
+                probe_tree = Probe.from_url(url=probe_url, probes_root=probes_folder)
+                probes.extend(probe_tree.probes)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
@@ -134,9 +135,10 @@ def check(
                 f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
             )
 
-        output_fmt = OutputFormat(verbose, format)
-        aggregator = ProbeResultAggregator(probe_results, output_fmt, from_url.tree)
-        aggregator.print_results()
+        if probe_tree.tree:
+            output_fmt = OutputFormat(verbose, format)
+            aggregator = ProbeResultAggregator(probe_results, output_fmt, probe_tree.tree)
+            aggregator.print_results()
 
 
 if __name__ == "__main__":
