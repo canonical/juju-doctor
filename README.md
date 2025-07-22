@@ -98,7 +98,6 @@ Ruleset probes are written in YAML, specifying which probes should be coordinate
 Currently, we support the following probe types:
 - **`scriptlet`**: A Python probe
 - **`ruleset`**: A declarative deployment RuleSet
-- **`directory`**: A directory of probes (from the types in this list)
 
 ```yaml
 name: A declarative deployment RuleSet
