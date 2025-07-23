@@ -1,16 +1,18 @@
 """Main Typer application to assemble the CLI."""
 
+import json
 import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Annotated, Dict, List, Optional, Set
+from typing import Annotated, Dict, List, Set
 
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
+from juju_doctor.builtins import build_unified_schema
 from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
@@ -59,9 +61,9 @@ def check(
         typer.Option("--verbose", "-v", help="Enable verbose output."),
     ] = False,
     format: Annotated[
-        Optional[str],
+        str,
         typer.Option("--format", "-o", help="Specify output format."),
-    ] = None,
+    ] = "",
 ):
     """Validate deployments, i.e. artifacts against assertions, i.e. probes.
 
@@ -74,9 +76,13 @@ def check(
         raise typer.BadParameter("Live models (--model) and static files are mutually exclusive.")
     if not any([models, status_files, bundle_files, show_unit_files]):
         raise typer.BadParameter("No artifacts were specified, cannot validate the deployment.")
-
     if not probe_urls:
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
+
+    # Ensure valid JSON format in stdout
+    if format.lower() == "json":
+        logging.disable(logging.ERROR)
+
     unique_probe_urls: Set[str] = set()
     for probe_url in probe_urls:
         if probe_url not in unique_probe_urls:
@@ -109,7 +115,7 @@ def check(
     # Gather the probes
     builtins: List[dict] = []
     probes: List[Probe] = []
-    probe_tree = ProbeTree([], {})
+    probe_tree = ProbeTree()
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
@@ -117,8 +123,9 @@ def check(
             try:
                 probe_tree = Probe.from_url(url=probe_url, probes_root=probes_folder)
                 probes.extend(probe_tree.probes)
-                # TODO It would be great if we could output the combined result from multiple probes to show the user what they created
-                # E.g. 2 Rulesets: Applications: AM & Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
+                # TODO It would be great if we could output the combined result from multiple
+                # probes to show the user what they created E.g. 2 Rulesets: Applications: AM &
+                # Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
                 builtins.append(probe_tree.builtins)
             except RecursionError:
                 log.error(
@@ -127,32 +134,50 @@ def check(
                 )
 
         probe_results = {}
+        # FIXME: Builtin validation use bundles, but this should be programmatic
+        check_functions = {"bundle"} if builtins else set()
         for builtin in builtins:
-            for name, builtin_obj in builtin.items():
-                # TODO Combine this with probe_results
-                # TODO I think probe_results and builtin_results differ here because in probes we have Python as the lowest level which
-                # Means probe.name -> [ProbeAggregationResults] makes sense. For the Builtins, we iterate through each one in main.py instead of appending to the list inside the .validate
+            for builtin_obj in builtin.values():
                 if builtin_obj.probe.name not in probe_results:
                     probe_results[builtin_obj.probe.name] = builtin_obj.validate(artifacts)
                 else:
                     probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
 
-        output_fmt = OutputFormat(verbose, format)
-        check_functions = set()
         for probe in probes:
             check_functions |= set(probe.get_functions().keys())
-            probe_results[probe.name] = probe.run(artifacts, output_fmt)
+            probe_results[probe.name] = probe.run(artifacts)
 
         if not supplied_artifacts.issubset(check_functions):
             useless_artifacts = ", ".join(supplied_artifacts - check_functions)
-            # TODO - Fix this warning when a builtin probe is used because this uses different artifacts depending on the builtin
             log.warning(
                 f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
             )
 
         if probe_tree.tree:
+            output_fmt = OutputFormat(verbose, format)
             aggregator = ProbeResultAggregator(probe_results, output_fmt, probe_tree.tree)
             aggregator.print_results()
+
+
+@app.command(no_args_is_help=True)
+def schema(
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Specify the file's relative destination path."),
+    ],
+):
+    """Generate and save the unified schema to a file at a relative path."""
+    schema = build_unified_schema()  # Dict
+
+    # Create the output directory if it doesn't exist
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write the schema to the specified file
+    with open(output_path, "w") as f:
+        json.dump(schema, f, indent=4)
+
+    console.print(f"Schema saved to {output_path}")
 
 
 if __name__ == "__main__":

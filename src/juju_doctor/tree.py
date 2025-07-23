@@ -4,7 +4,7 @@ import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -23,7 +23,7 @@ class OutputFormat:
     """Track the output format for the application."""
 
     verbose: bool
-    format: Optional[str]
+    format: str = ""
     rich_map = {
         "green": "🟢",
         "red": "🔴",
@@ -118,8 +118,8 @@ class ProbeResultAggregator:
         passed = results[AssertionStatus.PASS.value]
         failed = results[AssertionStatus.FAIL.value]
         total = passed + failed
-        match self._output_fmt.format:
-            case None:
+        match self._output_fmt.format.lower():
+            case "":
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)

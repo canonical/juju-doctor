@@ -1,0 +1,44 @@
+{
+    "applications": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "minimum": {
+                    "type": "integer"
+                },
+                "maximum": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "relations": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "provides": {
+                    "type": "string"
+                },
+                "requires": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "provides",
+                "requires"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "offers": {},
+    "consumes": {}
+}

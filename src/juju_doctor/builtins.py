@@ -3,7 +3,6 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import jsonschema
@@ -14,6 +13,14 @@ from juju_doctor.artifacts import Artifacts
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
+
+
+def build_unified_schema() -> Schema:
+    """Unify the Builtin schemas to create a Ruleset schema."""
+    schema: Schema = {}
+    for builtin in Builtins.all():
+        schema.update({builtin.name(): builtin.schema()})
+    return schema
 
 
 class AssertionStatus(Enum):
@@ -27,47 +34,48 @@ class _Builtin(object):
     """Baseclass for builtin assertions.
 
     Each builtin validates its assertions against a schema and the assertions against artifacts.
-
-    # We need to create a schema and if its not used, Raise error
-    # Parse the YAML for predefined top-level keys: applications, relations, offers, consumes, probes
-    # We will have to aggregate builtins from potentially many rulesets,
-    # aggregate_probes could consume this? It already does bc from_url makes it circular
-    # When combining, make sure to not overwrite previous aggregations, UNIT TEST
     """
 
     # TODO How can I type hint here "Probe" without a circular dep
-    def __init__(self, probe, schema_file: Path, assertion: Dict):
+    def __init__(self, probe, assertion: Dict):
         self.probe = probe
-        self.schema_file = schema_file
         self.assertion = assertion
 
-    def is_schema_valid(self, instance: object, schema: Schema) -> bool:
+    def is_schema_valid(self) -> bool:
         """Check that the provided schema is valid."""
         valid = False
         try:
-            jsonschema.validate(instance, schema)
+            jsonschema.validate(self.assertion, self.schema())
             valid = True
         except jsonschema.ValidationError as e:
             log.error(f"Failed to validate schema for {self.probe.name}: {e}")
         return valid
 
-    @property
-    def schema(self) -> Dict[str, Any]:
-        """Get the schema definition from file."""
+    # TODO We can use https://github.com/python-jsonschema/check-jsonschema to validate the schema
+    @classmethod
+    def schema(cls) -> Schema:
+        """The Builtin's JSON schema."""
         raise NotImplementedError
 
     def validate(self, artifacts: Artifacts):
-        """Validate assertions against artifacts or live model."""
+        """Assert Builtins against artifacts or live models."""
         raise NotImplementedError
+
+    @classmethod
+    def name(cls) -> str:
+        return cls.__name__.lower()
 
 
 class Applications(_Builtin):
-    # TODO Can I use kwargs or args here to make it cleaner?
-    def __init__(self, probe, schema_file: Path, assertion: Dict):
-        super().__init__(probe, schema_file, assertion)
+    """A Builtin probe which defines applications requirements."""
 
-    @property
-    def schema(self) -> Dict[str, Any]:
+    # TODO Can I use kwargs or args here to make it cleaner?
+    def __init__(self, probe, assertion: Dict):  # noqa: D107
+        super().__init__(probe, assertion)
+
+    @classmethod
+    def schema(cls) -> Schema:
+        """The JSON schema for Applications."""
         return {
             "type": "array",
             "items": {
@@ -83,6 +91,7 @@ class Applications(_Builtin):
         }
 
     def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
+        """Assert Applications against artifacts or live models."""
         results: List[AssertionResult] = []
         if not self.assertion or not artifacts.bundle:
             return results
@@ -99,7 +108,8 @@ class Applications(_Builtin):
                 passed = False
                 exception = Exception(f"{app['name']} was not found in bundle apps: {bundle_apps}")
                 results.append(AssertionResult(self.probe, func_name, passed, exception))
-            # app_scale = [app["name"]["scale"] for bundle in artifacts.bundle.values() for app in bundle["applications"]]
+            # app_scale = [app["name"]["scale"] for bundle in artifacts.bundle.values() for app in
+            # bundle["applications"]]
             # TODO Fix this so the result is not a list and we don't hardcode [0]
             app_scale = [
                 bundle["applications"][app["name"]]["scale"]
@@ -123,11 +133,14 @@ class Applications(_Builtin):
 
 
 class Relations(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: Dict):
-        super().__init__(probe, schema_file, assertion)
+    """A Builtin probe which defines relation requirements."""
 
-    @property
-    def schema(self) -> Dict[str, Any]:
+    def __init__(self, probe, assertion: Dict):  # noqa: D107
+        super().__init__(probe, assertion)
+
+    @classmethod
+    def schema(cls) -> Schema:
+        """The JSON schema for Relations."""
         return {
             "type": "array",
             "items": {
@@ -139,6 +152,7 @@ class Relations(_Builtin):
         }
 
     def validate(self, artifacts: Artifacts):
+        """Assert Relations against artifacts or live models."""
         results: List[AssertionResult] = []
         if not self.assertion or not artifacts.bundle:
             return results
@@ -152,11 +166,10 @@ class Relations(_Builtin):
                 for relation in bundle["relations"]
             ]
             # TODO Is this robust? Does Juju always place requires before provides?
-            if [relation["requires"], relation["provides"]] not in bundle_relations:
+            rel_pair = [relation["requires"], relation["provides"]]
+            if rel_pair not in bundle_relations:
                 passed = False
-                exception = Exception(
-                    f"Relation ({[relation['provides'], relation['requires']]}) not found in {bundle_relations}"
-                )
+                exception = Exception(f"Relation ({rel_pair}) not found in {bundle_relations}")
                 results.append(AssertionResult(self.probe, func_name, passed, exception))
         if passed:
             results.append(AssertionResult(self.probe, func_name, passed))
@@ -165,19 +178,35 @@ class Relations(_Builtin):
 
 
 class Offers(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: Dict):
-        super().__init__(probe, schema_file, assertion)
+    """A Builtin probe which defines model offer requirements."""
+
+    def __init__(self, probe, assertion: Dict):  # noqa: D107
+        super().__init__(probe, assertion)
+
+    @classmethod
+    def schema(cls) -> Schema:
+        """The JSON schema for Offers."""
+        return {}
 
     def validate(self, artifacts: Artifacts):
+        """Assert Offers against artifacts or live models."""
         # TODO We cut the multi-doc containing offers in artifacts.py: https://github.com/canonical/juju-doctor/issues/10
         raise NotImplementedError
 
 
 class Consumes(_Builtin):
-    def __init__(self, probe, schema_file: Path, assertion: Dict):
-        super().__init__(probe, schema_file, assertion)
+    """A Builtin probe which defines cross-model relation requirements."""
+
+    def __init__(self, probe, assertion: Dict):  # noqa: D107
+        super().__init__(probe, assertion)
+
+    @classmethod
+    def schema(cls) -> Schema:
+        """The JSON schema for Consumes."""
+        return {}
 
     def validate(self, artifacts: Artifacts):
+        """Assert Consumes against artifacts or live models."""
         # TODO The artifacts were not generated with a CMR, so we are missing SAAS
         raise NotImplementedError
 
@@ -190,6 +219,11 @@ class Builtins(Enum):
     OFFERS = Offers
     CONSUMES = Consumes
 
+    @staticmethod
+    def all():
+        """Return all file extensions."""
+        return [f.value for f in Builtins]
+
 
 @dataclass
 class ResultInfo:
@@ -199,7 +233,7 @@ class ResultInfo:
     exception_msg: str = ""
 
 
-# TODO Try to combine this with ProbeAssertionResult
+# TODO AssertionResult is identical to ProbeAssertionResult, but we have circular import
 @dataclass
 class AssertionResult:
     """A helper class to wrap results for a Probe's functions."""
@@ -223,7 +257,7 @@ class AssertionResult:
             return ResultInfo(f"{green} {self.probe.name}", exception_msg)
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
-        if output_fmt.format == "json":
+        if output_fmt.format.lower() == "json":
             exception_msg = f"Exception {exception_suffix}"
         else:
             if output_fmt.verbose:

@@ -1,4 +1,5 @@
 """Helper module to wrap and execute probes."""
+
 import importlib.util
 import inspect
 import logging
@@ -51,10 +52,9 @@ def _read_file(filename: Path) -> Optional[Dict]:
 class ProbeTree:
     """A collection of Probes in a tree format."""
 
-    probes: List["Probe"]  # list of probes in the tree
-    # TODO Move builtins to last arg and default like tree. Note: this is a nit
-    builtins: Dict[str, List]  # list of collected builtin probes in the tree
-    tree: Tree = Tree()  # Tree containing a probe per node
+    probes: List["Probe"] = field(default_factory=list)  # list of scriptlet probes in the tree
+    tree: Tree = field(default_factory=Tree)  # Tree containing a probe per node
+    builtins: Dict[str, List] = field(default_factory=dict)  # list of builtin probes in the tree
 
 
 @dataclass
@@ -146,17 +146,13 @@ class Probe:
             if is_ruleset:
                 ruleset = RuleSet(probe)
 
-                # Gather builtins
-                # FIXME too many vars using the word "builtin", make it more clear what I am doing or docstring
-                rulset_builtins = ruleset.builtins
-                for builtin in rulset_builtins:
+                # Gather builtins from the Rulset and store them
+                for builtin in ruleset.builtins:
                     if builtin not in builtins:
-                        builtins[builtin] = rulset_builtins[builtin]
+                        builtins[builtin] = ruleset.builtins[builtin]
                     else:
-                        builtins[builtin].append(rulset_builtins[builtin])
-                log.info(
-                    f"Fetched builtin assertions for {probe.name}: {builtins}"
-                )  # TODO Is this logging too noisy/large?
+                        builtins[builtin].append(ruleset.builtins[builtin])
+                log.info(f"Fetched builtin assertions for {probe.name}: {builtins}")
 
                 probe_tree = ruleset.aggregate_probes(tree)
                 log.info(f"Fetched probe(s) for {probe.name}: {probe_tree.probes}")
@@ -167,7 +163,7 @@ class Probe:
                 log.info(f"Fetched probe(s) for {probe.name}: {probe}")
                 probes.append(probe)
 
-        return ProbeTree(probes, builtins, tree)
+        return ProbeTree(probes, tree, builtins)
 
     @staticmethod
     def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
@@ -212,7 +208,7 @@ class Probe:
             if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts, output_fmt) -> List["ProbeAssertionResult"]:  # TODO add a type to output_fmt
+    def run(self, artifacts: Artifacts) -> List["ProbeAssertionResult"]:
         """Execute each Probe function that matches the supported probe types."""
         # Silence the result printing if needed
         results: List[ProbeAssertionResult] = []
@@ -220,11 +216,9 @@ class Probe:
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                # TODO Instead of checking for JSON everywhere, we should instead build a {"juju-doctor-exceptions": [], "probe-exceptions": []}
-                if output_fmt.format != "json":
-                    log.warning(
-                        f"No '{func_name}' artifacts have been provided for probe: {self.path}."
-                    )
+                log.warning(
+                    f"No '{func_name}' artifacts have been provided for probe: {self.path}."
+                )
                 continue
             # Run the probe function, and record its result
             try:
@@ -259,7 +253,7 @@ class ProbeAssertionResult:
             return ResultInfo(f"{green} {self.probe.name}", exception_msg)
         # If the probe failed
         exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
-        if output_fmt.format == "json":
+        if output_fmt.format.lower() == "json":
             exception_msg = f"Exception {exception_suffix}"
         else:
             if output_fmt.verbose:
@@ -299,14 +293,11 @@ class RuleSet:
                 continue
 
             builtin_class = builtin.value
-            builtin_obj = builtin_class(
-                self.probe, Path(""), content[builtin.name.lower()]
-            )
+            builtin_obj = builtin_class(self.probe, content[builtin.name.lower()])
             builtin_objs[builtin.name.lower()] = builtin_obj
-            builtin_obj.is_schema_valid(content[builtin.name.lower()], builtin_obj.schema)
+            builtin_obj.is_schema_valid()
 
         return builtin_objs
-
 
     def aggregate_probes(self, tree: Tree = Tree()) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
@@ -319,7 +310,7 @@ class RuleSet:
         """
         content = _read_file(self.probe.path)
         if not content:
-            return ProbeTree([], {}, tree)
+            return ProbeTree(tree=tree)
 
         # Create a root node if it does not exist
         if not tree:
@@ -345,7 +336,7 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
-                        return ProbeTree([], {}, tree)
+                        return ProbeTree(tree=tree)
                     probe_tree = Probe.from_url(
                         ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain(), tree
                     )
@@ -359,7 +350,7 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
-                        return ProbeTree([], {}, tree)
+                        return ProbeTree(tree=tree)
                     if ruleset_probe.get("url", None):
                         probe_tree = Probe.from_url(
                             ruleset_probe["url"],
@@ -379,7 +370,6 @@ class RuleSet:
                             log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")
                             probes.extend(derived_ruleset_probe_tree.probes)
                     else:
-                        # TODO "built-in" directives, e.g. "apps/has-relation"
                         log.info(
                             f"Found built-in probe config: \n{ruleset_probe.get('with', None)}"
                         )
@@ -388,4 +378,4 @@ class RuleSet:
                 case _:
                     raise NotImplementedError
 
-        return ProbeTree(probes, {}, tree)
+        return ProbeTree(probes, tree)

@@ -15,7 +15,7 @@ def test_builtins_in_tree():
     pass
     # GIVEN a Ruleset contains builtin assertions
     # WHEN the Ruleset executes
-    # THEN the builtin assertions exist in the tree (in their own section OR we could use Simme's name approach? for the parent in tree)
+    # THEN the builtin assertions exist in the tree (in their own section
     # AND the number of pass/fail is correct
     # AND --verbose provides assertion information
     # AND the result can be piped to jq (maybe done in solution test)
