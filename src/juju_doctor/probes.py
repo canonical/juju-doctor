@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo
+from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo, _Builtin
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
@@ -54,7 +54,9 @@ class ProbeTree:
 
     probes: List["Probe"] = field(default_factory=list)  # list of scriptlet probes in the tree
     tree: Tree = field(default_factory=Tree)  # Tree containing a probe per node
-    builtins: Dict[str, List] = field(default_factory=dict)  # list of builtin probes in the tree
+    builtins: Dict[str, List[_Builtin]] = field(
+        default_factory=dict
+    )  # list of builtin assertions in the tree
 
 
 @dataclass
@@ -109,7 +111,7 @@ class Probe:
 
     @staticmethod
     def from_url(
-        url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()
+        url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = ProbeTree()
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
@@ -126,14 +128,12 @@ class Probe:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
-            tree: a treelib::Tree representing the probe results.
+            probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
         """
         # Create a root node if it does not exist
-        if not tree:
-            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+        if not probe_tree.tree:
+            probe_tree.tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
-        probes = []
-        builtins = {}
         parsed_url = urlparse(url)
         url_without_scheme = parsed_url.netloc + parsed_url.path
         url_flattened = url_without_scheme.replace("/", "_")
@@ -148,22 +148,26 @@ class Probe:
 
                 # Gather builtins from the Rulset and store them
                 for builtin in ruleset.builtins:
-                    if builtin not in builtins:
-                        builtins[builtin] = ruleset.builtins[builtin]
+                    if builtin not in probe_tree.builtins:
+                        probe_tree.builtins[builtin] = [ruleset.builtins[builtin]]
                     else:
-                        builtins[builtin].append(ruleset.builtins[builtin])
-                log.info(f"Fetched builtin assertions for {probe.name}: {builtins}")
+                        probe_tree.builtins[builtin].append(ruleset.builtins[builtin])
 
-                probe_tree = ruleset.aggregate_probes(tree)
+                probe_tree = ruleset.aggregate_probes(probe_tree)
+                log.info(
+                    f"Fetched builtin assertions for {probe.name}: {probe_tree.builtins.keys()}"
+                )
                 log.info(f"Fetched probe(s) for {probe.name}: {probe_tree.probes}")
-                probes.extend(probe_tree.probes)
+
             else:
                 if probe.is_root_node:
-                    tree.create_node(probe.name, probe.get_chain(), tree.root)
+                    probe_tree.tree.create_node(
+                        probe.name, probe.get_chain(), probe_tree.tree.root
+                    )
                 log.info(f"Fetched probe(s) for {probe.name}: {probe}")
-                probes.append(probe)
+                probe_tree.probes.append(probe)
 
-        return ProbeTree(probes, tree, builtins)
+        return probe_tree
 
     @staticmethod
     def _get_fs_from_protocol(parsed_url: ParseResult, url_without_scheme: str) -> FileSystem:
@@ -278,7 +282,7 @@ class RuleSet:
         self.name = name or self.probe.name
 
     @property
-    def builtins(self) -> Dict[str, List]:
+    def builtins(self) -> Dict[str, _Builtin]:
         """Obtain all the builtin assertions from the RuleSet.
 
         Returns a mapping of builtin name to builtin assertion for the Ruleset.
@@ -299,7 +303,7 @@ class RuleSet:
 
         return builtin_objs
 
-    def aggregate_probes(self, tree: Tree = Tree()) -> ProbeTree:
+    def aggregate_probes(self, probe_tree: ProbeTree = ProbeTree()) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
 
         This method is recursive when it finds another RuleSet probe and returns a list of probes
@@ -310,18 +314,17 @@ class RuleSet:
         """
         content = _read_file(self.probe.path)
         if not content:
-            return ProbeTree(tree=tree)
+            return probe_tree
 
         # Create a root node if it does not exist
-        if not tree:
-            tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
+        if not probe_tree.tree:
+            probe_tree.tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
         ruleset_name = content.get("name", None)
         # Only add the source ruleset probe to the tree's root node
         if self.probe.is_root_node:
-            tree.create_node(ruleset_name, self.probe.get_chain(), tree.root)
+            probe_tree.tree.create_node(ruleset_name, self.probe.get_chain(), probe_tree.tree.root)
 
-        probes = []
         ruleset_probes = content.get("probes", [])
         for ruleset_probe in ruleset_probes:
             match ruleset_probe["type"]:
@@ -336,11 +339,13 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a scriptlet but was specified as such."
                         )
-                        return ProbeTree(tree=tree)
+                        return probe_tree
                     probe_tree = Probe.from_url(
-                        ruleset_probe["url"], self.probe.probes_root, self.probe.get_chain(), tree
+                        ruleset_probe["url"],
+                        self.probe.probes_root,
+                        self.probe.get_chain(),
+                        probe_tree,
                     )
-                    probes.extend(probe_tree.probes)
                 case "ruleset":
                     if (
                         Path(ruleset_probe["url"]).suffix.lower()
@@ -350,25 +355,24 @@ class RuleSet:
                         log.warning(
                             f"{ruleset_probe['url']} is not a ruleset but was specified as such."
                         )
-                        return ProbeTree(tree=tree)
+                        return probe_tree
                     if ruleset_probe.get("url", None):
                         probe_tree = Probe.from_url(
                             ruleset_probe["url"],
                             self.probe.probes_root,
                             self.probe.get_chain(),
-                            tree,
+                            probe_tree,
                         )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
                         if len(probe_tree.probes) > 1:
-                            probes.extend(probe_tree.probes)
                             continue
                         # Recurses until we no longer have Ruleset probes
                         for nested_ruleset_probe in probe_tree.probes:
                             ruleset = RuleSet(nested_ruleset_probe)
-                            derived_ruleset_probe_tree = ruleset.aggregate_probes(probe_tree.tree)
+                            derived_ruleset_probe_tree = ruleset.aggregate_probes(probe_tree)
                             log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")
-                            probes.extend(derived_ruleset_probe_tree.probes)
+                            probe_tree.probes.extend(derived_ruleset_probe_tree.probes)
                     else:
                         log.info(
                             f"Found built-in probe config: \n{ruleset_probe.get('with', None)}"
@@ -378,4 +382,4 @@ class RuleSet:
                 case _:
                     raise NotImplementedError
 
-        return ProbeTree(probes, tree)
+        return probe_tree

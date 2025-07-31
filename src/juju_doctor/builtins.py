@@ -17,9 +17,11 @@ log = logging.getLogger(__name__)
 
 def build_unified_schema() -> Schema:
     """Unify the Builtin schemas to create a Ruleset schema."""
-    schema: Schema = {}
+    schema: Schema = {"type": "object", "additionalProperties": False}
+    properties: Dict = {"name": {"type": "string"}}
     for builtin in Builtins.all():
-        schema.update({builtin.name(): builtin.schema()})
+        properties.update({builtin.name(): builtin.schema()})
+    schema.update({"properties": properties})
     return schema
 
 
@@ -51,13 +53,12 @@ class _Builtin(object):
             log.error(f"Failed to validate schema for {self.probe.name}: {e}")
         return valid
 
-    # TODO We can use https://github.com/python-jsonschema/check-jsonschema to validate the schema
     @classmethod
     def schema(cls) -> Schema:
         """The Builtin's JSON schema."""
         raise NotImplementedError
 
-    def validate(self, artifacts: Artifacts):
+    def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         """Assert Builtins against artifacts or live models."""
         raise NotImplementedError
 
@@ -67,9 +68,8 @@ class _Builtin(object):
 
 
 class Applications(_Builtin):
-    """A Builtin probe which defines applications requirements."""
+    """A Builtin assertion which defines applications requirements."""
 
-    # TODO Can I use kwargs or args here to make it cleaner?
     def __init__(self, probe, assertion: Dict):  # noqa: D107
         super().__init__(probe, assertion)
 
@@ -93,47 +93,51 @@ class Applications(_Builtin):
     def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         """Assert Applications against artifacts or live models."""
         results: List[AssertionResult] = []
-        if not self.assertion or not artifacts.bundle:
+        if not self.assertion or not artifacts.status:
+            log.warning(
+                "The status artifact was not supplied for the Applications Builtin assertion."
+            )
             return results
 
         passed = True
         func_name = f"builtin:{Builtins.APPLICATIONS.name.lower()}"
-        for app in self.assertion:
-            bundle_apps = [
-                app
-                for bundle in artifacts.bundle.values()
-                for app in bundle["applications"].keys()
-            ]
-            if app["name"] not in bundle_apps:
-                passed = False
-                exception = Exception(f"{app['name']} was not found in bundle apps: {bundle_apps}")
-                results.append(AssertionResult(self.probe, func_name, passed, exception))
-            # app_scale = [app["name"]["scale"] for bundle in artifacts.bundle.values() for app in
-            # bundle["applications"]]
-            # TODO Fix this so the result is not a list and we don't hardcode [0]
-            app_scale = [
-                bundle["applications"][app["name"]]["scale"]
-                for bundle in artifacts.bundle.values()
-            ][0]
-            if "minimum" in app and app_scale < app["minimum"]:
-                passed = False
-                exception = Exception(
-                    f"{app['name']} scale is below the allowable limit: {app['minimum']}"
-                )
-                results.append(AssertionResult(self.probe, func_name, passed, exception))
-            if "maximum" in app and app_scale > app["maximum"]:
-                passed = False
-                exception = Exception(
-                    f"{app['name']} scale exceeds the allowable limit: {app['maximum']}"
-                )
-                results.append(AssertionResult(self.probe, func_name, passed, exception))
+
+        app_assertion_names = [app["name"] for app in self.assertion]
+        for status in artifacts.status.values():
+            for name, app in status["applications"].items():
+                if name not in app_assertion_names:
+                    # FIXME If no names are in the apps, we have a false positive, passing probe
+                    continue
+
+                for app_assertion in self.assertion:
+                    if app_assertion["name"] == name:
+                        if "minimum" in app_assertion and app["scale"] < app_assertion["minimum"]:
+                            passed = False
+                            exception = Exception(
+                                f"{name} scale ({app['scale']}) "
+                                f"is below the allowable limit: {app_assertion['minimum']}"
+                            )
+                            results.append(
+                                AssertionResult(self.probe, func_name, passed, exception)
+                            )
+                        if "maximum" in app_assertion and app["scale"] > app_assertion["maximum"]:
+                            passed = False
+                            exception = Exception(
+                                f"{name} scale ({app['scale']}) "
+                                f"exceeds the allowable limit: {app_assertion['maximum']}"
+                            )
+                            results.append(
+                                AssertionResult(self.probe, func_name, passed, exception)
+                            )
+
         if passed:
             results.append(AssertionResult(self.probe, func_name, passed))
+
         return results
 
 
 class Relations(_Builtin):
-    """A Builtin probe which defines relation requirements."""
+    """A Builtin assertion which defines relation requirements."""
 
     def __init__(self, probe, assertion: Dict):  # noqa: D107
         super().__init__(probe, assertion)
@@ -151,23 +155,29 @@ class Relations(_Builtin):
             },
         }
 
-    def validate(self, artifacts: Artifacts):
+    def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         """Assert Relations against artifacts or live models."""
         results: List[AssertionResult] = []
         if not self.assertion or not artifacts.bundle:
+            log.warning(
+                "The bundle artifact was not supplied for the Relations Builtin assertion."
+            )
             return results
 
         passed = True
         func_name = f"builtin:{Builtins.RELATIONS.name.lower()}"
+
         for relation in self.assertion:
             bundle_relations = [
                 relation
                 for bundle in artifacts.bundle.values()
                 for relation in bundle["relations"]
             ]
-            # TODO Is this robust? Does Juju always place requires before provides?
             rel_pair = [relation["requires"], relation["provides"]]
-            if rel_pair not in bundle_relations:
+            if (
+                rel_pair not in bundle_relations
+                and [rel_pair[1], rel_pair[0]] not in bundle_relations
+            ):
                 passed = False
                 exception = Exception(f"Relation ({rel_pair}) not found in {bundle_relations}")
                 results.append(AssertionResult(self.probe, func_name, passed, exception))
@@ -178,7 +188,7 @@ class Relations(_Builtin):
 
 
 class Offers(_Builtin):
-    """A Builtin probe which defines model offer requirements."""
+    """A Builtin assertion which defines model offer requirements."""
 
     def __init__(self, probe, assertion: Dict):  # noqa: D107
         super().__init__(probe, assertion)
@@ -188,14 +198,54 @@ class Offers(_Builtin):
         """The JSON schema for Offers."""
         return {}
 
-    def validate(self, artifacts: Artifacts):
+    def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         """Assert Offers against artifacts or live models."""
-        # TODO We cut the multi-doc containing offers in artifacts.py: https://github.com/canonical/juju-doctor/issues/10
-        raise NotImplementedError
+        results: List[AssertionResult] = []
+        if not self.assertion or not artifacts.status:
+            log.warning("The status artifact was not supplied for the Offers Builtin assertion.")
+            return results
+
+        passed = True
+        func_name = f"builtin:{Builtins.OFFERS.name.lower()}"
+
+        offer_assertion_names = [offer["name"] for offer in self.assertion]
+        for status in artifacts.status.values():
+            for name, offer in status["offers"].items():
+                if name not in offer_assertion_names:
+                    # FIXME If no names are in the apps, we have a false positive, passing probe
+                    continue
+
+                for offer_assertion in self.assertion:
+                    if offer_assertion["name"] == name:
+                        if offer_assertion["endpoint"] not in offer["endpoints"]:
+                            passed = False
+                            exception = Exception(
+                                f"{name}: endpoint ({offer_assertion['endpoint']}) "
+                                f"not in ({offer['endpoints'].keys()})"
+                            )
+                            results.append(
+                                AssertionResult(self.probe, func_name, passed, exception)
+                            )
+                            continue
+                        interface = offer["endpoints"][offer_assertion["endpoint"]]["interface"]
+                        if offer_assertion["interface"] != interface:
+                            passed = False
+                            exception = Exception(
+                                f"{name}: interface ({offer_assertion['interface']}) "
+                                f"!= ({interface})"
+                            )
+                            results.append(
+                                AssertionResult(self.probe, func_name, passed, exception)
+                            )
+
+        if passed:
+            results.append(AssertionResult(self.probe, func_name, passed))
+
+        return results
 
 
 class Consumes(_Builtin):
-    """A Builtin probe which defines cross-model relation requirements."""
+    """A Builtin assertion which defines cross-model relation requirements."""
 
     def __init__(self, probe, assertion: Dict):  # noqa: D107
         super().__init__(probe, assertion)
@@ -205,7 +255,7 @@ class Consumes(_Builtin):
         """The JSON schema for Consumes."""
         return {}
 
-    def validate(self, artifacts: Artifacts):
+    def validate(self, artifacts: Artifacts) -> List["AssertionResult"]:
         """Assert Consumes against artifacts or live models."""
         # TODO The artifacts were not generated with a CMR, so we are missing SAAS
         raise NotImplementedError

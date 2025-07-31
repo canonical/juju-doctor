@@ -80,6 +80,8 @@ def check(
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
 
     # Ensure valid JSON format in stdout
+    # TODO Determine if this is desired, we basically hide warning when JSON output
+    #   makes tests harder to write
     if format.lower() == "json":
         logging.disable(logging.ERROR)
 
@@ -113,20 +115,16 @@ def check(
         artifacts = Artifacts(input)
 
     # Gather the probes
-    builtins: List[dict] = []
-    probes: List[Probe] = []
     probe_tree = ProbeTree()
     with tempfile.TemporaryDirectory() as temp_folder:
         probes_folder = Path(temp_folder) / Path("probes")
         probes_folder.mkdir(parents=True)
         for probe_url in unique_probe_urls:
             try:
-                probe_tree = Probe.from_url(url=probe_url, probes_root=probes_folder)
-                probes.extend(probe_tree.probes)
+                probe_tree = Probe.from_url(probe_url, probes_folder, probe_tree=probe_tree)
                 # TODO It would be great if we could output the combined result from multiple
                 # probes to show the user what they created E.g. 2 Rulesets: Applications: AM &
                 # Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
-                builtins.append(probe_tree.builtins)
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
@@ -134,16 +132,16 @@ def check(
                 )
 
         probe_results = {}
-        # FIXME: Builtin validation use bundles, but this should be programmatic
-        check_functions = {"bundle"} if builtins else set()
-        for builtin in builtins:
-            for builtin_obj in builtin.values():
+        check_functions: Set[str] = set()
+        for builtin in probe_tree.builtins:
+            # TODO: If an artifact is supplied, but no builtin uses it, we do not warn
+            for builtin_obj in probe_tree.builtins[builtin]:
                 if builtin_obj.probe.name not in probe_results:
                     probe_results[builtin_obj.probe.name] = builtin_obj.validate(artifacts)
                 else:
                     probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
 
-        for probe in probes:
+        for probe in probe_tree.probes:
             check_functions |= set(probe.get_functions().keys())
             probe_results[probe.name] = probe.run(artifacts)
 
@@ -168,7 +166,7 @@ def schema(
 ):
     """Generate and save the unified schema to a file at a relative path."""
     schema = build_unified_schema()  # Dict
-
+    # TODO This could output to stdout with nice formatting as default and optionally to file
     # Create the output directory if it doesn't exist
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

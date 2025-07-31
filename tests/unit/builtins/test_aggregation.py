@@ -1,12 +1,28 @@
-def test_unknown_top_level_keys():
-    pass
-    # TODO Consider using inline YAML for tests to not pollute the tests/resources
-    # GIVEN a Ruleset with unknown top-level keys
-    # WHEN the Ruleset executes the builtin assertions
-    # THEN the unknown top-level keys are ignored
+import tempfile
+from pathlib import Path
+
+from juju_doctor.probes import Probe
+
 
 def test_nested_builtins():
-    pass
-    # GIVEN a Ruleset executes other Rulesets
-    # WHEN the executed Ruleset has builtin assertions
-    # THEN they are aggregated with the others builtin assertions
+    # GIVEN a Ruleset (with builtin assertions) executes another Ruleset with builtin assertions
+    yaml_content = """
+    name: Test nested builtins
+    applications:
+      - name: catalogue
+    relations:
+      - provides: grafana:catalogue
+        requires: catalogue:catalogue
+    probes:
+      - name: Local builtins
+        type: ruleset
+        url: file://tests/resources/probes/ruleset/builtins.yaml
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(Path(tmpdir) / "nested-builtins.yaml", 'w') as temp_file:
+            temp_file.write(yaml_content)
+        # WHEN the probes are fetched to a local filesystem
+        probe_tree = Probe.from_url(url=f"file://{temp_file.name}", probes_root=Path(tmpdir))
+    # THEN both the top-level and nested builtin assertions were aggregated
+    assert len(probe_tree.builtins["applications"]) == 2
+    assert len(probe_tree.builtins["relations"]) == 2

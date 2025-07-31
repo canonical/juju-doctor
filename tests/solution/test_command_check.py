@@ -40,7 +40,7 @@ def test_no_artifacts():
     assert "No artifacts were specified" in result.output
 
 
-def test_check_multiple_artifacts(caplog):
+def test_check_multiple_artifacts():
     # GIVEN a file probe, missing the Status artifact
     # AND all artifacts are supplied
     # WHEN `juju-doctor check` is executed
@@ -49,22 +49,18 @@ def test_check_multiple_artifacts(caplog):
         "check",
         "--format=json",
         "--probe=file://tests/resources/probes/python/mixed.py",
-        "--status=tests/resources/artifacts/status.yaml",
         "--bundle=tests/resources/artifacts/bundle.yaml",
         "--show-unit=tests/resources/artifacts/show-unit.yaml",
     ]
-    with caplog.at_level("WARNING"):
-        result = runner.invoke(app, test_args)
+    result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND only the functions with artifacts are executed
     assert json.loads(result.stdout)["passed"] == 1
     assert json.loads(result.stdout)["failed"] == 1
-    # AND the user is warned of their mistake
-    assert re.search(r"status.*not used", caplog.text)
 
 
-def test_check_multiple_file_probes(caplog):
+def test_check_multiple_file_probes():
     # GIVEN multiple file probes and a Status artifact
     # WHEN `juju-doctor check` is executed
     runner = CliRunner()
@@ -75,13 +71,45 @@ def test_check_multiple_file_probes(caplog):
         "--probe=file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
-    with caplog.at_level("WARNING"):
-        result = runner.invoke(app, test_args)
+    result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND only the status functions are executed
     assert json.loads(result.stdout)["failed"] == 1
     assert json.loads(result.stdout)["passed"] == 1
+
+
+def test_check_unused_artifacts(caplog):
+    # GIVEN a file probe is missing the Status artifact
+    # AND this artifact is supplied
+    # WHEN `juju-doctor check` is executed
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--probe=file://tests/resources/probes/python/mixed.py",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    with caplog.at_level("WARNING"):
+        result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the user is warned of their mistake
+    assert re.search(r"status.*not used", caplog.text)
+
+
+def test_check_missing_required_artifacts(caplog):
+    # GIVEN multiple file probes and a Status artifact
+    # WHEN `juju-doctor check` is executed
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--probe=file://tests/resources/probes/python/passing.py",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    with caplog.at_level("WARNING"):
+        result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
     # AND the user is warned of their mistake
     assert re.search(r"No 'bundle'.*provided", caplog.text)
     assert re.search(r"No 'show_unit'.*provided", caplog.text)
@@ -107,7 +135,7 @@ def test_check_returns_valid_json():
         assert False, f"Output is not valid JSON: {e}\nOutput:\n{result.output}"
 
 
-def test_duplicate_file_probes_are_excluded(caplog):
+def test_duplicate_file_probes_are_excluded():
     # GIVEN 2 duplicate file probes
     # WHEN `juju-doctor check` is executed
     runner = CliRunner()
@@ -118,13 +146,28 @@ def test_duplicate_file_probes_are_excluded(caplog):
         "--probe=file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
-    with caplog.at_level("WARNING"):
-        result = runner.invoke(app, test_args)
+    result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the second Probe overwrote the first, i.e. only 1 exists
     failing = json.loads(result.stdout)["Results"]["children"]
     assert len(failing) == 1
+
+
+def test_duplicate_file_probes_warning(caplog):
+    # GIVEN 2 duplicate file probes
+    # WHEN `juju-doctor check` is executed
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--probe=file://tests/resources/probes/python/failing.py",
+        "--probe=file://tests/resources/probes/python/failing.py",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    with caplog.at_level("WARNING"):
+        result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
     # AND the user is warned of their mistake
     assert re.search(r"Duplicate probe arg", caplog.text)
 
@@ -168,8 +211,6 @@ def test_duplicate_gh_probes_are_excluded():
     assert len(failing) == 1
 
 
-# TODO These tests are not isolated https://github.com/fastapi/typer/discussions/1259
-# has context from previous tests
 def test_check_groups_by_parent():
     # GIVEN multiple Ruleset probes
     # WHEN `juju-doctor check` is executed

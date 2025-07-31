@@ -9,12 +9,19 @@ relations:
     requires: loki:alertmanager
   - provides: loki:grafana-source
     requires: grafana:grafana-source
-# offers:
-#   - prometheus:something
-#   - loki:something
+  - provides: loki:metrics-endpoint
+    requires: prometheus:metrics-endpoint
+  - provides: loki:grafana-dashboard
+    requires: grafana:grafana-dashboard
+  - provides: traefik:ingress
+    requires: alertmanager:ingress
+offers:
+  - name: loki-logging
+    endpoint: logging
+    interface: loki_push_api
+  - name: grafana-dashboards
+    endpoint: grafana-dashboard
+    interface: grafana_dashboard
+
 # consumes:
 #   - mysql:something
-probes:
-  - name: Local probe - passing
-    type: scriptlet
-    url: file://tests/resources/probes/python/passing.py

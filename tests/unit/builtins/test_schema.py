@@ -3,6 +3,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 import yaml
+from jsonschema.exceptions import ValidationError
 
 from juju_doctor.builtins import Builtins, build_unified_schema
 from juju_doctor.probes import Probe
@@ -13,6 +14,22 @@ def test_load_schema():
     # GIVEN a schema file
     # WHEN the contents are read
     # THEN there are no errors
+
+def test_incorrect_schema():
+    # GIVEN a Ruleset schema
+    schema = build_unified_schema()
+    # WHEN a Ruleset with non-schema top-level keys is loaded
+    incorrect_key = "foo"
+    yaml_content = f"""
+    name: Incorrect Ruleset
+    {incorrect_key}: bar
+    """
+    yaml_data = yaml.safe_load(yaml_content)
+    # THEN it fails validation
+    with pytest.raises(ValidationError) as error:
+        jsonschema.validate(yaml_data, schema)
+
+    assert f"'{incorrect_key}' was unexpected" in str(error.value)
 
 
 def test_combine_schemas():

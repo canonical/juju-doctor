@@ -1,4 +1,9 @@
 name: A declarative deployment RuleSet - all
+application:
+  - name: catalogue
+relations:
+  - provides: grafana:catalogue
+    requires: catalogue:catalogue
 probes:
   - name: Local probe - passing
     type: scriptlet
@@ -9,3 +14,6 @@ probes:
   - name: Local ruleset
     type: ruleset
     url: file://tests/resources/probes/ruleset/scriptlet.yaml
+  - name: Local builtins
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/builtins.yaml

@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-from juju_doctor.probes import Probe
+from juju_doctor.probes import Probe, ProbeTree
 
 
 def contains_only_one_passing_and_failing_probe(probes: List[Probe]):
@@ -21,7 +21,7 @@ def test_ruleset_calls_scriptlet():
     probe_url = "file://tests/resources/probes/ruleset/scriptlet.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        probe_tree = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
         probes = probe_tree.probes
         # THEN probes are found
         contains_only_one_passing_and_failing_probe(probes)
@@ -32,7 +32,7 @@ def test_ruleset_calls_nested():
     probe_url = "file://tests/resources/probes/ruleset/nested.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        probe_tree = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
         probes = probe_tree.probes
         # THEN probes are found
         contains_only_one_passing_and_failing_probe(probes)
@@ -43,7 +43,7 @@ def test_ruleset_calls_dir():
     probe_url = "file://tests/resources/probes/ruleset/dir.yaml"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probe is fetched to a local filesystem
-        probe_tree = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
         probes = probe_tree.probes
         # THEN probes are found
         contains_only_one_passing_and_failing_probe(probes)
