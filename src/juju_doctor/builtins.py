@@ -271,7 +271,7 @@ class Builtins(Enum):
 
     @staticmethod
     def all():
-        """Return all file extensions."""
+        """Return all Builtin classes."""
         return [f.value for f in Builtins]
 
 

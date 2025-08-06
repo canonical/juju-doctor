@@ -5,7 +5,7 @@ import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Annotated, Dict, List, Set
+from typing import Annotated, Dict, List, Optional, Set
 
 import typer
 from rich.console import Console
@@ -81,7 +81,8 @@ def check(
 
     # Ensure valid JSON format in stdout
     # TODO Determine if this is desired, we basically hide warning when JSON output
-    #   makes tests harder to write
+    # makes tests harder to write. I.e. should a user clear warnings before getting
+    # valid JSON -> this is the most important case!
     if format.lower() == "json":
         logging.disable(logging.ERROR)
 
@@ -122,9 +123,6 @@ def check(
         for probe_url in unique_probe_urls:
             try:
                 probe_tree = Probe.from_url(probe_url, probes_folder, probe_tree=probe_tree)
-                # TODO It would be great if we could output the combined result from multiple
-                # probes to show the user what they created E.g. 2 Rulesets: Applications: AM &
-                # Applications: Prom. Combined to be {"applications": ["AM", "Prom"]}
             except RecursionError:
                 log.error(
                     f"Recursion limit exceeded for probe: {probe_url}\n"
@@ -159,23 +157,30 @@ def check(
 
 @app.command(no_args_is_help=True)
 def schema(
-    output: Annotated[
-        Path,
+    stdout: Annotated[
+        bool,
+        typer.Option("--stdout", help="Output the schema to stdout."),
+    ] = False,
+    file: Annotated[
+        Optional[Path],
         typer.Option("--output", "-o", help="Specify the file's relative destination path."),
-    ],
+    ] = None,
 ):
-    """Generate and save the unified schema to a file at a relative path."""
+    """Generate and output the unified schema."""
     schema = build_unified_schema()  # Dict
-    # TODO This could output to stdout with nice formatting as default and optionally to file
-    # Create the output directory if it doesn't exist
-    output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write the schema to the specified file
-    with open(output_path, "w") as f:
-        json.dump(schema, f, indent=4)
+    if file:
+        output_path = Path(file)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    console.print(f"Schema saved to {output_path}")
+        # Write the schema to the specified file
+        with open(output_path, "w") as f:
+            json.dump(schema, f, indent=2)
+
+        console.print(f"Schema saved to {output_path}")
+
+    if stdout:
+        console.print(schema)
 
 
 if __name__ == "__main__":
