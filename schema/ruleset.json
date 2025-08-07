@@ -45,7 +45,29 @@
         "additionalProperties": false
       }
     },
-    "offers": {},
+    "offers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "interface": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "endpoint",
+          "interface"
+        ],
+        "additionalProperties": false
+      }
+    },
     "consumes": {}
   }
 }

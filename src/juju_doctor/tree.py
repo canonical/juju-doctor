@@ -3,33 +3,18 @@
 import json
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Dict, List
 
 from rich.console import Console
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
-from juju_doctor.builtins import ResultInfo
-from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, ProbeAssertionResult
+from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, Probe
+from juju_doctor.results import OutputFormat
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 console = Console()
-
-
-@dataclass
-class OutputFormat:
-    """Track the output format for the application."""
-
-    verbose: bool
-    format: str = ""
-    rich_map = {
-        "green": "🟢",
-        "red": "🔴",
-        "check_mark": "✔️",
-        "multiply": "✖️",
-    }
 
 
 class ProbeResultAggregator:
@@ -37,9 +22,9 @@ class ProbeResultAggregator:
 
     def __init__(
         self,
-        probe_results: Dict[str, List[ProbeAssertionResult]],
+        probes: List[Probe],
         output_fmt: OutputFormat,
-        tree=Tree(),
+        tree: Tree = Tree(),
     ):
         """Prepare the aggregated results and its tree representation.
 
@@ -51,65 +36,48 @@ class ProbeResultAggregator:
         # Create a root node if it does not exist
         if not self._tree:
             self._tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
-        self._grouped_by_status = defaultdict(list)
-        self._group_results(probe_results)
+        self._grouped_by_status: Dict[str, List[Probe]] = defaultdict(list)
+        self._group_results(probes)
 
-    def _group_results(self, probe_results: Dict[str, List[ProbeAssertionResult]]):
+    def _group_results(self, probes: List[Probe]):
         """Group each probe assertion result by pass/fail."""
-        for probe_result in probe_results.values():
+        for probe in probes:
             status = (
                 AssertionStatus.FAIL.value
-                if any(p.status == AssertionStatus.FAIL.value for p in probe_result)
+                if any(p.status == AssertionStatus.FAIL.value for p in probe.results)
                 else AssertionStatus.PASS.value
             )
-            self._grouped_by_status[status].append(probe_result)
+            self._grouped_by_status[status].append(probe)
 
     def _build_tree(self) -> Dict[str, int]:
         """Create the tree structure for aggregated results.
 
-        Create a new node in the tree once per defined probe with an assertion summary.
+        Create a new node in the tree per probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
-        result_info = ResultInfo()
-        for probe_results in self._grouped_by_status.values():
-            for probe_result in probe_results:
-                func_statuses = []
-                assertion_result = None
-                # gather failed assertions and exceptions
-                for assertion_result in probe_result:
-                    result_info = assertion_result.get_text(self._output_fmt)
-                    results[assertion_result.status] += 1
-                    if result_info.exception_msg:
-                        self._exceptions.append(result_info.exception_msg)
-                    symbol = (
-                        self._output_fmt.rich_map["check_mark"]
-                        if assertion_result.status == AssertionStatus.PASS.value
-                        else self._output_fmt.rich_map["multiply"]
-                    )
-                    func_statuses.append(f"{symbol} {assertion_result.func_name}")
+        for probes in self._grouped_by_status.values():
+            for probe in probes:
+                node_info = probe.result_text(self._output_fmt)
+                self._exceptions.extend(node_info.exception_msgs)
+                result = None
+                for result in probe.results:
+                    results[result.status] += 1
 
-                if self._output_fmt.verbose:
-                    result_info.node_tag += f" ({', '.join(func_statuses)})"
-                # The `probe` attribute for each `assertion_result` in a given `probe_result` will
-                # be identical, so we can create the tree node with the last `assertion_result`
-                if assertion_result:
-                    if not assertion_result.probe.is_root_node:
-                        self._tree.create_node(
-                            result_info.node_tag,
-                            assertion_result.probe.get_chain(),
-                            str(assertion_result.probe.root_node_uuid),
-                        )
+                if not probe.is_root_node:
+                    self._tree.create_node(
+                        node_info.node_tag,
+                        probe.get_chain(),
+                        str(probe.root_node_uuid),
+                    )
+                else:
+                    if probe.get_chain() in self._tree:
+                        self._tree.update_node(probe.get_chain(), tag=node_info.node_tag)
                     else:
-                        if assertion_result.probe.get_chain() in self._tree:
-                            self._tree.update_node(
-                                assertion_result.probe.get_chain(), tag=result_info.node_tag
-                            )
-                        else:
-                            self._tree.create_node(
-                                result_info.node_tag,
-                                assertion_result.probe.get_chain(),
-                                self._tree.root,
-                            )
+                        self._tree.create_node(
+                            node_info.node_tag,
+                            probe.get_chain(),
+                            self._tree.root,
+                        )
         return results
 
     def print_results(self):

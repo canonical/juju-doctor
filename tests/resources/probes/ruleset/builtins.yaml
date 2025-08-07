@@ -1,6 +1,6 @@
 name: A RuleSet which uses native Juju Doctor probes
 applications:
-  - name: alertmanager
+  - name: alertmanagers
   - name: prometheus
     minimum: 1
     maximum: 4

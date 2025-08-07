@@ -15,8 +15,9 @@ from rich.logging import RichHandler
 from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import AssertionStatus, Builtins, ResultInfo, _Builtin
+from juju_doctor.builtins import Builtins, _Builtin
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
+from juju_doctor.results import AssertionResult, AssertionStatus, OutputFormat
 
 SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
 ROOT_NODE_ID = "root"
@@ -24,14 +25,6 @@ ROOT_NODE_TAG = "Results"
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
-
-
-@dataclass
-class FileSystem:
-    """Class for probe filesystem information."""
-
-    fs: fsspec.AbstractFileSystem
-    path: Path
 
 
 def _read_file(filename: Path) -> Optional[Dict]:
@@ -49,14 +42,39 @@ def _read_file(filename: Path) -> Optional[Dict]:
 
 
 @dataclass
-class ProbeTree:
-    """A collection of Probes in a tree format."""
+class FileSystem:
+    """Probe filesystem information."""
 
-    probes: List["Probe"] = field(default_factory=list)  # list of scriptlet probes in the tree
-    tree: Tree = field(default_factory=Tree)  # Tree containing a probe per node
-    builtins: Dict[str, List[_Builtin]] = field(
-        default_factory=dict
-    )  # list of builtin assertions in the tree
+    fs: fsspec.AbstractFileSystem
+    path: Path
+
+
+@dataclass
+class NodeResultInfo:
+    """Probe result information for display in a Tree node.
+
+    Args:
+        node_tag: text for displaying the Probe's identity in a node of the Tree
+        exception_msgs: a list of exception messages aggregated from the Probe's function results
+    """
+
+    node_tag: str = ""
+    exception_msgs: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ProbeTree:
+    """A collection of Probes in a tree format.
+
+    Args:
+        probes: a list of scriptlet probes in the tree
+        tree: a treelib.Tree containing a probe per node
+        builtins: a dict mapping builtin types to their calling rulesets and assertions
+    """
+
+    probes: List["Probe"] = field(default_factory=list)
+    tree: Tree = field(default_factory=Tree)
+    builtins: Dict[str, Dict[str, _Builtin]] = field(default_factory=dict)
 
 
 @dataclass
@@ -77,12 +95,20 @@ class Probe:
         UUID(E)/UUID(F)
 
     The probe chain ends when the probe does not call another probe.
+
+    Args:
+        path: relative file path in the temporary probes folder
+        probes_root: temporary directory for all fetched probes
+        probes_chain: a chain of UUIDs identifying the probe's call path
+        uuid: a unique identifier for this probe among others in a treelib.Tree
+        results: aggregated results for the probe's functions
     """
 
-    path: Path  # relative path in the temporary folder
-    probes_root: Path  # temporary folder for all probes
+    path: Path
+    probes_root: Path
     probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
     uuid: UUID = field(default_factory=uuid4)
+    results: List[AssertionResult] = field(default_factory=list)
 
     @property
     def name(self) -> str:
@@ -100,11 +126,11 @@ class Probe:
 
     @property
     def root_node_uuid(self) -> UUID:
-        """Unique identifier of this root probe."""
+        """Unique identifier of this probe's original caller."""
         return UUID(self.get_chain().split("/")[0])
 
     def get_chain(self) -> str:
-        """Append the current probe's UUID to the chain."""
+        """Get the current probe's call path with itself at the end of the chain."""
         if self.probes_chain:
             return f"{self.probes_chain}/{self.uuid}"
         return str(self.uuid)
@@ -146,18 +172,14 @@ class Probe:
             if is_ruleset:
                 ruleset = RuleSet(probe)
 
-                # Gather builtins from the Rulset and store them
-                for builtin in ruleset.builtins:
-                    if builtin not in probe_tree.builtins:
-                        probe_tree.builtins[builtin] = [ruleset.builtins[builtin]]
-                    else:
-                        probe_tree.builtins[builtin].append(ruleset.builtins[builtin])
+                # Gather builtins from the Ruleset and map the ruleset to builtins
+                for name, ruleset_builtin in ruleset.builtins.items():
+                    probe_tree.builtins.setdefault(name, {})
+                    probe_tree.builtins[name].setdefault(
+                        ruleset.probe.get_chain(), ruleset_builtin
+                    )
 
                 probe_tree = ruleset.aggregate_probes(probe_tree)
-                log.info(
-                    f"Fetched builtin assertions for {probe.name}: {probe_tree.builtins.keys()}"
-                )
-                log.info(f"Fetched probe(s) for {probe.name}: {probe_tree.probes}")
 
             else:
                 if probe.is_root_node:
@@ -212,10 +234,11 @@ class Probe:
             if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts) -> List["ProbeAssertionResult"]:
-        """Execute each Probe function that matches the supported probe types."""
-        # Silence the result printing if needed
-        results: List[ProbeAssertionResult] = []
+    def run(self, artifacts: Artifacts):
+        """Execute each Probe function that matches the supported probe types.
+
+        The results of each function are aggregated and assigned to the probe itself
+        """
         for func_name, func in self.get_functions().items():
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
@@ -228,47 +251,48 @@ class Probe:
             try:
                 func(artifact)
             except BaseException as e:
-                results.append(ProbeAssertionResult(self, func_name, passed=False, exception=e))
+                self.results.append(AssertionResult(func_name, passed=False, exception=e))
             else:
-                results.append(ProbeAssertionResult(probe=self, func_name=func_name, passed=True))
-        return results
+                self.results.append(AssertionResult(func_name, passed=True))
 
-
-@dataclass
-class ProbeAssertionResult:
-    """A helper class to wrap results for a Probe's functions."""
-
-    probe: Probe
-    func_name: str
-    passed: bool
-    exception: Optional[BaseException] = None
-
-    @property
-    def status(self) -> str:
-        """Result of the probe."""
-        return AssertionStatus.PASS.value if self.passed else AssertionStatus.FAIL.value
-
-    def get_text(self, output_fmt) -> ResultInfo:
-        """Probe results (formatted as Pretty-print) as a string."""
-        exception_msg = ""
-        green = output_fmt.rich_map["green"]
+    def result_text(self, output_fmt: OutputFormat) -> NodeResultInfo:
+        """Probe results (formatted with Pretty-print) as text."""
+        failed = False
+        func_statuses = []
+        exception_msgs = []
         red = output_fmt.rich_map["red"]
-        if self.passed:
-            return ResultInfo(f"{green} {self.probe.name}", exception_msg)
-        # If the probe failed
-        exception_suffix = f"({self.probe.name}/{self.func_name}): {self.exception}"
-        if output_fmt.format.lower() == "json":
-            exception_msg = f"Exception {exception_suffix}"
+        green = output_fmt.rich_map["green"]
+        for result in self.results:
+            if not result.passed:
+                failed = True
+                exception_suffix = f"({self.name}/{result.func_name}): {result.exception}"
+                if output_fmt.format.lower() == "json":
+                    exception_msgs.append(f"Exception {exception_suffix}")
+                else:
+                    if output_fmt.verbose:
+                        exception_msgs.append(f"[b]Exception[/b] {exception_suffix}")
+
+            symbol = (
+                output_fmt.rich_map["check_mark"]
+                if result.status == AssertionStatus.PASS.value
+                else output_fmt.rich_map["multiply"]
+            )
+            func_statuses.append(f"{symbol} {result.func_name}")
+
+        if failed:
+            node_tag = f"{red} {self.name}"
         else:
-            if output_fmt.verbose:
-                exception_msg = f"[b]Exception[/b] {exception_suffix}"
-        return ResultInfo(f"{red} {self.probe.name}", exception_msg)
+            node_tag = f"{green} {self.name}"
+        if output_fmt.verbose:
+            node_tag += f" ({', '.join(func_statuses)})"
+
+        return NodeResultInfo(node_tag, exception_msgs)
 
 
 class RuleSet:
-    """Represents a set of probes defined in a ruleset configuration file.
+    """Represents a set of probes defined in a declarative configuration file.
 
-    Supports recursive aggregation of probes, handling scriptlets and nested rulesets.
+    Supports recursive aggregation of probes, nested rulesets, and builtin assertions.
     """
 
     def __init__(self, probe: Probe, name: Optional[str] = None):
@@ -297,7 +321,7 @@ class RuleSet:
                 continue
 
             builtin_class = builtin.value
-            builtin_obj = builtin_class(self.probe, content[builtin.name.lower()])
+            builtin_obj = builtin_class(self.probe.name, content[builtin.name.lower()])
             builtin_objs[builtin.name.lower()] = builtin_obj
             builtin_obj.is_schema_valid()
 
@@ -306,8 +330,8 @@ class RuleSet:
     def aggregate_probes(self, probe_tree: ProbeTree = ProbeTree()) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
 
-        This method is recursive when it finds another RuleSet probe and returns a list of probes
-        that were found after traversing all the probes in the ruleset.
+        This method is recursive when it finds another RuleSet. It returns a list of probes that
+        were found after traversing all the probes in the ruleset.
 
         While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
         the root of the tree for each probe result.

@@ -129,21 +129,31 @@ def check(
                     "Try reducing the intensity of probe chaining!"
                 )
 
-        probe_results = {}
         check_functions: Set[str] = set()
-        for builtin in probe_tree.builtins:
-            # TODO: If an artifact is supplied, but no builtin uses it, we do not warn
-            for builtin_obj in probe_tree.builtins[builtin]:
-                if builtin_obj.probe.name not in probe_results:
-                    probe_results[builtin_obj.probe.name] = builtin_obj.validate(artifacts)
-                else:
-                    probe_results[builtin_obj.probe.name].extend(builtin_obj.validate(artifacts))
 
+        # Probes
         for probe in probe_tree.probes:
             check_functions |= set(probe.get_functions().keys())
-            probe_results[probe.name] = probe.run(artifacts)
+            probe.run(artifacts)
 
-        if not supplied_artifacts.issubset(check_functions):
+        # Builtins
+        for _type, builtin in probe_tree.builtins.items():
+            # TODO: If an artifact is supplied, but no builtin uses it, we do not warn
+            for ruleset_id, builtin_obj in builtin.items():
+                assertion_results = builtin_obj.validate(artifacts)
+                # FIXME when running all.yaml, we are nesting all results under ruleset - all
+                #   which might be fixed in the tandem PR
+                # TODO 🟢 builtins:relations (✔️ builtin:relations) is gross and needs updating
+                probe = Probe(
+                    Path(f"builtins:{_type}"),
+                    Path(),
+                    probes_chain=ruleset_id,
+                    results=assertion_results,
+                )
+                probe_tree.probes.append(probe)
+
+        # TODO we should accurately warn for builtins like we do for probes
+        if not (probe_tree.builtins and supplied_artifacts.issubset(check_functions)):
             useless_artifacts = ", ".join(supplied_artifacts - check_functions)
             log.warning(
                 f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
@@ -151,7 +161,7 @@ def check(
 
         if probe_tree.tree:
             output_fmt = OutputFormat(verbose, format)
-            aggregator = ProbeResultAggregator(probe_results, output_fmt, probe_tree.tree)
+            aggregator = ProbeResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
             aggregator.print_results()
 
 
