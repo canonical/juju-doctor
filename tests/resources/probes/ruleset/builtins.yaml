@@ -1,6 +1,6 @@
 name: A RuleSet which uses native Juju Doctor probes
 applications:
-  - name: alertmanagers
+  - name: alertmanagerxxx # TODO This should warn
   - name: prometheus
     minimum: 1
     maximum: 4
@@ -16,7 +16,7 @@ relations:
   - provides: traefik:ingress
     requires: alertmanager:ingress
 offers:
-  - name: loki-logging
+  - name: loki-loggingxxx # TODO This should warn
     endpoint: logging
     interface: loki_push_api
   - name: grafana-dashboards

@@ -94,17 +94,11 @@ class Applications(_Builtin):
         func_name = f"builtin:{Builtins.APPLICATIONS.name.lower()}"
 
         app_assertion_names = [app["name"] for app in self.assertion]
-        for status_name, status in artifacts.status.items():
-            names_found = False
-            for name, app in status["applications"].items():
-                if name not in app_assertion_names:
-                    # TODO try to filter out all the apps beforehand instead of using continue
-                    # apps = dict(filter(lambda n, a: n not in app_assertion_names,
-                    # -> status["applications"].items()))
-                    continue
-
-                # FIXME this only checks if all names are wrong, fix for if 1 name is wrong
-                names_found = True
+        for status in artifacts.status.values():
+            relevant_apps = dict(
+                filter(lambda item: item[0] in app_assertion_names, status["applications"].items())
+            )
+            for name, app in relevant_apps.items():
                 for app_assertion in self.assertion:
                     if app_assertion["name"] == name:
                         if "minimum" in app_assertion and app["scale"] < app_assertion["minimum"]:
@@ -119,12 +113,6 @@ class Applications(_Builtin):
                                 f"exceeds the allowable limit: {app_assertion['maximum']}"
                             )
                             results.append(AssertionResult(func_name, False, exception))
-            if not names_found:
-                exception = Exception(
-                    f"Application names: {app_assertion_names} were not found "
-                    f"in the artifact: {status_name}."
-                )
-                results.append(AssertionResult(func_name, False, exception))
 
         if not results:
             results.append(AssertionResult(func_name, True))
@@ -215,15 +203,11 @@ class Offers(_Builtin):
         func_name = f"builtin:{Builtins.OFFERS.name.lower()}"
 
         offer_assertion_names = [offer["name"] for offer in self.assertion]
-        for status_name, status in artifacts.status.items():
-            names_found = False
-            for name, offer in status["offers"].items():
-                if name not in offer_assertion_names:
-                    # TODO try to filter out all the offers beforehand instead of using continue
-                    continue
-
-                # FIXME this only checks if all names are wrong, fix for if 1 name is wrong
-                names_found = True
+        for status in artifacts.status.values():
+            relevant_offers = dict(
+                filter(lambda item: item[0] in offer_assertion_names, status["offers"].items())
+            )
+            for name, offer in relevant_offers.items():
                 for offer_assertion in self.assertion:
                     if offer_assertion["name"] == name:
                         if offer_assertion["endpoint"] not in offer["endpoints"]:
@@ -240,13 +224,6 @@ class Offers(_Builtin):
                                 f"!= ({interface})"
                             )
                             results.append(AssertionResult(func_name, False, exception))
-
-            if not names_found:
-                exception = Exception(
-                    f"Offer names: {offer_assertion_names} were not found "
-                    f"in the artifact: {status_name}."
-                )
-                results.append(AssertionResult(func_name, False, exception))
 
         if not results:
             results.append(AssertionResult(func_name, True))
