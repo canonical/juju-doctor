@@ -141,9 +141,6 @@ def check(
             # TODO: If an artifact is supplied, but no builtin uses it, we do not warn
             for ruleset_id, builtin_obj in builtin.items():
                 assertion_results = builtin_obj.validate(artifacts)
-                # FIXME when running all.yaml, we are nesting all results under ruleset - all
-                #   which might be fixed in the tandem PR
-                # TODO 🟢 builtins:relations (✔️ builtin:relations) is gross and needs updating
                 probe = Probe(
                     Path(f"builtins:{_type}"),
                     Path(),
