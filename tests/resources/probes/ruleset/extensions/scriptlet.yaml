@@ -1,4 +1,4 @@
-name: A declarative deployment RuleSet
+name: RuleSet - test yaml
 probes:
   - name: Local probe
     type: scriptlet

@@ -1,4 +1,4 @@
-name: A RuleSet which uses native Juju Doctor probes
+name: RuleSet - test builtins
 applications:
   - name: alertmanagerxxx # TODO This should warn
   - name: prometheus

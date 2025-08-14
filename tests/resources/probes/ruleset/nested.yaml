@@ -1,4 +1,4 @@
-name: A declarative deployment RuleSet - nested
+name: RuleSet - test nested rulesets
 probes:
   - name: Local ruleset (calling other RuleSets)
     type: ruleset

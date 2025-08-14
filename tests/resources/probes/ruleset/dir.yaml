@@ -1,4 +1,4 @@
-name: A declarative deployment RuleSet - dir
+name: RuleSet - test directory of probes
 probes:
   - name: Local probe
     type: ruleset
