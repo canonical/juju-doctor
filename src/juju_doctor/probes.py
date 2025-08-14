@@ -284,14 +284,16 @@ class Probe:
                 if result.status == AssertionStatus.PASS.value
                 else output_fmt.rich_map["multiply"]
             )
-            func_statuses.append(f"{symbol} {result.func_name}")
+            if result.func_name:
+                func_statuses.append(f"{symbol} {result.func_name}")
 
         if failed:
             node_tag = f"{red} {self.name}"
         else:
             node_tag = f"{green} {self.name}"
         if output_fmt.verbose:
-            node_tag += f" ({', '.join(func_statuses)})"
+            if func_statuses:
+                node_tag += f" ({', '.join(func_statuses)})"
 
         return NodeResultInfo(node_tag, exception_msgs)
 

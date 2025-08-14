@@ -38,7 +38,7 @@ class AssertionStatus(Enum):
 class AssertionResult:
     """The result of a Probe function."""
 
-    func_name: str
+    func_name: Optional[str]
     passed: bool
     exception: Optional[BaseException] = None
 

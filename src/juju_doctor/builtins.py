@@ -91,15 +91,13 @@ class Applications(_Builtin):
             )
             return results
 
-        func_name = f"builtin:{Builtins.APPLICATIONS.name.lower()}"
-
         app_assertion_names = [app["name"] for app in self.assertion]
         for status_name, status in artifacts.status.items():
             if not all(item in status["applications"] for item in app_assertion_names):
                 exception = Exception(
                     f"Not all apps: {app_assertion_names} were found in {status_name}"
                 )
-                results.append(AssertionResult(func_name, False, exception))
+                results.append(AssertionResult(None, False, exception))
             relevant_apps = dict(
                 filter(lambda item: item[0] in app_assertion_names, status["applications"].items())
             )
@@ -111,16 +109,16 @@ class Applications(_Builtin):
                                 f"{name} scale ({app['scale']}) "
                                 f"is below the allowable limit: {app_assertion['minimum']}"
                             )
-                            results.append(AssertionResult(func_name, False, exception))
+                            results.append(AssertionResult(None, False, exception))
                         if "maximum" in app_assertion and app["scale"] > app_assertion["maximum"]:
                             exception = Exception(
                                 f"{name} scale ({app['scale']}) "
                                 f"exceeds the allowable limit: {app_assertion['maximum']}"
                             )
-                            results.append(AssertionResult(func_name, False, exception))
+                            results.append(AssertionResult(None, False, exception))
 
         if not results:
-            results.append(AssertionResult(func_name, True))
+            results.append(AssertionResult(None, True))
 
         return results
 
@@ -153,8 +151,6 @@ class Relations(_Builtin):
             )
             return results
 
-        func_name = f"builtin:{Builtins.RELATIONS.name.lower()}"
-
         for relation in self.assertion:
             bundle_relations = [
                 relation
@@ -167,10 +163,10 @@ class Relations(_Builtin):
                 and [rel_pair[1], rel_pair[0]] not in bundle_relations
             ):
                 exception = Exception(f"Relation ({rel_pair}) not found in {bundle_relations}")
-                results.append(AssertionResult(func_name, False, exception))
+                results.append(AssertionResult(None, False, exception))
 
         if not results:
-            results.append(AssertionResult(func_name, True))
+            results.append(AssertionResult(None, True))
 
         return results
 
@@ -205,15 +201,13 @@ class Offers(_Builtin):
             log.warning("The status artifact was not supplied for the Offers Builtin assertion.")
             return results
 
-        func_name = f"builtin:{Builtins.OFFERS.name.lower()}"
-
         offer_assertion_names = [offer["name"] for offer in self.assertion]
         for status_name, status in artifacts.status.items():
             if not all(item in status["offers"] for item in offer_assertion_names):
                 exception = Exception(
                     f"Not all offers: {offer_assertion_names} were found in {status_name}"
                 )
-                results.append(AssertionResult(func_name, False, exception))
+                results.append(AssertionResult(None, False, exception))
             relevant_offers = dict(
                 filter(lambda item: item[0] in offer_assertion_names, status["offers"].items())
             )
@@ -225,7 +219,7 @@ class Offers(_Builtin):
                                 f"{name}: endpoint ({offer_assertion['endpoint']}) "
                                 f"not in ({offer['endpoints'].keys()})"
                             )
-                            results.append(AssertionResult(func_name, False, exception))
+                            results.append(AssertionResult(None, False, exception))
                             continue
                         interface = offer["endpoints"][offer_assertion["endpoint"]]["interface"]
                         if offer_assertion["interface"] != interface:
@@ -233,10 +227,10 @@ class Offers(_Builtin):
                                 f"{name}: interface ({offer_assertion['interface']}) "
                                 f"!= ({interface})"
                             )
-                            results.append(AssertionResult(func_name, False, exception))
+                            results.append(AssertionResult(None, False, exception))
 
         if not results:
-            results.append(AssertionResult(func_name, True))
+            results.append(AssertionResult(None, True))
 
         return results
 
