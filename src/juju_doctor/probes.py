@@ -1,4 +1,5 @@
 """Helper module to wrap and execute probes."""
+
 import importlib.util
 import inspect
 import logging
@@ -57,8 +58,10 @@ def _read_file(filename: Path) -> Optional[Dict]:
 @dataclass
 class ProbeTree:
     """A collection of Probes in a tree format."""
+
     probes: List["Probe"]  # list of probes in the tree
     tree: Tree = Tree()  # Tree containing a probe per node
+
 
 @dataclass
 class Probe:
@@ -110,6 +113,13 @@ class Probe:
             return f"{self.probes_chain}/{self.uuid}"
         return str(self.uuid)
 
+    def get_parent(self) -> Optional[UUID]:
+        """Unique identifier of this probe's parent."""
+        chain = self.get_chain().split("/")
+        if len(chain) > 1:
+            return UUID(self.get_chain().split("/")[-2])
+        return None
+
     @staticmethod
     def from_url(
         url: str, probes_root: Path, probes_chain: str = "", tree: Tree = Tree()
@@ -152,7 +162,7 @@ class Probe:
                 probes.extend(aggregated_ruleset.probes)
             else:
                 if probe.is_root_node:
-                    tree.create_node(probe.name, probe.get_chain(), tree.root)
+                    tree.create_node(probe.name, str(probe.uuid), tree.root, probe)
                 log.info(f"Fetched probe: {probe}")
                 probes.append(probe)
 
@@ -294,7 +304,11 @@ class RuleSet:
         ruleset_name = content.get("name", None)
         # Only add the source ruleset probe to the tree's root node
         if self.probe.is_root_node:
-            tree.create_node(ruleset_name, self.probe.get_chain(), tree.root)
+            tree.create_node(ruleset_name, str(self.probe.uuid), tree.root, self.probe)
+        else:
+            tree.create_node(
+                ruleset_name, str(self.probe.uuid), str(self.probe.get_parent()), self.probe
+            )
 
         probes = []
         ruleset_probes = content.get("probes", [])

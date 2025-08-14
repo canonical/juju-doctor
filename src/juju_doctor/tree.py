@@ -95,18 +95,21 @@ class ProbeResultAggregator:
                     if not assertion_result.probe.is_root_node:
                         self._tree.create_node(
                             node_tag,
-                            assertion_result.probe.get_chain(),
-                            str(assertion_result.probe.root_node_uuid),
+                            str(assertion_result.probe.uuid),
+                            str(assertion_result.probe.get_parent()),
+                            assertion_result.probe,
                         )
                     else:
                         if assertion_result.probe.get_chain() in self._tree:
-                            self._tree.update_node(
-                                assertion_result.probe.get_chain(), tag=node_tag
-                            )
+                            self._tree.update_node(str(assertion_result.probe.uuid), tag=node_tag)
                         else:
                             self._tree.create_node(
-                                node_tag, assertion_result.probe.get_chain(), self._tree.root
+                                node_tag,
+                                str(assertion_result.probe.uuid),
+                                self._tree.root,
+                                assertion_result.probe,
                             )
+        # TODO We can check each node Probe. If it has no 🔴/🟢 and no children, then remove it
         return results
 
     def print_results(self):
