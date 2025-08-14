@@ -229,13 +229,13 @@ def test_check_groups_by_parent():
     # AND there is one parent node (with children nodes) per Ruleset
     probes = check_result[ROOT_NODE_TAG]["children"]
     assert any(
-        " - dir" in key and len(probe.values()) > 0
+        " - test dir" in key and len(probe.values()) > 0
         for probe in probes
         if isinstance(probe, dict)
         for key in probe.keys()
     )
     assert any(
-        " - scriptlet" in key and len(probe.values()) > 0
+        " - test scriptlet" in key and len(probe.values()) > 0
         for probe in probes
         if isinstance(probe, dict)
         for key in probe.keys()

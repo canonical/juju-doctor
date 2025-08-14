@@ -94,7 +94,12 @@ class Applications(_Builtin):
         func_name = f"builtin:{Builtins.APPLICATIONS.name.lower()}"
 
         app_assertion_names = [app["name"] for app in self.assertion]
-        for status in artifacts.status.values():
+        for status_name, status in artifacts.status.items():
+            if not all(item in status["applications"] for item in app_assertion_names):
+                exception = Exception(
+                    f"Not all apps: {app_assertion_names} were found in {status_name}"
+                )
+                results.append(AssertionResult(func_name, False, exception))
             relevant_apps = dict(
                 filter(lambda item: item[0] in app_assertion_names, status["applications"].items())
             )
@@ -203,7 +208,12 @@ class Offers(_Builtin):
         func_name = f"builtin:{Builtins.OFFERS.name.lower()}"
 
         offer_assertion_names = [offer["name"] for offer in self.assertion]
-        for status in artifacts.status.values():
+        for status_name, status in artifacts.status.items():
+            if not all(item in status["offers"] for item in offer_assertion_names):
+                exception = Exception(
+                    f"Not all offers: {offer_assertion_names} were found in {status_name}"
+                )
+                results.append(AssertionResult(func_name, False, exception))
             relevant_offers = dict(
                 filter(lambda item: item[0] in offer_assertion_names, status["offers"].items())
             )
