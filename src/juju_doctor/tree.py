@@ -100,7 +100,7 @@ class ProbeResultAggregator:
                             assertion_result.probe,
                         )
                     else:
-                        if assertion_result.probe.get_chain() in self._tree:
+                        if str(assertion_result.probe.uuid) in self._tree:
                             self._tree.update_node(str(assertion_result.probe.uuid), tag=node_tag)
                         else:
                             self._tree.create_node(
