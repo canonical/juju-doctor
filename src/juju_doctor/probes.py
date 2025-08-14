@@ -135,6 +135,13 @@ class Probe:
             return f"{self.probes_chain}/{self.uuid}"
         return str(self.uuid)
 
+    def get_parent(self) -> Optional[UUID]:
+        """Unique identifier of this probe's parent."""
+        chain = self.get_chain().split("/")
+        if len(chain) > 1:
+            return UUID(self.get_chain().split("/")[-2])
+        return None
+
     @staticmethod
     def from_url(
         url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = ProbeTree()
@@ -184,7 +191,7 @@ class Probe:
             else:
                 if probe.is_root_node:
                     probe_tree.tree.create_node(
-                        probe.name, probe.get_chain(), probe_tree.tree.root
+                        probe.name, str(probe.uuid), probe_tree.tree.root, probe
                     )
                 log.info(f"Fetched probe(s) for {probe.name}: {probe}")
                 probe_tree.probes.append(probe)
@@ -347,7 +354,13 @@ class RuleSet:
         ruleset_name = content.get("name", None)
         # Only add the source ruleset probe to the tree's root node
         if self.probe.is_root_node:
-            probe_tree.tree.create_node(ruleset_name, self.probe.get_chain(), probe_tree.tree.root)
+            probe_tree.tree.create_node(
+                ruleset_name, str(self.probe.uuid), probe_tree.tree.root, self.probe
+            )
+        else:
+            probe_tree.tree.create_node(
+                ruleset_name, str(self.probe.uuid), str(self.probe.get_parent()), self.probe
+            )
 
         ruleset_probes = content.get("probes", [])
         for ruleset_probe in ruleset_probes:
