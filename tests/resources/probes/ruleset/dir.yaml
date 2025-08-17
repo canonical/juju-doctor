@@ -1,5 +1,5 @@
 name: RuleSet - test directory of probes
 probes:
-  - name: Local probe
+  - name: Probe - test directory
     type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir

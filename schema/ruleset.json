@@ -68,6 +68,29 @@
         "additionalProperties": false
       }
     },
-    "consumes": {}
+    "consumes": {},
+    "probes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    }
   }
 }

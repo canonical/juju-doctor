@@ -102,16 +102,19 @@ Currently, we support the following probe types:
 ```yaml
 name: A declarative deployment RuleSet
 probes:
-  - name: Local probe - passing
+  - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: Local ruleset
+  - name: RuleSet - test scriptlet
     type: ruleset
-    url: file://tests/resources/probes/ruleset/ruleset.yaml
-  - name: Local probe directory (may contain scriptlets and/or rulesets)
-    type: directory
+    url: file://tests/resources/probes/ruleset/scriptlet.yaml
+  - name: Probe - test directory (may contain scriptlets and/or rulesets)
+    type: scriptlet
     url: file://tests/resources/probes/ruleset/small-dir
 ```
+
+#### Builtin assertions
+While scriptlet probes are an escape hatch for complex, programmatic assertions, they are not intended to assert against common model patterns. For example, scriptlet probe authors may assert that certain applications or relations exist. This repetitiveness is abstracted into Builtin assertions which follows the [RuleSet schema](schema/ruleset.json). Refer to this [RuleSet with Builtin assertions](tests/resources/probes/ruleset/builtins.yaml) as a starting point.
 
 ## Development
 ```bash

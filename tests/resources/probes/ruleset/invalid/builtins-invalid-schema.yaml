@@ -1,0 +1,10 @@
+name: RuleSet - test invalid builtins
+applications:
+  - "foo"
+relations:
+  - "foo"
+offers:
+  - "foo"
+
+# consumes:
+#   - mysql:something

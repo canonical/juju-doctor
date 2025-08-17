@@ -1,0 +1,26 @@
+name: RuleSet - test invalid builtins
+applications:
+  - name: alertmanager_fake
+  - name: alertmanager
+    minimum: 2
+  - name: alertmanager
+    maximum: 0
+
+relations:
+  - provides: alertmanager_fake:alerting
+    requires: loki:alertmanager
+  - provides: alertmanager:alerting
+    requires: loki_fake:alertmanager
+offers:
+  - name: loki-logging-fake
+    endpoint: logging
+    interface: loki_push_api
+  - name: loki-logging
+    endpoint: logging-fake
+    interface: loki_push_api
+  - name: loki-logging
+    endpoint: logging
+    interface: loki_push_api_fake
+
+# consumes:
+#   - mysql:something

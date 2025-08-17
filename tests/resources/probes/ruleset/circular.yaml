@@ -1,5 +1,5 @@
 name: RuleSet - test circular nesting
 probes:
-  - name: Local ruleset (calling a circular RuleSet chain)
+  - name: RuleSet - test circular nesting
     type: ruleset
     url: file://tests/resources/probes/ruleset/circular.yaml

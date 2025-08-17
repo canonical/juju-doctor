@@ -251,7 +251,7 @@ class Probe:
             artifact = getattr(artifacts, func_name)
             if not artifact:
                 log.warning(
-                    f"No '{func_name}' artifacts have been provided for probe: {self.path}."
+                    f"No {func_name} artifact was provided for probe: {self.path}."
                 )
                 continue
             # Run the probe function, and record its result
@@ -287,7 +287,7 @@ class Probe:
             if result.func_name:
                 func_statuses.append(f"{symbol} {result.func_name}")
 
-        if failed:
+        if failed or not self.results:
             node_tag = f"{red} {self.name}"
         else:
             node_tag = f"{green} {self.name}"
@@ -331,8 +331,8 @@ class RuleSet:
 
             builtin_class = builtin.value
             builtin_obj = builtin_class(self.probe.name, content[builtin.name.lower()])
+            builtin_obj.validate_schema()
             builtin_objs[builtin.name.lower()] = builtin_obj
-            builtin_obj.is_schema_valid()
 
         return builtin_objs
 

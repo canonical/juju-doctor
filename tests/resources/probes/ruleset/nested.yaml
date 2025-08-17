@@ -1,5 +1,5 @@
 name: RuleSet - test nested rulesets
 probes:
-  - name: Local ruleset (calling other RuleSets)
+  - name: RuleSet - test scriptlet
     type: ruleset
     url: file://tests/resources/probes/ruleset/scriptlet.yaml

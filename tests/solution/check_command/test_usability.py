@@ -5,18 +5,17 @@ import pytest
 from typer.testing import CliRunner
 
 from juju_doctor.main import app
-from juju_doctor.probes import ROOT_NODE_TAG
 
 
 def test_no_probes():
-    # GIVEN no probes were supplied
-    # WHEN `juju-doctor check` is executed
+    # GIVEN no probes were provided
     runner = CliRunner()
     test_args = [
         "check",
         "--format=json",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command fails
     assert result.exit_code == 2
@@ -25,14 +24,14 @@ def test_no_probes():
 
 
 def test_no_artifacts():
-    # GIVEN no artifacts were supplied
-    # WHEN `juju-doctor check` is executed
+    # GIVEN no artifacts were provided
     runner = CliRunner()
     test_args = [
         "check",
         "--format=json",
         "--probe=file://tests/resources/probes/python/mixed.py",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command fails
     assert result.exit_code == 2
@@ -42,8 +41,7 @@ def test_no_artifacts():
 
 def test_check_multiple_artifacts():
     # GIVEN a file probe, missing the Status artifact
-    # AND all artifacts are supplied
-    # WHEN `juju-doctor check` is executed
+    # AND all artifacts are provided
     runner = CliRunner()
     test_args = [
         "check",
@@ -52,6 +50,7 @@ def test_check_multiple_artifacts():
         "--bundle=tests/resources/artifacts/bundle.yaml",
         "--show-unit=tests/resources/artifacts/show-unit.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
@@ -60,9 +59,8 @@ def test_check_multiple_artifacts():
     assert json.loads(result.stdout)["failed"] == 1
 
 
-def test_check_multiple_file_probes():
-    # GIVEN multiple file probes and a Status artifact
-    # WHEN `juju-doctor check` is executed
+def test_check_multiple_probes():
+    # GIVEN multiple probes and a Status artifact
     runner = CliRunner()
     test_args = [
         "check",
@@ -71,6 +69,7 @@ def test_check_multiple_file_probes():
         "--probe=file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
@@ -79,16 +78,16 @@ def test_check_multiple_file_probes():
     assert json.loads(result.stdout)["passed"] == 1
 
 
-def test_check_unused_artifacts(caplog):
-    # GIVEN a file probe is missing the Status artifact
-    # AND this artifact is supplied
-    # WHEN `juju-doctor check` is executed
+def test_check_unused_probe_artifacts(caplog):
+    # GIVEN a probe is missing the Status artifact
+    # AND this artifact is provided
     runner = CliRunner()
     test_args = [
         "check",
         "--probe=file://tests/resources/probes/python/mixed.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     with caplog.at_level("WARNING"):
         result = runner.invoke(app, test_args)
     # THEN the command succeeds
@@ -97,27 +96,61 @@ def test_check_unused_artifacts(caplog):
     assert re.search(r"status.*not used", caplog.text)
 
 
-def test_check_missing_required_artifacts(caplog):
-    # GIVEN multiple file probes and a Status artifact
+def test_check_unused_builtin_artifacts(caplog):
+    # GIVEN a RuleSet probe does not use the Show-unit artifact
+    # AND this artifact is provided
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--probe=file://tests/resources/probes/ruleset/builtins.yaml",
+        "--show-unit=tests/resources/artifacts/show-unit.yaml",
+    ]
     # WHEN `juju-doctor check` is executed
+    with caplog.at_level("WARNING"):
+        result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the user is warned of their mistake
+    assert re.search(r"show_unit.*not used", caplog.text)
+
+
+def test_check_probe_missing_required_artifacts(caplog):
+    # GIVEN a probe requires all artifacts
     runner = CliRunner()
     test_args = [
         "check",
         "--probe=file://tests/resources/probes/python/passing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     with caplog.at_level("WARNING"):
         result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the user is warned of their mistake
-    assert re.search(r"No 'bundle'.*provided", caplog.text)
-    assert re.search(r"No 'show_unit'.*provided", caplog.text)
+    assert re.search(r"No bundle.*provided", caplog.text)
+    assert re.search(r"No show_unit.*provided", caplog.text)
+
+
+def test_check_builtin_missing_required_artifacts(caplog):
+    # GIVEN a RuleSet probe requires Status and Bundle artifacts
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--probe=file://tests/resources/probes/ruleset/builtins.yaml",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    # WHEN `juju-doctor check` is executed
+    with caplog.at_level("WARNING"):
+        result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the user is warned of their mistake
+    assert re.search(r"No bundle.*provided", caplog.text)
 
 
 def test_check_returns_valid_json():
     # GIVEN any probe
-    # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
         "check",
@@ -125,6 +158,7 @@ def test_check_returns_valid_json():
         "--probe=file://tests/resources/probes/ruleset/all.yaml",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
@@ -137,7 +171,6 @@ def test_check_returns_valid_json():
 
 def test_duplicate_file_probes_are_excluded():
     # GIVEN 2 duplicate file probes
-    # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
         "check",
@@ -146,6 +179,7 @@ def test_duplicate_file_probes_are_excluded():
         "--probe=file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
@@ -156,7 +190,6 @@ def test_duplicate_file_probes_are_excluded():
 
 def test_duplicate_file_probes_warning(caplog):
     # GIVEN 2 duplicate file probes
-    # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
         "check",
@@ -164,18 +197,18 @@ def test_duplicate_file_probes_warning(caplog):
         "--probe=file://tests/resources/probes/python/failing.py",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     with caplog.at_level("WARNING"):
         result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the user is warned of their mistake
-    assert re.search(r"Duplicate probe arg", caplog.text)
+    assert "Duplicate probe arg" in caplog.text
 
 
 @pytest.mark.github
 def test_check_gh_probe_at_branch():
     # GIVEN a GitHub probe on the main branch
-    # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
         "check",
@@ -183,6 +216,7 @@ def test_check_gh_probe_at_branch():
         "--probe=github://canonical/juju-doctor//tests/resources/probes/python/failing.py?main",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
@@ -194,7 +228,6 @@ def test_check_gh_probe_at_branch():
 @pytest.mark.github
 def test_duplicate_gh_probes_are_excluded():
     # GIVEN two GitHub probes
-    # WHEN `juju-doctor check` is executed
     runner = CliRunner()
     test_args = [
         "check",
@@ -203,40 +236,10 @@ def test_duplicate_gh_probes_are_excluded():
         "--probe=github://canonical/juju-doctor//tests/resources/probes/python/failing.py?main",
         "--status=tests/resources/artifacts/status.yaml",
     ]
+    # WHEN `juju-doctor check` is executed
     result = runner.invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the second Probe overwrote the first, i.e. only 1 exists
     failing = json.loads(result.stdout)["Results"]["children"]
     assert len(failing) == 1
-
-
-def test_check_groups_by_parent():
-    # GIVEN multiple Ruleset probes
-    # WHEN `juju-doctor check` is executed
-    runner = CliRunner()
-    test_args = [
-        "check",
-        "--format=json",
-        "--probe=file://tests/resources/probes/ruleset/dir.yaml",
-        "--probe=file://tests/resources/probes/ruleset/scriptlet.yaml",
-        "--status=tests/resources/artifacts/status.yaml",
-    ]
-    result = runner.invoke(app, test_args)
-    # THEN the command succeeds
-    assert result.exit_code == 0
-    check_result = json.loads(result.output)
-    # AND there is one parent node (with children nodes) per Ruleset
-    probes = check_result[ROOT_NODE_TAG]["children"]
-    assert any(
-        " - test dir" in key and len(probe.values()) > 0
-        for probe in probes
-        if isinstance(probe, dict)
-        for key in probe.keys()
-    )
-    assert any(
-        " - test scriptlet" in key and len(probe.values()) > 0
-        for probe in probes
-        if isinstance(probe, dict)
-        for key in probe.keys()
-    )

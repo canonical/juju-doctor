@@ -5,17 +5,11 @@ import pytest
 import yaml
 from jsonschema.exceptions import ValidationError
 
-from juju_doctor.builtins import Builtins, build_unified_schema
+from juju_doctor.builtins import Builtins, Probes, build_unified_schema
 from juju_doctor.probes import Probe
 
 
-def test_load_schema():
-    pass
-    # GIVEN a schema file
-    # WHEN the contents are read
-    # THEN there are no errors
-
-def test_incorrect_schema():
+def test_incorrect_schema_top_level_keys():
     # GIVEN a Ruleset schema
     schema = build_unified_schema()
     # WHEN a Ruleset with non-schema top-level keys is loaded
@@ -43,8 +37,8 @@ def test_combine_schemas():
     jsonschema.validate(yaml_data, schema)
 
 
-@pytest.mark.parametrize("builtin_cls", Builtins.all())
-def test_schema_validation(builtin_cls):
+@pytest.mark.parametrize("builtin_cls", Builtins.all(filter=[Probes]))
+def test_schema_validation_builtins(builtin_cls):
     # GIVEN a Ruleset probe with Builtin assertions
     probe_path = Path("tests/resources/probes/ruleset/builtins.yaml")
     with open(probe_path, 'r') as file:
@@ -53,4 +47,5 @@ def test_schema_validation(builtin_cls):
     builtin_assertion = yaml_data.get(builtin_cls.name())  # Adjust key as necessary
     # THEN the assertion matches the Builtin's schema
     builtin_obj = builtin_cls(Probe(Path(), Path()), builtin_assertion)
-    assert builtin_obj.is_schema_valid()
+    builtin_obj.validate_schema()
+    assert builtin_obj.valid_schema

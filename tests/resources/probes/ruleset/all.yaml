@@ -1,19 +1,19 @@
 name: RuleSet - test all
-application:
+applications:
   - name: catalogue
 relations:
   - provides: grafana:catalogue
     requires: catalogue:catalogue
 probes:
-  - name: Local probe - passing
+  - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: Local probe directory (contains both scriptlets and rulesets)
+  - name: RuleSet - test directory of probes
     type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir
-  - name: Local ruleset
+  - name: RuleSet - test scriptlet
     type: ruleset
     url: file://tests/resources/probes/ruleset/scriptlet.yaml
-  - name: Local builtins
+  - name: RuleSet - test builtin assertions
     type: ruleset
     url: file://tests/resources/probes/ruleset/builtins.yaml

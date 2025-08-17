@@ -80,7 +80,6 @@ class ProbeResultAggregator:
                             self._tree.root,
                             probe
                         )
-        # TODO We can check each node Probe. If it has no 🔴/🟢 and no children, then remove it
         return results
 
     def print_results(self):
@@ -96,7 +95,8 @@ class ProbeResultAggregator:
                     console.print(e)
                 pass_string = f"🟢 {passed}/{total}" if passed != 0 else ""
                 fail_string = f"🔴 {failed}/{total}" if failed != 0 else ""
-                console.print(f"\nTotal: {pass_string} {fail_string}")
+                if pass_string or fail_string:
+                    console.print(f"\nTotal: {pass_string} {fail_string}")
             case "json":
                 tree_json = json.loads(self._tree.to_json())
                 meta_json = {

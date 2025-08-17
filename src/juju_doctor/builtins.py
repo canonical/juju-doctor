@@ -2,7 +2,7 @@
 
 import logging
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import jsonschema
 from referencing.jsonschema import Schema
@@ -34,16 +34,16 @@ class _Builtin(object):
     def __init__(self, probe_name: str, assertion: Dict):
         self.probe_name = probe_name
         self.assertion = assertion
+        self.valid_schema: bool = True
+        self.artifact: Optional[str] = None
 
-    def is_schema_valid(self) -> bool:
+    def validate_schema(self):
         """Check that the provided schema is valid."""
-        valid = False
         try:
             jsonschema.validate(self.assertion, self.schema())
-            valid = True
         except jsonschema.ValidationError as e:
             log.error(f"Failed to validate schema for {self.probe_name}: {e}")
-        return valid
+            self.valid_schema = False
 
     @classmethod
     def schema(cls) -> Schema:
@@ -85,14 +85,16 @@ class Applications(_Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Application assertions against artifacts."""
         results: List[AssertionResult] = []
-        if not self.assertion or not artifacts.status:
+        self.artifact = "status"
+        artifact_obj = getattr(artifacts, self.artifact)
+        if not self.assertion or not artifact_obj:
             log.warning(
-                "The status artifact was not supplied for the Applications Builtin assertion."
+                "No status artifact was provided for the Applications Builtin assertion."
             )
             return results
 
         app_assertion_names = [app["name"] for app in self.assertion]
-        for status_name, status in artifacts.status.items():
+        for status_name, status in artifact_obj.items():
             if not all(item in status["applications"] for item in app_assertion_names):
                 exception = Exception(
                     f"Not all apps: {app_assertion_names} were found in {status_name}"
@@ -145,16 +147,18 @@ class Relations(_Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Relation assertions against artifacts."""
         results: List[AssertionResult] = []
-        if not self.assertion or not artifacts.bundle:
+        self.artifact = "bundle"
+        artifact_obj = getattr(artifacts, self.artifact)
+        if not self.assertion or not artifact_obj:
             log.warning(
-                "The bundle artifact was not supplied for the Relations Builtin assertion."
+                "No bundle artifact was provided for the Relations Builtin assertion."
             )
             return results
 
         for relation in self.assertion:
             bundle_relations = [
                 relation
-                for bundle in artifacts.bundle.values()
+                for bundle in artifact_obj.values()
                 for relation in bundle["relations"]
             ]
             rel_pair = [relation["requires"], relation["provides"]]
@@ -197,12 +201,14 @@ class Offers(_Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Offer assertions against artifacts or live models."""
         results: List[AssertionResult] = []
-        if not self.assertion or not artifacts.status:
-            log.warning("The status artifact was not supplied for the Offers Builtin assertion.")
+        self.artifact = "status"
+        artifact_obj = getattr(artifacts, self.artifact)
+        if not self.assertion or not artifact_obj:
+            log.warning("No status artifact was provided for the Offers Builtin assertion.")
             return results
 
         offer_assertion_names = [offer["name"] for offer in self.assertion]
-        for status_name, status in artifacts.status.items():
+        for status_name, status in artifact_obj.items():
             if not all(item in status["offers"] for item in offer_assertion_names):
                 exception = Exception(
                     f"Not all offers: {offer_assertion_names} were found in {status_name}"
@@ -252,15 +258,60 @@ class Consumes(_Builtin):
         raise NotImplementedError
 
 
+class Probes(_Builtin):
+    """Programmatic assertions against artifacts."""
+
+    def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
+        super().__init__(probe_name, assertion)
+    """Programmatic assertions against artifacts."""
+
+    def validate_schema(self):
+        """Check that the provided schema is valid."""
+        try:
+            jsonschema.validate(self.assertion, self.schema())
+        except jsonschema.ValidationError as e:
+            log.error(f"Failed to validate schema for {self.probe_name}: {e}")
+            self.valid_schema = False
+
+    @classmethod
+    def schema(cls) -> Schema:
+        """The JSON schema for Probes."""
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "type": {"type": "string"},
+                    "url": {"type": "string"},
+                },
+                "required": ["name", "type", "url"],
+                "additionalProperties": False,
+            },
+        }
+
+    def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
+        """Programmatic assertions against artifacts or live models.
+
+        Note: The validation handled in probes.py
+        """
+        return []
+
+
 class Builtins(Enum):
-    """Supported Builtin assertion classes."""
+    """Supported Builtin assertion classes.
+
+    Note: Probes is an outlier here since its validation is handled in probes.py unlike the others.
+          In some cases you may want to filter out Probes in the `all` method.
+    """
 
     APPLICATIONS = Applications
     RELATIONS = Relations
     OFFERS = Offers
     CONSUMES = Consumes
+    PROBES = Probes
 
     @staticmethod
-    def all():
+    def all(filter: List = []):
         """Return all Builtin classes."""
-        return [f.value for f in Builtins]
+        return [f.value for f in Builtins if f.value not in filter]

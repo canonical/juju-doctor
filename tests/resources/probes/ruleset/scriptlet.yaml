@@ -1,8 +1,8 @@
 name: RuleSet - test scriptlet
 probes:
-  - name: Local probe - passing
+  - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: Local probe - failing
+  - name: Probe - test failing
     type: scriptlet
     url: file://tests/resources/probes/python/failing.py

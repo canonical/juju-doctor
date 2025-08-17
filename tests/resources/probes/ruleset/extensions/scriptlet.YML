@@ -1,5 +1,5 @@
 name: RuleSet - test YML
 probes:
-  - name: Local probe
+  - name: Probe - test failing
     type: scriptlet
     url: file://tests/resources/probes/python/failing.py

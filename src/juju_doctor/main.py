@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.builtins import build_unified_schema
+from juju_doctor.builtins import build_unified_schema, Probes
 from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
@@ -93,7 +93,7 @@ def check(
         else:
             log.warning(f"Duplicate probe arg detected: {probe_url}, it will be skipped.")
 
-    supplied_artifacts = {
+    provided_artifacts = {
         key.removesuffix("_files")
         for key, param in ctx.params.items()
         if key.endswith("_files") and param
@@ -138,9 +138,15 @@ def check(
 
         # Builtins
         for _type, builtin in probe_tree.builtins.items():
-            # TODO: If an artifact is supplied, but no builtin uses it, we do not warn
+            if _type == Probes.name():
+                continue
             for ruleset_id, builtin_obj in builtin.items():
-                assertion_results = builtin_obj.validate(artifacts)
+                if builtin_obj.valid_schema:
+                    assertion_results = builtin_obj.validate(artifacts)
+                else:
+                    assertion_results = []
+                if builtin_obj.artifact:
+                    check_functions.add(builtin_obj.artifact)
                 probe = Probe(
                     Path(f"builtins:{_type}"),
                     Path(),
@@ -149,11 +155,11 @@ def check(
                 )
                 probe_tree.probes.append(probe)
 
-        # TODO we should accurately warn for builtins like we do for probes
-        if not (probe_tree.builtins and supplied_artifacts.issubset(check_functions)):
-            useless_artifacts = ", ".join(supplied_artifacts - check_functions)
+        if not provided_artifacts.issubset(check_functions):
+            useless_artifacts = ", ".join(provided_artifacts - check_functions)
             log.warning(
-                f"The '{useless_artifacts}' artifact was supplied, but not used by any probes."
+                f"The '{useless_artifacts}' artifact was provided, but not used by any probes "
+                "or builtin assertions."
             )
 
         if probe_tree.tree:
