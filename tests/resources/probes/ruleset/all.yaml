@@ -8,6 +8,13 @@ probes:
   - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
+  - name: Probe - test with args
+    type: scriptlet
+    url: file://tests/resources/probes/python/with.py
+    with:
+      host: localhost
+      port: 8088
+      path: metrics
   - name: RuleSet - test directory of probes
     type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir

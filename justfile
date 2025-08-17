@@ -12,9 +12,20 @@ default:
 lock:
   uv lock --upgrade --no-cache
 
+# Run all tests
+test: lint static unit solution
+
 # Lint the code
 lint:
   uv run $uv_flags ruff check
+
+# Lint the schema file to ensure it is updated
+lint-schema:
+  #!/bin/bash
+  uv sync --extra=dev && source .venv/bin/activate
+  uv pip install -e .
+  juju-doctor schema --output tmp/schema/ruleset.json
+  diff tmp/schema/ruleset.json schema/ruleset.json
 
 # Run static checks
 static:
@@ -24,9 +35,6 @@ alias fmt := format
 # Format the code
 format:
   uv run $uv_flags ruff check --fix-only
-
-# Run all tests
-test: lint static unit solution
 
 # Run unit tests
 unit *args='':

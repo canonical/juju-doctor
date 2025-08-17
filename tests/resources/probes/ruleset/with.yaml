@@ -1,0 +1,10 @@
+name: RuleSet - test probe with args
+version: 0.1
+description: Validation is important
+probes:
+  - name: Probe - test with args
+    type: scriptlet
+    url: file://tests/resources/probes/python/with.py
+    with:
+      application: prometheus-k8s
+      path: /api/v1/metrics

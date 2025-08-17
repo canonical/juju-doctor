@@ -29,7 +29,7 @@ def test_parse_dir():
         probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
         probes = probe_tree.probes
         # THEN 3 probes exist
-        assert len(probes) == 3
+        assert len(probes) == 4
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
         failing_probe = [probe for probe in probes if "failing.py" in probe.name][0]
         # AND the Probe was correctly parsed as passing

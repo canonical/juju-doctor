@@ -243,3 +243,21 @@ def test_duplicate_gh_probes_are_excluded():
     # AND the second Probe overwrote the first, i.e. only 1 exists
     failing = json.loads(result.stdout)["Results"]["children"]
     assert len(failing) == 1
+
+
+def test_probe_with_args():
+    # GIVEN a probe using the "with" key
+    runner = CliRunner()
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/ruleset/with.yaml",
+        "--status=tests/resources/artifacts/status.yaml",
+    ]
+    # WHEN `juju-doctor check` is executed
+    result = runner.invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    # AND the second Probe overwrote the first, i.e. only 1 exists
+    assert json.loads(result.stdout)["passed"] == 1
+    assert json.loads(result.stdout)["failed"] == 0

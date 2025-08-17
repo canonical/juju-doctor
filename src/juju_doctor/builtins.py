@@ -284,6 +284,10 @@ class Probes(_Builtin):
                     "name": {"type": "string"},
                     "type": {"type": "string"},
                     "url": {"type": "string"},
+                    "with": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
                 },
                 "required": ["name", "type", "url"],
                 "additionalProperties": False,

@@ -5,7 +5,7 @@ import inspect
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
@@ -102,6 +102,7 @@ class Probe:
         probes_chain: a chain of UUIDs identifying the probe's call path
         uuid: a unique identifier for this probe among others in a treelib.Tree
         results: aggregated results for the probe's functions
+        args: arguments to pass the the Probe's functions
     """
 
     path: Path
@@ -109,6 +110,7 @@ class Probe:
     probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
     uuid: UUID = field(default_factory=uuid4)
     results: List[AssertionResult] = field(default_factory=list)
+    args: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def name(self) -> str:
@@ -144,7 +146,11 @@ class Probe:
 
     @staticmethod
     def from_url(
-        url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = ProbeTree()
+        url: str,
+        probes_root: Path,
+        probes_chain: str = "",
+        probe_tree: ProbeTree = ProbeTree(),
+        args: Dict[str, Any] = {},
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
@@ -162,6 +168,7 @@ class Probe:
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
             probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
+            args: arguments for a Probe's functions.
         """
         # Create a root node if it does not exist
         if not probe_tree.tree:
@@ -174,7 +181,7 @@ class Probe:
 
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
-            probe = Probe(probe_path, probes_root, probes_chain)
+            probe = Probe(probe_path, probes_root, probes_chain, args=args)
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
             if is_ruleset:
                 ruleset = RuleSet(probe)
@@ -250,13 +257,11 @@ class Probe:
             # Get the artifact needed by the probe, and fail if it's missing
             artifact = getattr(artifacts, func_name)
             if not artifact:
-                log.warning(
-                    f"No {func_name} artifact was provided for probe: {self.path}."
-                )
+                log.warning(f"No {func_name} artifact was provided for probe: {self.path}.")
                 continue
             # Run the probe function, and record its result
             try:
-                func(artifact)
+                func(artifact, **self.args)
             except BaseException as e:
                 self.results.append(AssertionResult(func_name, passed=False, exception=e))
             else:
@@ -384,6 +389,7 @@ class RuleSet:
                         self.probe.probes_root,
                         self.probe.get_chain(),
                         probe_tree,
+                        ruleset_probe.get("with", {}),
                     )
                 case "ruleset":
                     if (
