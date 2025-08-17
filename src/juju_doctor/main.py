@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.builtins import build_unified_schema, Probes
+from juju_doctor.builtins import Probes, build_unified_schema
 from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
