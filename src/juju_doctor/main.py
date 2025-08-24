@@ -83,6 +83,9 @@ def check(
     # TODO Determine if this is desired, we basically hide warning when JSON output
     # makes tests harder to write. I.e. should a user clear warnings before getting
     # valid JSON -> this is the most important case!
+    # TODO Another aspect to this issue is that the user can print within the probe and break JSON
+    #      This might be user error though
+    # TODO Maybe use it as a global with a wrapper method to print or not
     if format.lower() == "json":
         logging.disable(logging.ERROR)
 

@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import Builtins, _Builtin
+from juju_doctor.builtins import Builtin, Builtins
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 from juju_doctor.results import AssertionResult, AssertionStatus, OutputFormat
 
@@ -74,7 +74,7 @@ class ProbeTree:
 
     probes: List["Probe"] = field(default_factory=list)
     tree: Tree = field(default_factory=Tree)
-    builtins: Dict[str, Dict[str, _Builtin]] = field(default_factory=dict)
+    builtins: Dict[str, Dict[str, Builtin]] = field(default_factory=dict)
 
 
 @dataclass
@@ -315,7 +315,7 @@ class RuleSet:
         self.name = name or self.probe.name
 
     @property
-    def builtins(self) -> Dict[str, _Builtin]:
+    def builtins(self) -> Dict[str, Builtin]:
         """Obtain all the builtin assertions from the RuleSet.
 
         Returns a mapping of builtin name to builtin assertion for the Ruleset.

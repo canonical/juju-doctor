@@ -1,6 +1,7 @@
 """Universal assertions for deployments."""
 
 import logging
+from abc import ABC
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -25,13 +26,19 @@ def build_unified_schema() -> Schema:
     return schema
 
 
-class _Builtin(object):
+class Builtin(ABC):
     """Baseclass for builtin assertions.
 
-    Each builtin validates its assertions against a schema and the assertions against artifacts.
+    A builtin validates its assertions against a schema and the assertions against artifacts.
     """
 
     def __init__(self, probe_name: str, assertion: Dict):
+        """Gather input to assert against.
+
+        Args:
+            probe_name: the name of the probe
+            assertion: the content to validate against
+        """
         self.probe_name = probe_name
         self.assertion = assertion
         self.valid_schema: bool = True
@@ -56,10 +63,11 @@ class _Builtin(object):
 
     @classmethod
     def name(cls) -> str:
+        """Lowercase name of the class."""
         return cls.__name__.lower()
 
 
-class Applications(_Builtin):
+class Applications(Builtin):
     """A Builtin assertion which defines applications requirements."""
 
     def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
@@ -125,7 +133,7 @@ class Applications(_Builtin):
         return results
 
 
-class Relations(_Builtin):
+class Relations(Builtin):
     """A Builtin assertion which defines relation requirements."""
 
     def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
@@ -175,7 +183,7 @@ class Relations(_Builtin):
         return results
 
 
-class Offers(_Builtin):
+class Offers(Builtin):
     """A Builtin assertion which defines model offer requirements."""
 
     def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
@@ -241,7 +249,7 @@ class Offers(_Builtin):
         return results
 
 
-class Consumes(_Builtin):
+class Consumes(Builtin):
     """A Builtin assertion which defines cross-model relation requirements."""
 
     def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
@@ -258,20 +266,12 @@ class Consumes(_Builtin):
         raise NotImplementedError
 
 
-class Probes(_Builtin):
+class Probes(Builtin):
     """Programmatic assertions against artifacts."""
 
     def __init__(self, probe_name: str, assertion: Dict):  # noqa: D107
         super().__init__(probe_name, assertion)
     """Programmatic assertions against artifacts."""
-
-    def validate_schema(self):
-        """Check that the provided schema is valid."""
-        try:
-            jsonschema.validate(self.assertion, self.schema())
-        except jsonschema.ValidationError as e:
-            log.error(f"Failed to validate schema for {self.probe_name}: {e}")
-            self.valid_schema = False
 
     @classmethod
     def schema(cls) -> Schema:
@@ -293,11 +293,12 @@ class Probes(_Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Programmatic assertions against artifacts or live models.
 
-        Note: The validation handled in probes.py
+        Note: The validation is handled in probes.py so we return no AssertionResults
         """
         return []
 
 
+# TODO There is likely a better way to do this like BuiltinTemplate.subclasses()
 class Builtins(Enum):
     """Supported Builtin assertion classes.
 
