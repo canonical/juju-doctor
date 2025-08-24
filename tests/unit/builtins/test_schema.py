@@ -5,7 +5,7 @@ import pytest
 import yaml
 from jsonschema.exceptions import ValidationError
 
-from juju_doctor.builtins import Builtins, Probes, build_unified_schema
+from juju_doctor.builtins import Probes, SupportedBuiltins, build_unified_schema
 from juju_doctor.probes import Probe
 
 
@@ -37,7 +37,7 @@ def test_combine_schemas():
     jsonschema.validate(yaml_data, schema)
 
 
-@pytest.mark.parametrize("builtin_cls", Builtins.all(filter=[Probes]))
+@pytest.mark.parametrize("builtin_cls", SupportedBuiltins.all(filter=[Probes]))
 def test_schema_validation_builtins(builtin_cls):
     # GIVEN a Ruleset probe with Builtin assertions
     probe_path = Path("tests/resources/probes/ruleset/builtins.yaml")

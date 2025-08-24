@@ -148,8 +148,8 @@ def check(
                     assertion_results = builtin_obj.validate(artifacts)
                 else:
                     assertion_results = []
-                if builtin_obj.artifact:
-                    check_functions.add(builtin_obj.artifact)
+                if builtin_obj.artifact_type:
+                    check_functions.add(builtin_obj.artifact_type)
                 probe = Probe(
                     Path(f"builtins:{_type}"),
                     Path(),

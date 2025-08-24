@@ -20,7 +20,7 @@ def build_unified_schema() -> Schema:
     """Unify the Builtin schemas to create a Ruleset schema."""
     schema: Schema = {"type": "object", "additionalProperties": False}
     properties: Dict = {"name": {"type": "string"}}
-    for builtin in Builtins.all():
+    for builtin in SupportedBuiltins.all():
         properties.update({builtin.name(): builtin.schema()})
     schema.update({"properties": properties})
     return schema
@@ -33,16 +33,18 @@ class Builtin(ABC):
     """
 
     def __init__(self, probe_name: str, assertion: Dict):
-        """Gather input to assert against.
+        """Builtin context.
 
         Args:
             probe_name: the name of the probe
             assertion: the content to validate against
+            valid_schema: whether the supplied assertion has a valid schema
+            artifact_type: a string representing the artifact type of a Juju deployment
         """
         self.probe_name = probe_name
         self.assertion = assertion
         self.valid_schema: bool = True
-        self.artifact: Optional[str] = None
+        self.artifact_type: Optional[str] = None
 
     def validate_schema(self):
         """Check that the provided schema is valid."""
@@ -93,8 +95,8 @@ class Applications(Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Application assertions against artifacts."""
         results: List[AssertionResult] = []
-        self.artifact = "status"
-        artifact_obj = getattr(artifacts, self.artifact)
+        self.artifact_type = "status"
+        artifact_obj = getattr(artifacts, self.artifact_type)
         if not self.assertion or not artifact_obj:
             log.warning(
                 "No status artifact was provided for the Applications Builtin assertion."
@@ -155,8 +157,8 @@ class Relations(Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Relation assertions against artifacts."""
         results: List[AssertionResult] = []
-        self.artifact = "bundle"
-        artifact_obj = getattr(artifacts, self.artifact)
+        self.artifact_type = "bundle"
+        artifact_obj = getattr(artifacts, self.artifact_type)
         if not self.assertion or not artifact_obj:
             log.warning(
                 "No bundle artifact was provided for the Relations Builtin assertion."
@@ -209,8 +211,8 @@ class Offers(Builtin):
     def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
         """Offer assertions against artifacts or live models."""
         results: List[AssertionResult] = []
-        self.artifact = "status"
-        artifact_obj = getattr(artifacts, self.artifact)
+        self.artifact_type = "status"
+        artifact_obj = getattr(artifacts, self.artifact_type)
         if not self.assertion or not artifact_obj:
             log.warning("No status artifact was provided for the Offers Builtin assertion.")
             return results
@@ -298,21 +300,20 @@ class Probes(Builtin):
         return []
 
 
-# TODO There is likely a better way to do this like BuiltinTemplate.subclasses()
-class Builtins(Enum):
+class SupportedBuiltins(Enum):
     """Supported Builtin assertion classes.
 
     Note: Probes is an outlier here since its validation is handled in probes.py unlike the others.
           In some cases you may want to filter out Probes in the `all` method.
     """
 
-    APPLICATIONS = Applications
-    RELATIONS = Relations
-    OFFERS = Offers
-    CONSUMES = Consumes
-    PROBES = Probes
+    applications = Applications
+    relations = Relations
+    offers = Offers
+    consumes = Consumes
+    probes = Probes
 
     @staticmethod
     def all(filter: List = []):
         """Return all Builtin classes."""
-        return [f.value for f in Builtins if f.value not in filter]
+        return [f.value for f in SupportedBuiltins if f.value not in filter]

@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import Builtin, Builtins
+from juju_doctor.builtins import Builtin, SupportedBuiltins
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 from juju_doctor.results import AssertionResult, AssertionStatus, OutputFormat
 
@@ -325,14 +325,14 @@ class RuleSet:
             return {}
 
         builtin_objs = {}
-        for builtin in Builtins:
-            if builtin.name.lower() not in content:
+        for builtin in SupportedBuiltins:
+            if builtin.name not in content:
                 continue
 
             builtin_class = builtin.value
-            builtin_obj = builtin_class(self.probe.name, content[builtin.name.lower()])
+            builtin_obj = builtin_class(self.probe.name, content[builtin.name])
             builtin_obj.validate_schema()
-            builtin_objs[builtin.name.lower()] = builtin_obj
+            builtin_objs[builtin.name] = builtin_obj
 
         return builtin_objs
 
