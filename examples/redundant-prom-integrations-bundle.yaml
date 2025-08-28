@@ -1,0 +1,69 @@
+saas:
+  grafana:
+    url: microk8s:admin/cos.grafana-dashboards
+  prom:
+    url: microk8s:admin/cos.prom
+  prometheus:
+    url: microk8s:admin/cos.prometheus-receive-remote-write
+applications:
+  cos-proxy:
+    charm: cos-proxy
+    channel: 1/stable
+    revision: 95
+    base: ubuntu@22.04/stable
+    num_units: 1
+    to:
+    - "0"
+    constraints: arch=amd64
+  grafana-agent:
+    charm: grafana-agent
+    channel: 1/stable
+    revision: 164
+    base: ubuntu@22.04/stable
+  telegraf:
+    charm: telegraf
+    channel: latest/stable
+    revision: 75
+    base: ubuntu@22.04/stable
+  ubuntu:
+    charm: ubuntu
+    channel: latest/stable
+    revision: 24
+    base: ubuntu@20.04/stable
+    num_units: 2
+    to:
+    - "1"
+    - "2"
+    constraints: arch=amd64
+    storage:
+      block: loop,100M
+      files: rootfs,100M
+machines:
+  "0":
+    constraints: arch=amd64
+    base: ubuntu@22.04/stable
+  "1":
+    constraints: arch=amd64
+    base: ubuntu@20.04/stable
+  "2":
+    constraints: arch=amd64
+    base: ubuntu@20.04/stable
+relations:
+- - telegraf:juju-info
+  - ubuntu:juju-info
+- - telegraf:dashboards
+  - cos-proxy:dashboards
+- - cos-proxy:prometheus-target
+  - telegraf:prometheus-client
+- - cos-proxy:prometheus-rules
+  - telegraf:prometheus-rules
+- - cos-proxy:send-remote-write
+  - telegraf:prometheus-rules
+- - grafana-agent:grafana-dashboards-provider
+  - grafana:grafana-dashboard
+- - grafana-agent:cos-agent
+  - cos-proxy:cos-agent
+- - grafana-agent:send-remote-write
+  - prometheus:receive-remote-write
+- - cos-proxy:downstream-prometheus-scrape
+  - prom:metrics-endpoint
