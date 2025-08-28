@@ -22,7 +22,7 @@ dependencies = [
   "fsspec",
   "requests",
   "treelib",
-  "jsonschema",
+  "pydantic",
 ]
 
 [project.optional-dependencies]

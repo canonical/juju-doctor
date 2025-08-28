@@ -12,7 +12,6 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.builtins import Probes, build_unified_schema
 from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
@@ -141,13 +140,8 @@ def check(
 
         # Builtins
         for _type, builtin in probe_tree.builtins.items():
-            if _type == Probes.name():
-                continue
             for ruleset_id, builtin_obj in builtin.items():
-                if builtin_obj.valid_schema:
-                    assertion_results = builtin_obj.validate(artifacts)
-                else:
-                    assertion_results = []
+                assertion_results = builtin_obj.schema.validate_assertions(builtin_obj, artifacts)
                 if builtin_obj.artifact_type:
                     check_functions.add(builtin_obj.artifact_type)
                 probe = Probe(
@@ -170,33 +164,33 @@ def check(
             aggregator = ProbeResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
             aggregator.print_results()
 
+# TODO: Remove if not needed
+# @app.command(no_args_is_help=True)
+# def schema(
+#     stdout: Annotated[
+#         bool,
+#         typer.Option("--stdout", help="Output the schema to stdout."),
+#     ] = False,
+#     file: Annotated[
+#         Optional[Path],
+#         typer.Option("--output", "-o", help="Specify the file's relative destination path."),
+#     ] = None,
+# ):
+#     """Generate and output the unified schema."""
+#     schema = build_unified_schema()  # Dict
 
-@app.command(no_args_is_help=True)
-def schema(
-    stdout: Annotated[
-        bool,
-        typer.Option("--stdout", help="Output the schema to stdout."),
-    ] = False,
-    file: Annotated[
-        Optional[Path],
-        typer.Option("--output", "-o", help="Specify the file's relative destination path."),
-    ] = None,
-):
-    """Generate and output the unified schema."""
-    schema = build_unified_schema()  # Dict
+#     if file:
+#         output_path = Path(file)
+#         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if file:
-        output_path = Path(file)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+#         # Write the schema to the specified file
+#         with open(output_path, "w") as f:
+#             json.dump(schema, f, indent=2)
 
-        # Write the schema to the specified file
-        with open(output_path, "w") as f:
-            json.dump(schema, f, indent=2)
+#         console.print(f"Schema saved to {output_path}")
 
-        console.print(f"Schema saved to {output_path}")
-
-    if stdout:
-        console.print(schema)
+#     if stdout:
+#         console.print(schema)
 
 
 if __name__ == "__main__":

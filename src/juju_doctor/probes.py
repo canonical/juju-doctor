@@ -74,7 +74,8 @@ class ProbeTree:
 
     probes: List["Probe"] = field(default_factory=list)
     tree: Tree = field(default_factory=Tree)
-    builtins: Dict[str, Dict[str, Builtin]] = field(default_factory=dict)
+    # TODO: Add a type hint like I had before Dict[str, Builtin]
+    builtins: Dict[str, Dict] = field(default_factory=dict)
 
 
 @dataclass
@@ -315,7 +316,8 @@ class RuleSet:
         self.name = name or self.probe.name
 
     @property
-    def builtins(self) -> Dict[str, Builtin]:
+    # TODO: Add a type hint like I had before Dict[str, Builtin]
+    def builtins(self) -> Dict:
         """Obtain all the builtin assertions from the RuleSet.
 
         Returns a mapping of builtin name to builtin assertion for the Ruleset.
@@ -326,13 +328,11 @@ class RuleSet:
 
         builtin_objs = {}
         for builtin in SupportedBuiltins:
-            if builtin.name not in content:
+            if builtin.name not in content.keys():
                 continue
-
-            builtin_class = builtin.value
-            builtin_obj = builtin_class(self.probe.name, content[builtin.name])
-            builtin_obj.validate_schema()
-            builtin_objs[builtin.name] = builtin_obj
+                # TODO: We do not warn if they specify a builtin we do not support
+                # Since Probes are also builtins we could take each top-level key and create a builtin out of it?
+            builtin_objs[builtin.name] = Builtin(self.probe.name, content[builtin.name], builtin.value)
 
         return builtin_objs
 
