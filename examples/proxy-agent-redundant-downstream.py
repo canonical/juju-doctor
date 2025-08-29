@@ -1,6 +1,7 @@
 # ruff: noqa: D103
 # ruff: noqa: D100
 # ruff: noqa: E501
+# ruff: noqa: E501
 
 import yaml
 
@@ -9,12 +10,15 @@ COS_PROXY = "cos-proxy"
 
 
 def bundle(juju_bundles):
-    f"""Bundle assertion against duplicate telemetry.
+    """Bundle assertion against duplicate telemetry.
 
-    >>> bundle({"failing-bundle": test_bundle()})
+    If COS_PROXY is related to GRAFANA_AGENT via the cos-agent endpoint, then COS_PROXY and
+    GRAFANA_AGENT shouldn't be related to the same "downstream-prometheus".
+
+    >>> bundle({"failing-bundle": test_bundle()})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: {COS_PROXY} and {GRAFANA_AGENT} should not be related to both juju-info and cos-agent.
+    AssertionError: If ... via the cos-agent endpoint, then ... shouldn't be related to the same "downstream-prometheus"
 
     >>> bundle({"bundle-missing-relations": test_no_relations()})
     Traceback (most recent call last):
@@ -64,8 +68,9 @@ def bundle(juju_bundles):
         suspicious_proxy_rels = [pe[1] for pe in proxy_endpoints]
         duplicate_endpoints = any(ae[1] in suspicious_proxy_rels for ae in agent_endpoints)
         assert not (suspicious_rel and duplicate_endpoints), (
-            f"{COS_PROXY} and {GRAFANA_AGENT} should not be related to both "
-            "juju-info and cos-agent."
+            f"If {COS_PROXY} is related to {GRAFANA_AGENT} via the cos-agent endpoint, then "
+            f"{COS_PROXY} and {GRAFANA_AGENT} shouldn't be related to the same "
+            '"downstream-prometheus"'
         )
 
 
@@ -98,3 +103,7 @@ relations:
 - - {GRAFANA_AGENT}:cos-agent
   - {COS_PROXY}:cos-agent
 """)
+
+
+# if __name__ == "__main__":
+#     print(test_no_saas())
