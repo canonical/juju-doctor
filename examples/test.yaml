@@ -1,0 +1,28 @@
+applications:
+  ga:
+    charm: grafana-agent
+    relations:
+      cos-agent:
+      - related-application: cp
+        interface: cos_agent
+      send-remote-write:
+      - related-application: prom
+        interface: prometheus_remote_write
+  cp:
+    charm: cos-proxy
+    relations:
+      cos-agent:
+      - related-application: ga
+        interface: cos_agent
+      downstream-prometheus-scrape:
+      - related-application: prom
+        interface: prometheus_scrape
+  prom:
+    charm: prometheus-k8s
+    relations:
+      receive-remote-write:
+      - related-application: ga
+        interface: prometheus_remote_write
+      metrics-endpoint:
+      - related-application: cp
+        interface: prometheus_scrape
