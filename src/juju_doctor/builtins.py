@@ -17,6 +17,11 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 
+def build_unified_schema() -> dict:
+    """Unify the Builtin schemas to create a Ruleset schema."""
+    return RuleSetModel.model_json_schema()
+
+
 @dataclass
 class Builtin:
     """A Builtin assertion which defines applications requirements.
@@ -32,14 +37,18 @@ class Builtin:
 
 @dataclass
 class AssertionContext:
-    artifact: Any
+    """Context that the sanity check provides the validation function of a Builtin."""
+
     pydantic_objs: List["BaseAssertion"]
+    artifact: Optional[Any] = None
 
 
 class BaseAssertion(BaseModel):
+    """Schema for a builtin definition in a RuleSet."""
+
     @classmethod
     def sanity_check(
-        cls, builtin: Builtin, artifacts: Artifacts, artifact_type: str
+        cls, builtin: Builtin, artifacts: Artifacts, artifact_type: Optional[str] = None
     ) -> AssertionContext:
         """Check if each assertion has a valid schema."""
         try:
@@ -48,15 +57,22 @@ class BaseAssertion(BaseModel):
             pydantic_objs = None
             log.error(e)
 
+        if not artifact_type:
+            return AssertionContext(pydantic_objs, None)
+
         builtin.artifact_type = artifact_type
         artifact_obj = getattr(artifacts, artifact_type) or {}
         if not artifact_obj:
-            log.warning("No status artifact was provided for the Applications Builtin assertion.")
+            log.warning(
+                f"No {artifact_type} artifact was provided for the Applications Builtin assertion."
+            )
 
-        return AssertionContext(artifact_obj, pydantic_objs)
+        return AssertionContext(pydantic_objs, artifact_obj)
 
 
 class ApplicationAssertion(BaseAssertion):
+    """Schema for a builtin Application definition in a RuleSet."""
+
     name: str
     minimum: Optional[Annotated[int, Field(ge=0)]] = None
     maximum: Optional[Annotated[int, Field(ge=0)]] = None
@@ -107,6 +123,8 @@ class ApplicationAssertion(BaseAssertion):
 
 
 class RelationAssertion(BaseAssertion):
+    """Schema for a builtin Relation definition in a RuleSet."""
+
     provides: str
     requires: str
 
@@ -146,8 +164,11 @@ class RelationAssertion(BaseAssertion):
 
 
 class OfferAssertion(BaseAssertion):
+    """Schema for a builtin Offer definition in a RuleSet."""
+
     name: str
-    endpoint: str
+    endpoint: str = None
+    interface: str = None
 
     @classmethod
     def validate_assertions(cls, builtin: Builtin, artifacts: Artifacts) -> List[AssertionResult]:
@@ -159,7 +180,7 @@ class OfferAssertion(BaseAssertion):
         E.g. _rel is a relation in the assertion from the RuleSet
         E.g. rel is a relation in the artifact
         """
-        assertion_context = cls.sanity_check(builtin, artifacts, "bundle")
+        assertion_context = cls.sanity_check(builtin, artifacts, "status")
         _offers = assertion_context.pydantic_objs
         _offer_names = [_offer.name for _offer in _offers]
 
@@ -175,7 +196,7 @@ class OfferAssertion(BaseAssertion):
             )
             for name, offer in relevant_offers.items():
                 for _offer in _offers:
-                    if _offer["name"] == name:
+                    if _offer.name == name:
                         if _offer.endpoint not in offer["endpoints"]:
                             exception = Exception(
                                 f"{name}: endpoint ({_offer.endpoint}) "
@@ -197,16 +218,28 @@ class OfferAssertion(BaseAssertion):
 
 
 class ProbeAssertion(BaseAssertion):
+    """Schema for a builtin Probe definition in a RuleSet."""
+
     name: str
     type: str
     url: str
 
     @classmethod
     def validate_assertions(cls, builtin: Builtin, artifacts: Artifacts) -> List[AssertionResult]:
-        """Programmatic assertions against artifacts."""
+        """Programmatic assertions against artifacts.
 
-        cls.sanity_check(builtin, artifacts, "bundle")
-        # TODO Could consider running the probes here?
+        Note: ProbeAssertion is an outlier since its validation is handled in probes.py unlike the
+        other BaseAssertions. We still validate each probe definition against the schema.
+        """
+        cls.sanity_check(builtin, artifacts)
+        return []
+
+
+class RuleSetModel(BaseModel):
+    applications: Optional[List[ApplicationAssertion]] = None
+    relations: Optional[List[RelationAssertion]] = None
+    offers: Optional[List[OfferAssertion]] = None
+    probes: Optional[List[ProbeAssertion]] = None
 
 
 class SupportedBuiltins(Enum):
@@ -219,9 +252,10 @@ class SupportedBuiltins(Enum):
     applications = ApplicationAssertion
     relations = RelationAssertion
     offers = OfferAssertion
-    # consumes = ConsumeAssertion
     probes = ProbeAssertion
 
+    # TODO: Is this needed?
+    # TODO: Create a unified schema, likely with BaseModel.model_dump_json()
     @staticmethod
     def all(filter: List = []):
         """Return all Builtin classes."""
