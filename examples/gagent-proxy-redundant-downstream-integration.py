@@ -1,20 +1,27 @@
-# ruff: noqa: D103
-# ruff: noqa: D100
-# ruff: noqa: E501
+"""Juju-doctor probe for redundant downstream telemetry integrations.
+
+If cos-proxy is related to grafana-agent via the cos-agent endpoint, then cos-proxy and
+grafana-agent should not be related to the same "downstream-prometheus".
+
+This probe is a solution probe (not a charm probe) because it targets a cyclic relation between
+three charms.
+
+Context: As openstack incrementally transitioned from cos-proxy to grafana-agent, some deployments
+ended up with hybrid, invalid topologies.
+"""
+
+from typing import Optional
 
 import yaml
 
 
 def status(juju_statuses):
-    """Status assertion against duplicate telemetry.
-
-    If cos-proxy is related to grafana-agent via the cos-agent endpoint, then cos-proxy and
-    grafana-agent should not be related to the same "downstream-prometheus".
+    """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.
 
     >>> status({"failing-status": test_status()})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: If "cos-proxy" is related to "grafana-agent" via the "cos-agent" endpoint, then "cos-proxy" and "grafana-agent" should not be related to the same "downstream-prometheus" in ...
+    AssertionError: Remove the relation between ... (cos-proxy) and prometheus. ...
     """
     gagent_and_proxy_rel = False
     suspicious_endpoint_apps = {}
@@ -40,18 +47,40 @@ def status(juju_statuses):
                     for rel in relations:
                         suspicious_endpoint_apps.setdefault(endpoint, [])
                         suspicious_endpoint_apps[endpoint].append(rel["related-application"])
-        redundant_downstream = any(
-            app in suspicious_endpoint_apps["send-remote-write"]
-            for app in suspicious_endpoint_apps["downstream-prometheus-scrape"]
-        )
-        assert not (gagent_and_proxy_rel and redundant_downstream), (
-            'If "cos-proxy" is related to "grafana-agent" via the "cos-agent" endpoint, then '
-            '"cos-proxy" and "grafana-agent" should not be related to the same '
-            f'"downstream-prometheus" in "{status_name}"'
-        )
+        for app in suspicious_endpoint_apps["downstream-prometheus-scrape"]:
+            redundant_downstream = app in suspicious_endpoint_apps["send-remote-write"]
+            ga_app = get_app_by_charm_name(status, "grafana-agent")
+            cp_app = get_app_by_charm_name(status, "cos-proxy")
+            assert not (gagent_and_proxy_rel and redundant_downstream), (
+                f'Remove the relation between "{cp_app}" (cos-proxy) and prometheus. "{cp_app}" '
+                f'(cos-proxy) and "{ga_app}" (grafana-agent) are inter-related (cos-agent) and '
+                f'related to the same prometheus in "{status_name}"'
+            )
+
+
+def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
+    """Helper function to get the (unpredictable) application name from a charm name."""
+    if applications := status.get("applications", {}):
+        for app, context in applications.items():
+            if charm_name == context["charm"]:
+                return app
+    return None
+
+
+def get_charm_by_app_name(status: dict, app_name: str) -> Optional[str]:
+    """Helper function to get the (predictable) charm name from an application name."""
+    if applications := status.get("applications", {}):
+        if charm := applications.get(app_name, None):
+            return charm["charm"]
+    return None
 
 
 def test_status():
+    """Invalid topology of cos-proxy and grafana-agent.
+
+    In this status, cos-proxy and grafana-agent are inter-related, while being
+    related to the same prometheus.
+    """
     return yaml.safe_load("""
 applications:
   ga:
