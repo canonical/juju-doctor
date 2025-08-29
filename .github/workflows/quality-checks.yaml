@@ -98,6 +98,7 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
+          sudo snap install --classic astral-uv
           sudo snap install --classic just
       - name: Run tests
         run: just doctest
