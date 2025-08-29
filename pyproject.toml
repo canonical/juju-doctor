@@ -33,8 +33,6 @@ dev = [
   # Unit
   "pytest",
   "coverage[toml]",
-  # Doctest
-  "pyyaml",
 ]
 
 [project.urls]
