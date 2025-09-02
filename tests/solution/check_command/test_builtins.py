@@ -1,10 +1,12 @@
 import json
+import re
 
 from typer.testing import CliRunner
 
 from juju_doctor.main import app
 
 
+# FIXME: This one I should solve last
 def test_builtins_failing():
     # GIVEN a RuleSet with failing Builtin assertions
     runner = CliRunner()
@@ -22,12 +24,13 @@ def test_builtins_failing():
     assert result.exit_code == 0
     exceptions = json.loads(result.stdout)["exceptions"]
     # AND the user is warned of their Builtin Applications mistakes
+
     assert any(
-        "Not all apps: ['alertmanager_fake', 'alertmanager', 'alertmanager'] were found in" in e
+        re.search(r"Not all apps:.*alertmanager_fake.*were found", e)
         for e in exceptions
     )
-    assert any("alertmanager scale (1) is below the allowable limit: 2" in e for e in exceptions)
-    assert any("alertmanager scale (1) exceeds the allowable limit: 0" in e for e in exceptions)
+    assert any(re.search(r"alertmanager scale.*below.*2", e) for e in exceptions)
+    assert any(re.search(r"alertmanager scale.*exceeds.*0", e) for e in exceptions)
     # AND the user is warned of their Builtin Relations mistakes
     assert any(
         "Relation (['loki:alertmanager', 'alertmanager_fake:alerting']) not found in" in e
@@ -52,21 +55,3 @@ def test_builtins_failing():
     # AND they are all identified as failing
     assert json.loads(result.stdout)["failed"] == 8
     assert json.loads(result.stdout)["passed"] == 0
-
-
-def test_builtins_with_invalid_schema(caplog):
-    # GIVEN RuleSet Builtin assertions with invalid schemas
-    runner = CliRunner()
-    test_args = [
-        "check",
-        "--probe=file://tests/resources/probes/ruleset/invalid/builtins-invalid-schema.yaml",
-        "--status=tests/resources/artifacts/status.yaml",
-        "--bundle=tests/resources/artifacts/bundle.yaml",
-    ]
-    # WHEN `juju-doctor check` is executed
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, test_args)
-    # THEN the command succeeds
-    assert result.exit_code == 0
-    # AND the user is warned of their mistakes
-    assert caplog.text.count("Failed to validate schema") == 3

@@ -39,6 +39,7 @@ class ProbeResultAggregator:
         self._grouped_by_status: Dict[str, List[Probe]] = defaultdict(list)
         self._group_results(probes)
 
+    # TODO: Do we still need this? I assume not
     def _group_results(self, probes: List[Probe]):
         """Group each probe assertion result by pass/fail."""
         for probe in probes:

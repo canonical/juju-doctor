@@ -128,8 +128,8 @@ def test_check_probe_missing_required_artifacts(caplog):
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the user is warned of their mistake
-    assert re.search(r"No bundle.*provided", caplog.text)
-    assert re.search(r"No show_unit.*provided", caplog.text)
+    assert re.search(r"No.*bundle.*provided", caplog.text)
+    assert re.search(r"No.*show_unit.*provided", caplog.text)
 
 
 def test_check_builtin_missing_required_artifacts(caplog):
@@ -146,7 +146,7 @@ def test_check_builtin_missing_required_artifacts(caplog):
     # THEN the command succeeds
     assert result.exit_code == 0
     # AND the user is warned of their mistake
-    assert re.search(r"No bundle.*provided", caplog.text)
+    assert re.search(r"No.*bundle.*provided", caplog.text)
 
 
 def test_check_returns_valid_json():

@@ -4,6 +4,10 @@ applications:
 relations:
   - provides: grafana:catalogue
     requires: catalogue:catalogue
+offers:
+  - name: loki-logging
+    endpoint: logging
+    interface: loki_push_api
 probes:
   - name: Probe - test passing
     type: scriptlet

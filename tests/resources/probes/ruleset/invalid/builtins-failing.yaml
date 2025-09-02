@@ -21,6 +21,3 @@ offers:
   - name: loki-logging
     endpoint: logging
     interface: loki_push_api_fake
-
-# consumes:
-#   - mysql:something

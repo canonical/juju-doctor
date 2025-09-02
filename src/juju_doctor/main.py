@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.builtins import build_unified_schema
+from juju_doctor.builtins import BuiltinArtifacts, BuiltinModel, RuleSetModel
 from juju_doctor.probes import Probe, ProbeTree
 from juju_doctor.tree import OutputFormat, ProbeResultAggregator
 
@@ -132,35 +132,34 @@ def check(
                     "Try reducing the intensity of probe chaining!"
                 )
 
-        check_functions: Set[str] = set()
-
         # Probes
+        check_functions: Set[str] = set()
         for probe in probe_tree.probes:
             check_functions |= set(probe.get_functions().keys())
             probe.run(artifacts)
 
         # Builtins
-        for _type, builtin in probe_tree.builtins.items():
-            for ruleset_id, builtin_obj in builtin.items():
-                # TODO: With RuleSetModel, we can stop schema validating in validate_assertions
-                #       and only do it when we find a RuleSet in aggregation or from_url
-                assertion_results = builtin_obj.schema.validate_assertions(builtin_obj, artifacts)
-                if _type == "probes":
-                    # Probes results are already determined in probe.run
-                    continue
-                check_functions.add(builtin_obj.artifact_type)
-                probe = Probe(
-                    Path(f"builtins:{_type}"),
-                    Path(),
-                    probes_chain=ruleset_id,
-                    results=assertion_results,
-                )
-                probe_tree.probes.append(probe)
+        for ruleset_id, builtin_model in probe_tree.builtins.items():
+            # TODO: We could pull this into a method in BuiltinModel
+            #       e.g. BuiltinModel.validate() -> List[Probe]
+            #       It would make more sense context-wise
+            for _type in BuiltinModel.model_fields:
+                probe = Probe(Path(f"builtins:{_type}"), Path(), ruleset_id)
+                if not (parent_node := probe_tree.tree.get_node(str(probe.get_parent()))):
+                    raise Exception(f"The builtin {probe} has no parent node in the tree.")
+                probe.update_name(f'{parent_node.data.path.name}@"{probe.path}"')
+                validation_func = getattr(builtin_model, f"validate_{_type}")
+                if results := validation_func(artifacts, probe.name):
+                    probe.results = results
+                    probe_tree.probes.append(probe)
 
+        check_functions = check_functions | {
+            k for k, v in BuiltinArtifacts.artifacts.items() if v > 0
+        }
         if not provided_artifacts.issubset(check_functions):
             useless_artifacts = ", ".join(provided_artifacts - check_functions)
             log.warning(
-                f"The '{useless_artifacts}' artifact was provided, but not used by any probes "
+                f'The "{useless_artifacts}" artifact was provided, but not used by any probes '
                 "or builtin assertions."
             )
 
@@ -169,7 +168,7 @@ def check(
             aggregator = ProbeResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
             aggregator.print_results()
 
-# TODO: Remove if not needed
+
 @app.command(no_args_is_help=True)
 def schema(
     stdout: Annotated[
@@ -182,7 +181,7 @@ def schema(
     ] = None,
 ):
     """Generate and output the unified schema."""
-    schema = build_unified_schema()  # Dict
+    schema = RuleSetModel.model_json_schema()
 
     if file:
         output_path = Path(file)

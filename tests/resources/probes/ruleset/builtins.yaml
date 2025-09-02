@@ -1,7 +1,7 @@
 name: RuleSet - test builtins
 applications:
-  - name: alertmanager-k8s
-  - name: prometheus-k8s
+  - name: alertmanager
+  - name: prometheus
     minimum: 1
     maximum: 4
 relations:
