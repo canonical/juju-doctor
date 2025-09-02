@@ -86,6 +86,7 @@ def check(
     # TODO Another aspect to this issue is that the user can print within the probe and break JSON
     #      This might be user error though
     # TODO Maybe use it as a global with a wrapper method to print or not
+    # TODO: Create an issue for this
     if format.lower() == "json":
         logging.disable(logging.ERROR)
 

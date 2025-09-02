@@ -1,6 +1,6 @@
 name: RuleSet - test all
 applications:
-  - name: catalogue-k8s
+  - name: catalogue
 relations:
   - provides: grafana:catalogue
     requires: catalogue:catalogue

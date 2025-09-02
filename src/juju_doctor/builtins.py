@@ -81,6 +81,8 @@ class BuiltinModel(BaseModel):
     relations: Optional[List[RelationAssertion]] = None
     offers: Optional[List[OfferAssertion]] = None
 
+    # TODO: We need to come up with an interface so people can contribute. E.g. we need separate files
+    # This class will grow too large at scale. E.g. think GH actions
     def validate_applications(
         self, artifacts: Artifacts, probe_path: str
     ) -> List[AssertionResult]:
@@ -124,7 +126,6 @@ class BuiltinModel(BaseModel):
                             f"{name} scale ({app['scale']}) "
                             f"is below the allowable limit: {_app.minimum}"
                         )
-                        # FIXME: Exception (builtins:applications/None): Why is there /None?
                         results.append(AssertionResult(None, False, exception))
                     if _app.maximum is not None and app["scale"] > _app.maximum:
                         exception = Exception(
@@ -168,6 +169,7 @@ class BuiltinModel(BaseModel):
         for _rel in _rels:
             rels = [rel for bundle in artifacts.bundle.values() for rel in bundle["relations"]]
             # TODO I think the API requires/provides is a lie
+            # A: Switch this to - app-a, -- app-b
             _rel_pair = [_rel.requires, _rel.provides]
             if _rel_pair not in rels and [_rel_pair[1], _rel_pair[0]] not in rels:
                 exception = Exception(f"Relation ({_rel_pair}) not found in {rels}")
