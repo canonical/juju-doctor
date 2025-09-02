@@ -27,19 +27,20 @@ def status(juju_statuses):
     """
     apps_related_to_gagent = {}
     for status_name, status in juju_statuses.items():
-        for app in status.get("applications", {}).values():
-            if app["charm"] != "grafana-agent":
+        # Gather apps related to grafana-agent
+        agent = get_app_by_charm_name(status, "grafana-agent")
+        for endpoint, relations in agent.get("relations", {}).items():
+            if endpoint not in ("cos-agent", "juju-info"):
                 continue
-            for endpoint, relations in app.get("relations", {}).items():
-                if endpoint not in ("cos-agent", "juju-info"):
-                    continue
-                apps_related_to_gagent.setdefault(endpoint, [])
-                for rel in relations:
-                    apps_related_to_gagent[endpoint].append(rel["related-application"])
-        for related_app in apps_related_to_gagent["cos-agent"]:
-            ga_app = get_app_by_charm_name(status, "grafana-agent")
-            other_charm = get_charm_by_app_name(status, related_app)
-            assert related_app not in apps_related_to_gagent["juju-info"], (
+            apps_related_to_gagent.setdefault(endpoint, [])
+            for rel in relations:
+                apps_related_to_gagent[endpoint].append(rel["related-application"])
+
+        # Assert that either juju-info or cos-agent exists per app, not both
+        for related_app in apps_related_to_gagent.get("cos-agent", {}):
+            ga_app = get_app_name_by_charm_name(status, "grafana-agent")
+            other_charm = get_charm_name_by_app_name(status, related_app)
+            assert related_app not in apps_related_to_gagent.get("juju-info", {}), (
                 f'Remove either the "juju-info" or "cos-agent" integration between "{ga_app}" '
                 f'(grafana-agent) and "{related_app}" ({other_charm}). Having both "juju-info" '
                 f'and "cos-agent" duplicates the "juju-info" telemetry to "{ga_app}" in '
@@ -47,7 +48,12 @@ def status(juju_statuses):
             )
 
 
-def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
+# ==========================
+# Helper methods
+# ==========================
+
+
+def get_app_name_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
     """Helper function to get the (unpredictable) application name from a charm name."""
     if applications := status.get("applications", {}):
         for app, context in applications.items():
@@ -56,11 +62,20 @@ def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
     return None
 
 
-def get_charm_by_app_name(status: dict, app_name: str) -> Optional[str]:
+def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
     """Helper function to get the (predictable) charm name from an application name."""
     if applications := status.get("applications", {}):
         if charm := applications.get(app_name, None):
             return charm["charm"]
+    return None
+
+
+def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
+    """Helper function to get the application object from a charm name."""
+    if applications := status.get("applications", {}):
+        for context in applications.values():
+            if charm_name == context["charm"]:
+                return context
     return None
 
 
