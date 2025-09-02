@@ -10,43 +10,48 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
+import contextlib
 from typing import Dict, Optional
 
 import yaml
 
 
-def status(juju_statuses):
+def status(juju_statuses: Dict[str, Dict]):
     """Status assertion for duplicate juju-info telemetry to grafana-agent.
 
-    >>> status({"failing-status": test_invalid_status()})  # doctest: +ELLIPSIS
+    >>> status({"invalid-openstack-model": example_status_redundant_endpoints_agent_cos_proxy()})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     AssertionError: Remove either the "juju-info" or "cos-agent" integration between ...
 
-    >>> status({"passing-status": test_valid_status()})
-    """
-    apps_related_to_gagent = {}
+    >>> status({"valid-model": example_status_valid()})
+    """  # noqa: E501
+    apps_related_to_agent = {}
     for status_name, status in juju_statuses.items():
         # Gather apps related to grafana-agent
-        if not (agent := get_app_by_charm_name(status, "grafana-agent")):
+        if not (agents := get_apps_by_charm_name(status, "grafana-agent")):
             continue
-        for endpoint, relations in agent.get("relations", {}).items():
-            if endpoint not in ("cos-agent", "juju-info"):
-                continue
-            apps_related_to_gagent.setdefault(endpoint, [])
-            for rel in relations:
-                apps_related_to_gagent[endpoint].append(rel["related-application"])
+        for agent_name, agent in agents.items():
+            for endpoint, relations in agent.get("relations", {}).items():
+                if endpoint not in ("cos-agent", "juju-info"):
+                    continue
+                apps_related_to_agent.setdefault(endpoint, [])
+                for rel in relations:
+                    apps_related_to_agent[endpoint].append(
+                        (agent_name, rel["related-application"])
+                    )
 
         # Assert that either juju-info or cos-agent exists per app, not both
-        for related_app in apps_related_to_gagent.get("cos-agent", {}):
-            ga_app = get_app_name_by_charm_name(status, "grafana-agent")
-            other_charm = get_charm_name_by_app_name(status, related_app)
-            assert related_app not in apps_related_to_gagent.get("juju-info", {}), (
-                f'Remove either the "juju-info" or "cos-agent" integration between "{ga_app}" '
-                f'(grafana-agent) and "{related_app}" ({other_charm}). Having both "juju-info" '
-                f'and "cos-agent" duplicates the "juju-info" telemetry to "{ga_app}" in '
-                f'"{status_name}".'
-            )
+        for agent, related_app in apps_related_to_agent.get("cos-agent", {}):
+            # other_charm = get_charm_name_by_app_name(status, related_app)
+            other_charm = get_charm_name_by_app_name(status, "fart")
+            for _, _related_app in apps_related_to_agent.get("juju-info", {}):
+                assert related_app != _related_app, (
+                    f'Remove either the "juju-info" or "cos-agent" integration between "{agent}" '
+                    f'(grafana-agent) and "{related_app}" ({other_charm}). Having both '
+                    f'"juju-info" and "cos-agent" duplicates the "juju-info" telemetry to '
+                    f'"{agent}" in "{status_name}".'
+                )
 
 
 # ==========================
@@ -54,33 +59,23 @@ def status(juju_statuses):
 # ==========================
 
 
-def get_app_name_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
-    """Helper function to get the (unpredictable) application name from a charm name."""
-    if applications := status.get("applications", {}):
-        for app, context in applications.items():
-            if charm_name == context["charm"]:
-                return app
-    return None
-
-
 def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
     """Helper function to get the (predictable) charm name from an application name."""
-    if applications := status.get("applications", {}):
-        if charm := applications.get(app_name, None):
-            return charm["charm"]
+    with contextlib.suppress(KeyError):
+        return status["applications"][app_name]["charm"]
     return None
 
 
-def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[Dict]:
+def get_apps_by_charm_name(status: dict, charm_name: str) -> Dict[str, Dict]:
     """Helper function to get the application object from a charm name."""
-    if applications := status.get("applications", {}):
-        for context in applications.values():
-            if charm_name == context["charm"]:
-                return context
-    return None
+    return {
+        app_name: context
+        for app_name, context in status.get("applications", {}).items()
+        if context["charm"] == charm_name
+    }
 
 
-def test_invalid_status():
+def example_status_redundant_endpoints_agent_cos_proxy():
     """Invalid topology of grafana-agent and another charm.
 
     In this status, grafana-agent and foo-charm are inter-related over both of the
@@ -109,7 +104,7 @@ applications:
 """)
 
 
-def test_valid_status():
+def example_status_valid():
     """Valid topology of grafana-agent and other charms.
 
     In this status, grafana-agent is related to two different charms: foo and bar. For each
