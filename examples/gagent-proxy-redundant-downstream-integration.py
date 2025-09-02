@@ -10,7 +10,7 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-from typing import Optional
+from typing import Dict, Optional
 
 import yaml
 
@@ -31,7 +31,8 @@ def status(juju_statuses):
         applications = status.get("applications", {})
 
         # Gather suspicious grafana-agent relations to prometheus
-        agent = get_app_by_charm_name(status, "grafana-agent")
+        if not (agent := get_app_by_charm_name(status, "grafana-agent")):
+            continue
         for endpoint, relations in agent.get("relations", {}).items():
             for rel in relations:
                 if endpoint == "cos-agent":
@@ -42,7 +43,8 @@ def status(juju_statuses):
                     suspicious_endpoint_apps[endpoint].append(rel["related-application"])
 
         # Gather suspicious cos-proxy relations to prometheus
-        proxy = get_app_by_charm_name(status, "cos-proxy")
+        if not (proxy := get_app_by_charm_name(status, "cos-proxy")):
+            continue
         for endpoint, relations in proxy.get("relations", {}).items():
             if endpoint != "downstream-prometheus-scrape":
                 continue
@@ -84,7 +86,7 @@ def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
     return None
 
 
-def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[str]:
+def get_app_by_charm_name(status: dict, charm_name: str) -> Optional[Dict]:
     """Helper function to get the application object from a charm name."""
     if applications := status.get("applications", {}):
         for context in applications.values():
