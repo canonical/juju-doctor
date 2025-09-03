@@ -35,6 +35,9 @@ dev = [
   "pytest",
   "coverage[toml]",
 ]
+example-probes = [
+  "pyyaml",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/canonical/juju-doctor"
