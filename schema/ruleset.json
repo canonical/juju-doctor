@@ -1,96 +1,100 @@
 {
-  "type": "object",
+  "$defs": {
+    "BaseBuiltin": {
+      "description": "Base class for all Pydantic models of builtins and their validations.",
+      "properties": {
+        "assertions": {
+          "items": {
+            "$ref": "#/$defs/BaseModel"
+          },
+          "title": "Assertions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "assertions"
+      ],
+      "title": "BaseBuiltin",
+      "type": "object"
+    },
+    "BaseModel": {
+      "properties": {},
+      "title": "BaseModel",
+      "type": "object"
+    },
+    "ProbeAssertion": {
+      "additionalProperties": false,
+      "description": "Schema for a builtin Probe definition in a RuleSet.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "with": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "With"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "url"
+      ],
+      "title": "ProbeAssertion",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
+  "description": "A pydantic model of a declarative YAML RuleSet.",
   "properties": {
     "name": {
+      "title": "Name",
       "type": "string"
     },
-    "applications": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "minimum": {
-            "type": "integer"
-          },
-          "maximum": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "relations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "provides": {
-            "type": "string"
-          },
-          "requires": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "provides",
-          "requires"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "offers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "endpoint": {
-            "type": "string"
-          },
-          "interface": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "endpoint",
-          "interface"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "consumes": {},
     "probes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ProbeAssertion"
           },
-          "type": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          }
+          "type": "array"
         },
-        "required": [
-          "name",
-          "type",
-          "url"
-        ],
-        "additionalProperties": false
-      }
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Probes"
+    },
+    "builtins": {
+      "additionalProperties": {
+        "$ref": "#/$defs/BaseBuiltin"
+      },
+      "default": null,
+      "title": "Builtins",
+      "type": "object"
     }
-  }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "RuleSetModel",
+  "type": "object"
 }

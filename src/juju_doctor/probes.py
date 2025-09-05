@@ -32,6 +32,7 @@ ROOT_NODE_TAG = "Results"
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
+
 def _read_file(filename: Path) -> Optional[Dict]:
     """Read a yaml probe file into a dict."""
     try:
@@ -154,7 +155,7 @@ class Probe:
 
     @staticmethod
     def from_url(
-        url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = None
+        url: str, probes_root: Path, probes_chain: str = "", probe_tree: Optional[ProbeTree] = None
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
@@ -332,7 +333,7 @@ class RuleSet:
             self.content = None
             log.error(e)
 
-    def aggregate_probes(self, probe_tree: ProbeTree = None) -> ProbeTree:
+    def aggregate_probes(self, probe_tree: Optional[ProbeTree] = None) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
 
         This method is recursive when it finds another RuleSet. It returns a list of probes that

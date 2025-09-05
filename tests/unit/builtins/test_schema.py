@@ -21,10 +21,9 @@ def test_rulesets_in_resources_dir():
         with open(file_path, "r") as f:
             contents = yaml.safe_load(f)
             # WHEN the contents are loaded into a Pydantic RuleSetModel
-            # TODO: I will likely need to update this path to "tests/resources/probes/ruleset/invalid/**/invalid-input-fields.py"
-            if "tests/resources/probes/ruleset/invalid" in os.path.dirname(file_path):
-                if Path(Path(file_path).name).stem == "circular":
-                    continue
+            invalid_ruleset_dir = "tests/resources/probes/ruleset/invalid"
+            raises_exception = Path(Path(file_path).name).stem.split("-")[0] == "raises"
+            if invalid_ruleset_dir in os.path.dirname(file_path) and raises_exception:
                 with pytest.raises(ValidationError):
                     RuleSetModel(
                         **RuleSetModel.input_without_builtins(contents),

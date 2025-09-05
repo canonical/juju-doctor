@@ -25,12 +25,16 @@ class OfferBuiltin(BaseBuiltin):
     assertions: List[OfferAssertion]
 
     def validate(self, artifacts: Artifacts, probe_path: str) -> List[AssertionResult]:
-        """Offer assertions against a status artifact.
+        """Takes a list of offers and assert that they all exist verbatim.
 
-        Verify that all specified offers are present in the artifact's status and check if the
-        corresponding endpoints (and interfaces) match the expected values. If there is a diff,
-        append an AssertionResult indicating failure; otherwise, it returns a success
-        result if all checks pass.
+        applicable for: status
+
+        Example:
+            offers:
+              - name: loki-logging
+
+        Returns an AssertionResult. If the offer context differs, the AssertionResult
+        indicates failure; otherwise, the AssertionResult indicates success.
 
         NOTE: Any variables which refer to the offer assertion will be private, whereas
         variables which refer to the artifact will be public.

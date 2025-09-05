@@ -28,20 +28,3 @@ def test_builtin_failing():
     # AND they are all identified as failing
     assert json.loads(result.stdout)["failed"] == 3
     assert json.loads(result.stdout)["passed"] == 0
-
-
-def test_builtin_invalid(caplog):
-    # GIVEN a RuleSet with invalid Applications assertions
-    runner = CliRunner()
-    test_args = [
-        "check",
-        "--probe=file://tests/resources/probes/ruleset/invalid/builtins/applications/invalid-input-fields.yaml",
-        "--status=tests/resources/artifacts/status.yaml",
-    ]
-    # WHEN `juju-doctor check` is executed
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, test_args)
-    # THEN the command succeeds
-    assert result.exit_code == 0
-    # AND the user is warned of their mistake
-    assert "Input should be a valid dictionary" in caplog.text

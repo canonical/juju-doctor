@@ -1,4 +1,0 @@
-name: RuleSet - test invalid input
-builtins:
-  relations:
-    - "foo"

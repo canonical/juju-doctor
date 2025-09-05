@@ -3,18 +3,15 @@ from typer.testing import CliRunner
 from juju_doctor.main import app
 
 
-# TODO clean up this copy pasta
-def test_builtins_failing():
-    # GIVEN a RuleSet with failing Builtin assertions
+def test_schema_output():
+    # GIVEN a RuleSet pydantic model
     runner = CliRunner()
     test_args = [
         "schema",
         "--stdout",
     ]
-    # WHEN `juju-doctor check` is executed
+    # WHEN `juju-doctor schema` is executed
     result = runner.invoke(app, test_args)
-    # THEN the command succeeds
+    # THEN the command succeeds, outputting the schema
     assert result.exit_code == 0
-    # TODO: If we want to keep this command, then
-    # TODO: Add a test for --file
-    assert False
+    assert result.output

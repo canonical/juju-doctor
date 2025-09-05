@@ -121,7 +121,7 @@ class RuleSetModel(BaseModel):
         builtin_plugins = RuleSetModel.get_builtin_plugins(BUILTINS_DIR)
         for name, builtin_plugin in builtin_plugins.items():
             if builtin_content := contents.get("builtins", {}).get(name):
-                builtins[name] = builtin_plugin(**{"assertions": builtin_content}, Counter())
+                builtins[name] = builtin_plugin(**{"assertions": builtin_content})
 
         return builtins
 

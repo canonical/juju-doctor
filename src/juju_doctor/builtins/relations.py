@@ -35,16 +35,17 @@ class RelationBuiltin(BaseBuiltin):
 
     assertions: List[RelationAssertion]
 
-    # TODO: Consider the case when we have multiple validate types: status, bundle, show_unit ...
-    # TODO: Create an issue for this, but we need an abstraction layer to gather needed input from artifacts and fill a dataclass with it, then use that to assert against
-    # FIXME Consider switching to status
     def validate(self, artifacts: Artifacts, probe_path: str) -> List[AssertionResult]:
-        """Relation assertions against a bundle artifact.
+        """Takes a list of relation pairs and assert that they all exist verbatim.
 
-        Check for the presence of specified relations in a given artifact by iterating through the
-        relations of each bundle and verifying if the required relation pairs exist. If any
-        relation is missing, append an AssertionResult indicating failure; otherwise, return a
-        success result if all relations are found.
+        applicable for: bundle
+
+        Example:
+            relations:
+              - [grafana:catalogue, catalogue:catalogue]
+
+        Returns an AssertionResult. If the relation pair is not found, the AssertionResult
+        indicates failure; otherwise, the AssertionResult indicates success.
 
         NOTE: Any variables which refer to the relation assertion will be private, whereas
         variables which refer to the artifact will be public.

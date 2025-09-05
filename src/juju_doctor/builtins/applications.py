@@ -30,12 +30,16 @@ class ApplicationBuiltin(BaseBuiltin):
     assertions: List[ApplicationAssertion]
 
     def validate(self, artifacts: Artifacts, probe_path: str) -> List[AssertionResult]:
-        """Application assertions against a status artifact.
+        """Takes a list of applications and assert that they all exist verbatim.
 
-        Iterate through the statuses of applications in an artifact, checking if all
-        required application names are present and validate their scale against specified
-        minimum and maximum limits. If any assertions fail, append an AssertionResult
-        indicating the failure; otherwise, return a success result if no issues are found.
+        applicable for: status
+
+        Example:
+            applications:
+              - name: alertmanager
+
+        Returns an AssertionResult. If the application (and its context) is not found, the
+        AssertionResult indicates failure; otherwise, the AssertionResult indicates success.
 
         NOTE: Any variables which refer to the application assertion will be private, whereas
         variables which refer to the artifact will be public.
