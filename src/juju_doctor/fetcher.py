@@ -80,7 +80,10 @@ def copy_probes(
         rpath = f"{path.as_posix()}/" if path.is_dir() else path.as_posix()
         lpath = probes_destination.as_posix()
         if Path(lpath).exists():
-            log.warning(f"Duplicate file detected: ./{rpath}, it will be skipped.")
+            log.warning(
+                f"Duplicate file detected: ./{rpath}. Multiple RuleSets, or a "
+                "combination of probes and RuleSets, are calling the same probe."
+            )
         filesystem.get(rpath, lpath, recursive=True, auto_mkdir=True)
     except FileNotFoundError as e:
         log.warning(

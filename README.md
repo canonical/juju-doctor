@@ -95,24 +95,27 @@ def show_unit(juju_show_units):
 ### Ruleset
 Ruleset probes are written in YAML, specifying which probes should be coordinated for a deployment validation.
 
-Currently, we support the following probe types:
+Currently, the following probe types are supported:
 - **`scriptlet`**: A Python probe
 - **`ruleset`**: A declarative deployment RuleSet
-- **`directory`**: A directory of probes (from the types in this list)
 
 ```yaml
 name: A declarative deployment RuleSet
 probes:
-  - name: Local probe - passing
+  - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: Local ruleset
+  - name: RuleSet - test scriptlet
     type: ruleset
-    url: file://tests/resources/probes/ruleset/ruleset.yaml
-  - name: Local probe directory (may contain scriptlets and/or rulesets)
-    type: directory
+    url: file://tests/resources/probes/ruleset/scriptlet.yaml
+  - name: Probe - test directory (may contain scriptlets and/or rulesets)
+    type: scriptlet
     url: file://tests/resources/probes/ruleset/small-dir
 ```
+
+#### Builtins
+TODO: clean this up or replace with our how-to
+While scriptlet probes are an escape hatch for complex, programmatic assertions, they are not intended to assert against common model patterns. For example, scriptlet probe authors may assert that certain applications or relations exist. This repetitiveness is abstracted into Builtin assertions. Refer to this [RuleSet with Builtin assertions](tests/resources/probes/ruleset/builtins.yaml) as a starting point.
 
 ## Development
 ```bash

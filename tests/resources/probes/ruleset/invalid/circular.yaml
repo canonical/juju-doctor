@@ -1,0 +1,5 @@
+name: RuleSet - test circular nesting
+probes:
+  - name: RuleSet - test circular nesting
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/circular.yaml

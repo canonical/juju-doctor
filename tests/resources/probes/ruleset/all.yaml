@@ -1,11 +1,28 @@
-name: A declarative deployment RuleSet
+name: RuleSet - test all
+builtins:
+  applications:
+    - name: catalogue
+  relations:
+    - apps: [grafana:catalogue, catalogue:catalogue]
+  offers:
+    - name: loki-logging
+      endpoint: logging
+      interface: loki_push_api
+  # mutually-exclusive-endpoints:
+  #   - charm-name: grafana-agent
+  #     interfaces:
+  #       - juju-info
+  #       - cos_agent
 probes:
-  - name: Local probe - passing
+  - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: Local probe directory (contains both scriptlets and rulesets)
+  - name: RuleSet - test directory of probes
     type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir
-  - name: Local ruleset
+  - name: RuleSet - test scriptlet
     type: ruleset
     url: file://tests/resources/probes/ruleset/scriptlet.yaml
+  - name: RuleSet - test builtin assertions
+    type: ruleset
+    url: file://tests/resources/probes/ruleset/builtins.yaml

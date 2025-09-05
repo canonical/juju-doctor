@@ -151,9 +151,9 @@ def test_model_artifact_parsing_from_file():
         assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
 
 
-def test_only_supplied_artifacts():
+def test_only_provided_artifacts():
     with patch("builtins.open", side_effect=_open_side_effect):
-        # GIVEN only some (omitting show_unit) artifacts are supplied
+        # GIVEN only some (omitting show_unit) artifacts are provided
         status_artifact = ModelArtifact.from_files(status_file="status.yaml")
         bundle_artifact = ModelArtifact.from_files(bundle_file="bundle.yaml")
         # WHEN the artifacts are aggregated

@@ -1,4 +1,4 @@
-# This is intentionally missing the status function
+# NOTE: This is intentionally missing the status function
 
 def bundle(juju_bundles):
     assert False, "This should be False!"

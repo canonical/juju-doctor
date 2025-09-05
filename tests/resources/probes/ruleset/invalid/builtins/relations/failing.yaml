@@ -1,0 +1,5 @@
+name: RuleSet - test builtin fails assertions
+builtins:
+  relations:
+    - apps: [alertmanager_fake:alerting, loki:alertmanager]
+    - apps: [alertmanager:alerting, loki_fake:alertmanager]
