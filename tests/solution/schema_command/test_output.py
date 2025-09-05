@@ -1,5 +1,3 @@
-import json
-
 from typer.testing import CliRunner
 
 from juju_doctor.main import app
@@ -19,3 +17,4 @@ def test_builtins_failing():
     assert result.exit_code == 0
     # TODO: If we want to keep this command, then
     # TODO: Add a test for --file
+    assert False

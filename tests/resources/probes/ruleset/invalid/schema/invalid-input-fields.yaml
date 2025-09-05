@@ -1,5 +1,0 @@
-name: RuleSet - test invalid builtins
-applications:
-  - "foo"
-relations:
-  foo:

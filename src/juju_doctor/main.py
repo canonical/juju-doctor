@@ -12,9 +12,9 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.builtins import BuiltinArtifacts, BuiltinModel, RuleSetModel
 from juju_doctor.probes import Probe, ProbeTree
-from juju_doctor.tree import OutputFormat, ProbeResultAggregator
+from juju_doctor.ruleset import BuiltinArtifacts, RuleSetModel
+from juju_doctor.tree import OutputFormat, ResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -80,13 +80,6 @@ def check(
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
 
     # Ensure valid JSON format in stdout
-    # TODO Determine if this is desired, we basically hide warning when JSON output
-    # makes tests harder to write. I.e. should a user clear warnings before getting
-    # valid JSON -> this is the most important case!
-    # TODO Another aspect to this issue is that the user can print within the probe and break JSON
-    #      This might be user error though
-    # TODO Maybe use it as a global with a wrapper method to print or not
-    # TODO: Create an issue for this
     if format.lower() == "json":
         logging.disable(logging.ERROR)
 
@@ -102,6 +95,8 @@ def check(
         for key, param in ctx.params.items()
         if key.endswith("_files") and param
     }
+    # TODO: This is code smell leaking in from testing difficulties due to using class variables
+    BuiltinArtifacts.reset_count()
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
@@ -141,19 +136,16 @@ def check(
 
         # Builtins
         for ruleset_id, builtin_model in probe_tree.builtins.items():
-            # TODO: We could pull this into a method in BuiltinModel
-            #       e.g. BuiltinModel.validate() -> List[Probe]
-            #       It would make more sense context-wise
-            for _type in BuiltinModel.model_fields:
+            for _type, model in builtin_model.items():
                 probe = Probe(Path(f"builtins:{_type}"), Path(), ruleset_id)
                 if not (parent_node := probe_tree.tree.get_node(str(probe.get_parent()))):
                     raise Exception(f"The builtin {probe} has no parent node in the tree.")
-                probe.update_name(f'{parent_node.data.path.name}@"{probe.path}"')
-                validation_func = getattr(builtin_model, f"validate_{_type}")
-                if results := validation_func(artifacts, probe.name):
+                probe.update_name(f'{parent_node.data.path.name}@{probe.path}')
+                if results := model.validate(artifacts, probe.name):
                     probe.results = results
                     probe_tree.probes.append(probe)
 
+        # TODO: Using BuiltinArtifacts.artifacts is a bug because tests are not in isolation
         check_functions = check_functions | {
             k for k, v in BuiltinArtifacts.artifacts.items() if v > 0
         }
@@ -166,7 +158,7 @@ def check(
 
         if probe_tree.tree:
             output_fmt = OutputFormat(verbose, format)
-            aggregator = ProbeResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
+            aggregator = ResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
             aggregator.print_results()
 
 

@@ -47,3 +47,14 @@ def test_ruleset_calls_dir():
         probes = probe_tree.probes
         # THEN probes are found
         contains_only_one_passing_and_failing_probe(probes)
+
+
+def test_ruleset_finds_probes_and_builtins():
+    # GIVEN a ruleset probe file defines probes and builtins
+    probe_url = "file://tests/resources/probes/ruleset/scriptlet.yaml"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # WHEN the probe is fetched to a local filesystem
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
+        probes = probe_tree.probes
+        # THEN probes are found
+        contains_only_one_passing_and_failing_probe(probes)

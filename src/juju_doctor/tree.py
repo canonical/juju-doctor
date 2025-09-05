@@ -2,7 +2,6 @@
 
 import json
 import logging
-from collections import defaultdict
 from typing import Dict, List
 
 from rich.console import Console
@@ -17,8 +16,9 @@ log = logging.getLogger(__name__)
 console = Console()
 
 
-class ProbeResultAggregator:
-    """Aggregate and group probe results based on metadata."""
+class ResultAggregator:
+    # TODO: Update this description
+    """Aggregate probe results."""
 
     def __init__(
         self,
@@ -30,25 +30,13 @@ class ProbeResultAggregator:
 
         Leaf nodes will be created from the root of the tree for each probe result.
         """
+        self._probes = probes
         self._output_fmt = output_fmt
         self._exceptions = []
         self._tree = tree
         # Create a root node if it does not exist
         if not self._tree:
             self._tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
-        self._grouped_by_status: Dict[str, List[Probe]] = defaultdict(list)
-        self._group_results(probes)
-
-    # TODO: Do we still need this? I assume not
-    def _group_results(self, probes: List[Probe]):
-        """Group each probe assertion result by pass/fail."""
-        for probe in probes:
-            status = (
-                AssertionStatus.FAIL.value
-                if any(p.status == AssertionStatus.FAIL.value for p in probe.results)
-                else AssertionStatus.PASS.value
-            )
-            self._grouped_by_status[status].append(probe)
 
     def _build_tree(self) -> Dict[str, int]:
         """Create the tree structure for aggregated results.
@@ -56,31 +44,30 @@ class ProbeResultAggregator:
         Create a new node in the tree per probe with an assertion summary.
         """
         results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
-        for probes in self._grouped_by_status.values():
-            for probe in probes:
-                node_info = probe.result_text(self._output_fmt)
-                self._exceptions.extend(node_info.exception_msgs)
-                result = None
-                for result in probe.results:
-                    results[result.status] += 1
+        for probe in self._probes:
+            node_info = probe.result_text(self._output_fmt)
+            self._exceptions.extend(node_info.exception_msgs)
+            result = None
+            for result in probe.results:
+                results[result.status] += 1
 
-                if not probe.is_root_node:
+            if not probe.is_root_node:
+                self._tree.create_node(
+                    node_info.node_tag,
+                    str(probe.uuid),
+                    str(probe.get_parent()),
+                    probe
+                )
+            else:
+                if str(probe.uuid) in self._tree:
+                    self._tree.update_node(str(probe.uuid), tag=node_info.node_tag)
+                else:
                     self._tree.create_node(
                         node_info.node_tag,
                         str(probe.uuid),
-                        str(probe.get_parent()),
+                        self._tree.root,
                         probe
                     )
-                else:
-                    if str(probe.uuid) in self._tree:
-                        self._tree.update_node(str(probe.uuid), tag=node_info.node_tag)
-                    else:
-                        self._tree.create_node(
-                            node_info.node_tag,
-                            str(probe.uuid),
-                            self._tree.root,
-                            probe
-                        )
         return results
 
     def print_results(self):

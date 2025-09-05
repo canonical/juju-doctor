@@ -3,6 +3,7 @@
 import importlib.util
 import inspect
 import logging
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -11,12 +12,11 @@ from uuid import UUID, uuid4
 
 import fsspec
 import yaml
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts
-from juju_doctor.builtins import BuiltinModel, RuleSetModel
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 from juju_doctor.results import (
     SUPPORTED_PROBE_FUNCTIONS,
@@ -24,13 +24,13 @@ from juju_doctor.results import (
     AssertionStatus,
     OutputFormat,
 )
+from juju_doctor.ruleset import RuleSetModel
 
 ROOT_NODE_ID = "root"
 ROOT_NODE_TAG = "Results"
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
-
 
 def _read_file(filename: Path) -> Optional[Dict]:
     """Read a yaml probe file into a dict."""
@@ -79,7 +79,7 @@ class ProbeTree:
 
     probes: List["Probe"] = field(default_factory=list)
     tree: Tree = field(default_factory=Tree)
-    builtins: Dict[str, BuiltinModel] = field(default_factory=dict)
+    builtins: Dict[str, BaseModel] = field(default_factory=dict)
 
 
 @dataclass
@@ -126,6 +126,7 @@ class Probe:
         return self._name or self.path.relative_to(self.probes_root).as_posix()
 
     def update_name(self, name: str):
+        """Update the Probe's name."""
         self._name = name
 
     @property
@@ -153,7 +154,7 @@ class Probe:
 
     @staticmethod
     def from_url(
-        url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = ProbeTree()
+        url: str, probes_root: Path, probes_chain: str = "", probe_tree: ProbeTree = None
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
@@ -172,7 +173,8 @@ class Probe:
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
             probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
         """
-        # Create a root node if it does not exist
+        if probe_tree is None:
+            probe_tree = ProbeTree()
         if not probe_tree.tree:
             probe_tree.tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
@@ -183,12 +185,15 @@ class Probe:
 
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
+            # TODO: We need to pass the "with" contents to the Probe class
             probe = Probe(probe_path, probes_root, probes_chain)
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
             if is_ruleset:
                 ruleset = RuleSet(probe)
+                # TODO: Access probe "with" ruleset.content.probes[0].with_
                 # Gather builtins from the Ruleset and map the ruleset to builtins
-                probe_tree.builtins[ruleset.probe.get_chain()] = ruleset.builtins
+                if ruleset.content:
+                    probe_tree.builtins[ruleset.probe.get_chain()] = ruleset.content.builtins
                 probe_tree = ruleset.aggregate_probes(probe_tree)
 
             else:
@@ -315,15 +320,19 @@ class RuleSet:
             probe: The Probe representing the ruleset configuration file.
         """
         self.probe = probe
+        if not (contents := _read_file(self.probe.path)):
+            self.content = None
+
         try:
-            if contents := _read_file(self.probe.path):
-                self.builtins = BuiltinModel(**contents)
-                self.content = RuleSetModel(**contents)
+            self.content = RuleSetModel(
+                **RuleSetModel.input_without_builtins(contents),
+                builtins=RuleSetModel.get_builtin_models(contents),
+            )
         except ValidationError as e:
             self.content = None
             log.error(e)
 
-    def aggregate_probes(self, probe_tree: ProbeTree = ProbeTree()) -> ProbeTree:
+    def aggregate_probes(self, probe_tree: ProbeTree = None) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
 
         This method is recursive when it finds another RuleSet. It returns a list of probes that
@@ -332,6 +341,8 @@ class RuleSet:
         While traversing, a record of probes are stored in a tree. Leaf nodes will be created from
         the root of the tree for each probe result.
         """
+        if probe_tree is None:
+            probe_tree = ProbeTree()
         if not self.content:
             return probe_tree
 
@@ -366,6 +377,7 @@ class RuleSet:
                             f"{ruleset_probe.url} is not a scriptlet but was specified as such."
                         )
                         return probe_tree
+                    # TODO: pass ruleset.content.probes[0].with_ to Probe.from_url
                     probe_tree = Probe.from_url(
                         ruleset_probe.url,
                         self.probe.probes_root,
@@ -395,6 +407,7 @@ class RuleSet:
                             continue
                         # Recurses until we no longer have Ruleset probes
                         for nested_ruleset_probe in probe_tree.probes:
+                            # TODO: Access probe "with" ruleset.content.probes[0].with_
                             ruleset = RuleSet(nested_ruleset_probe)
                             derived_ruleset_probe_tree = ruleset.aggregate_probes(probe_tree)
                             log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")

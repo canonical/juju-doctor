@@ -1,27 +1,19 @@
 name: RuleSet - test builtins
-applications:
-  - name: alertmanager
-  - name: prometheus
-    minimum: 1
-    maximum: 4
-relations:
-  - provides: alertmanager:alerting
-    requires: loki:alertmanager
-  - provides: loki:grafana-source
-    requires: grafana:grafana-source
-  - provides: loki:metrics-endpoint
-    requires: prometheus:metrics-endpoint
-  - provides: loki:grafana-dashboard
-    requires: grafana:grafana-dashboard
-  - provides: traefik:ingress
-    requires: alertmanager:ingress
-offers:
-  - name: loki-logging
-    endpoint: logging
-    interface: loki_push_api
-  - name: grafana-dashboards
-    endpoint: grafana-dashboard
-    interface: grafana_dashboard
-
-# consumes:
-#   - mysql:something
+builtins:
+  applications:
+    - name: alertmanager
+    - name: prometheus
+      minimum: 1
+      maximum: 4
+  relations:
+    # TODO: What if someone specifies multiple apps. What if we allow the "with" to define an interface that the list of apps must be related over
+    - apps: [alertmanager:catalogue, catalogue:catalogue]
+    - apps: [traefik:ingress, alertmanager:ingress]
+    - apps: [loki:grafana-source, grafana:grafana-source]
+  offers:
+    - name: loki-logging
+      endpoint: logging
+      interface: loki_push_api
+    - name: grafana-dashboards
+      endpoint: grafana-dashboard
+      interface: grafana_dashboard

@@ -1,14 +1,8 @@
-def test_builtins_aggregation():
-    pass
-    # GIVEN a Ruleset contains no probes and some builtin assertions
-    # WHEN the Ruleset executes
-    # THEN the ProbeResultAggregator (maybe remove the Probe in the name?) collects the builtins
-
 def test_probes_and_builtins_aggregation():
-    pass
+    assert False
     # GIVEN a Ruleset contains probes and some builtin assertions
     # WHEN the Ruleset executes
-    # THEN the ProbeResultAggregator (maybe remove the Probe in the name?) collects both
+    # THEN the ResultAggregator (maybe remove the Probe in the name?) collects both
 
 
 def test_builtins_in_tree():

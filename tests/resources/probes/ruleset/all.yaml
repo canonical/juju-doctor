@@ -1,13 +1,18 @@
 name: RuleSet - test all
-applications:
-  - name: catalogue
-relations:
-  - provides: grafana:catalogue
-    requires: catalogue:catalogue
-offers:
-  - name: loki-logging
-    endpoint: logging
-    interface: loki_push_api
+builtins:
+  applications:
+    - name: catalogue
+  relations:
+    - apps: [grafana:catalogue, catalogue:catalogue]
+  offers:
+    - name: loki-logging
+      endpoint: logging
+      interface: loki_push_api
+  # mutually-exclusive-endpoints:
+  #   - charm-name: grafana-agent
+  #     interfaces:
+  #       - juju-info
+  #       - cos_agent
 probes:
   - name: Probe - test passing
     type: scriptlet

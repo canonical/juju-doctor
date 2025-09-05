@@ -1,0 +1,12 @@
+name: RuleSet - test builtin fails assertions
+builtins:
+  offers:
+    - name: loki-logging-fake
+      endpoint: logging
+      interface: loki_push_api
+    - name: loki-logging
+      endpoint: logging-fake
+      interface: loki_push_api
+    - name: loki-logging
+      endpoint: logging
+      interface: loki_push_api_fake

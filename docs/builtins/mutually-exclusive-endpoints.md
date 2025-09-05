@@ -9,9 +9,9 @@ applicable for: status
 ```yaml
 mutually-exclusive-endpoints:
   charm-name: grafana-agent
-  endpoint:
+  interfaces:
     - juju-info
-    - cos-agent
+    - cos_agent
 ```
 
 ```python
