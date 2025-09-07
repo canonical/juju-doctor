@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
