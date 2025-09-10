@@ -1,18 +1,4 @@
 name: RuleSet - test all
-builtins:
-  applications:
-    - name: catalogue
-  relations:
-    - apps: [grafana:catalogue, catalogue:catalogue]
-  offers:
-    - name: loki-logging
-      endpoint: logging
-      interface: loki_push_api
-  # mutually-exclusive-endpoints:
-  #   - charm-name: grafana-agent
-  #     interfaces:
-  #       - juju-info
-  #       - cos_agent
 probes:
   - name: Probe - test passing
     type: scriptlet
@@ -26,3 +12,18 @@ probes:
   - name: RuleSet - test builtin assertions
     type: ruleset
     url: file://tests/resources/probes/ruleset/builtins.yaml
+
+  - name: Builtin application-exists
+    type: builtin/application-exists
+    with:
+      - application-name: catalogue
+  - name: Builtin relation-exists
+    type: builtin/relation-exists
+    with:
+      - apps: [grafana:catalogue, catalogue:catalogue]
+  - name: Builtin offer-exists
+    type: builtin/offer-exists
+    with:
+      - offer-name: loki-logging
+        endpoint: logging
+        interface: loki_push_api

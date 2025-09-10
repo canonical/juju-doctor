@@ -25,16 +25,10 @@ def test_rulesets_in_resources_dir():
             raises_exception = Path(Path(file_path).name).stem.split("-")[0] == "raises"
             if invalid_ruleset_dir in os.path.dirname(file_path) and raises_exception:
                 with pytest.raises(ValidationError):
-                    RuleSetModel(
-                        **RuleSetModel.input_without_builtins(contents),
-                        builtins=RuleSetModel.get_builtin_models(contents),
-                    )
+                    RuleSetModel(**contents)
             else:
                 # THEN no ValidationError is raised
-                RuleSetModel(
-                    **RuleSetModel.input_without_builtins(contents),
-                    builtins=RuleSetModel.get_builtin_models(contents),
-                )
+                RuleSetModel(**contents)
 
 
 def test_incorrect_schema_top_level_keys():

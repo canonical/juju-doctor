@@ -116,9 +116,9 @@ def test_check_probes_and_builtins():
         {
             "RuleSet - test builtins": {
                 "children": [
-                    {"🟢 tests_resources_probes_ruleset_builtins.yaml@builtins:applications": {}},
-                    {"🟢 tests_resources_probes_ruleset_builtins.yaml@builtins:offers": {}},
-                    {"🟢 tests_resources_probes_ruleset_builtins.yaml@builtins:relations": {}},
+                    {"🟢 src_juju_doctor_builtin_application-exists.py": {}},
+                    {"🟢 src_juju_doctor_builtin_offer-exists.py": {}},
+                    {"🟢 src_juju_doctor_builtin_relation-exists.py": {}},
                 ]
             }
         },

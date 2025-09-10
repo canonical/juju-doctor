@@ -1,8 +1,0 @@
-name: RuleSet - test builtin fails assertions
-builtins:
-  applications:
-    - name: alertmanager_fake
-    - name: alertmanager
-      minimum: 2
-    - name: alertmanager
-      maximum: 0

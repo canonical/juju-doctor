@@ -13,7 +13,7 @@ def test_parse_file():
     probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", probe_tree=ProbeTree())
         probes = probe_tree.probes
         # THEN only 1 probe exists
         assert len(probes) == 1
@@ -30,7 +30,7 @@ def test_parse_dir():
     probe_url = f"github://canonical/juju-doctor//{path_str}?main"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", ProbeTree())
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir), "", probe_tree=ProbeTree())
         probes = probe_tree.probes
         # THEN each Probe is correctly parsed
         for probe in probes:

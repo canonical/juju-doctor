@@ -3,16 +3,15 @@
 import importlib.util
 import inspect
 import logging
-from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
 import fsspec
 import yaml
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
@@ -24,7 +23,7 @@ from juju_doctor.results import (
     AssertionStatus,
     OutputFormat,
 )
-from juju_doctor.ruleset import RuleSetModel
+from juju_doctor.ruleset import BUILTIN_DIR, RuleSetModel
 
 ROOT_NODE_ID = "root"
 ROOT_NODE_TAG = "Results"
@@ -80,7 +79,6 @@ class ProbeTree:
 
     probes: List["Probe"] = field(default_factory=list)
     tree: Tree = field(default_factory=Tree)
-    builtins: Dict[str, BaseModel] = field(default_factory=dict)
 
 
 @dataclass
@@ -112,7 +110,8 @@ class Probe:
 
     path: Path
     probes_root: Path
-    probes_chain: str = ""  # probe call chain with format UUID/UUID/UUID
+    probes_chain: str = ""
+    with_content: Optional[Dict[str, Any]] = None
     results: List[AssertionResult] = field(default_factory=list)
     uuid: UUID = field(default_factory=uuid4)
     _name: Optional[str] = None
@@ -155,7 +154,11 @@ class Probe:
 
     @staticmethod
     def from_url(
-        url: str, probes_root: Path, probes_chain: str = "", probe_tree: Optional[ProbeTree] = None
+        url: str,
+        probes_root: Path,
+        probes_chain: str = "",
+        with_content: Optional[Dict[str, Any]] = None,
+        probe_tree: Optional[ProbeTree] = None,
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
 
@@ -172,11 +175,12 @@ class Probe:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
+            with_content: kwargs offering customizable inputs to the probe.
             probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
         """
         if probe_tree is None:
             probe_tree = ProbeTree()
-        if not probe_tree.tree:
+        if not probe_tree.tree.nodes:
             probe_tree.tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
         parsed_url = urlparse(url)
@@ -186,15 +190,10 @@ class Probe:
 
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
-            # TODO: We need to pass the "with" contents to the Probe class
-            probe = Probe(probe_path, probes_root, probes_chain)
+            probe = Probe(probe_path, probes_root, probes_chain, with_content)
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
             if is_ruleset:
                 ruleset = RuleSet(probe)
-                # TODO: Access probe "with" ruleset.content.probes[0].with_
-                # Gather builtins from the Ruleset and map the ruleset to builtins
-                if ruleset.content:
-                    probe_tree.builtins[ruleset.probe.get_chain()] = ruleset.content.builtins
                 probe_tree = ruleset.aggregate_probes(probe_tree)
 
             else:
@@ -262,8 +261,9 @@ class Probe:
                 log.warning(f"No {func_name} artifact was provided for probe: {self.path}.")
                 continue
             # Run the probe function, and record its result
+            # TODO: Do we like "custom" as the probe arg?
             try:
-                func(artifact)
+                func(artifact, custom=self.with_content)
             except BaseException as e:
                 self.results.append(AssertionResult(func_name, passed=False, exception=e))
             else:
@@ -308,6 +308,7 @@ class Probe:
         return NodeResultInfo(node_tag, exception_msgs)
 
 
+# TODO: Consider merging ruleset.py and probes.py since they both do similar things
 class RuleSet:
     """Represents a set of probes defined in a declarative configuration file.
 
@@ -323,15 +324,12 @@ class RuleSet:
         self.probe = probe
         if not (contents := _read_file(self.probe.path)):
             self.content = None
-
-        try:
-            self.content = RuleSetModel(
-                **RuleSetModel.input_without_builtins(contents),
-                builtins=RuleSetModel.get_builtin_models(contents),
-            )
-        except ValidationError as e:
-            self.content = None
-            log.error(e)
+        else:
+            try:
+                self.content = RuleSetModel(**contents)
+            except ValidationError as e:
+                self.content = None
+                log.error(e)
 
     def aggregate_probes(self, probe_tree: Optional[ProbeTree] = None) -> ProbeTree:
         """Obtain all the probes from the RuleSet.
@@ -348,7 +346,7 @@ class RuleSet:
             return probe_tree
 
         # Create a root node if it does not exist
-        if not probe_tree.tree:
+        if not probe_tree.tree.nodes:
             probe_tree.tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
         # Only add the source ruleset probe to the tree's root node
@@ -365,10 +363,12 @@ class RuleSet:
             return probe_tree
 
         for ruleset_probe in self.content.probes:
-            match ruleset_probe.type:
+            match ruleset_probe.type.split("/")[0]:
                 # If the probe URL is not a directory and the path's suffix does not match the
                 # expected type, warn and return no probes
                 case "scriptlet":
+                    if ruleset_probe.url is None:
+                        raise Exception('"url" must be defined for scriptlet probes')
                     if (
                         Path(ruleset_probe.url).suffix.lower()
                         and Path(ruleset_probe.url).suffix.lower()
@@ -378,14 +378,16 @@ class RuleSet:
                             f"{ruleset_probe.url} is not a scriptlet but was specified as such."
                         )
                         return probe_tree
-                    # TODO: pass ruleset.content.probes[0].with_ to Probe.from_url
                     probe_tree = Probe.from_url(
                         ruleset_probe.url,
                         self.probe.probes_root,
                         self.probe.get_chain(),
+                        ruleset_probe.with_,
                         probe_tree,
                     )
                 case "ruleset":
+                    if ruleset_probe.url is None:
+                        raise Exception('"url" must be defined for scriptlet probes')
                     if (
                         Path(ruleset_probe.url).suffix.lower()
                         and Path(ruleset_probe.url).suffix.lower()
@@ -400,6 +402,7 @@ class RuleSet:
                             ruleset_probe.url,
                             self.probe.probes_root,
                             self.probe.get_chain(),
+                            None,
                             probe_tree,
                         )
                         # If the probe is a directory of probes, capture it and continue to the
@@ -408,14 +411,24 @@ class RuleSet:
                             continue
                         # Recurses until we no longer have Ruleset probes
                         for nested_ruleset_probe in probe_tree.probes:
-                            # TODO: Access probe "with" ruleset.content.probes[0].with_
                             ruleset = RuleSet(nested_ruleset_probe)
                             derived_ruleset_probe_tree = ruleset.aggregate_probes(probe_tree)
                             log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")
                             probe_tree.probes.extend(derived_ruleset_probe_tree.probes)
                     else:
+                        # TODO: Why do I hit this when running test_aggregation?
                         raise NotImplementedError
-
+                case "builtin":
+                    type_parts = ruleset_probe.type.split("/")
+                    if not (builtin_type := type_parts[1] if len(type_parts) == 2 else None):
+                        raise NotImplementedError
+                    probe_tree = Probe.from_url(
+                        f"file://{BUILTIN_DIR}/{builtin_type}.py",
+                        self.probe.probes_root,
+                        self.probe.get_chain(),
+                        ruleset_probe.with_,
+                        probe_tree,
+                    )
                 case _:
                     raise NotImplementedError
 

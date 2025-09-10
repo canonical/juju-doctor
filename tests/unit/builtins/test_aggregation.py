@@ -1,20 +1,30 @@
 import tempfile
 from pathlib import Path
 
-from juju_doctor.probes import Probe
+from src.juju_doctor.probes import Probe
+
+
+def get_assertions_count(builtins_groups: dict, key: str) -> int:
+    count = 0
+    for builtins in builtins_groups.values():
+        value = builtins.get(key)
+        if value is not None and hasattr(value, 'assertions'):
+            count += len(value.assertions)
+    return count
 
 
 def test_probes_and_builtins():
-    # GIVEN a Ruleset with probes and builtins
+    # GIVEN a Ruleset with scriptlets and builtins
     yaml_content = """
-    name: Test probes and builtins
-    builtins:
-        applications:
-          - name: catalogue
+    name: Test scriptlets and builtins
     probes:
-      - name: Foo
+      - name: Scriptlet probe
         type: scriptlet
         url: file://tests/resources/probes/python/failing.py
+      - name: Builtin probe
+        type: builtin/application-exists
+        with:
+          - application-name: catalogue
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(Path(tmpdir) / "probes_and_builtins.yaml", "w") as temp_file:
@@ -22,25 +32,29 @@ def test_probes_and_builtins():
         # WHEN the probes are fetched to a local filesystem
         probe_tree = Probe.from_url(url=f"file://{temp_file.name}", probes_root=Path(tmpdir))
     # THEN both the probe and builtin were aggregated
-    assert len(probe_tree.builtins) == 1
-    assert len(probe_tree.probes) == 1
+    assert len(probe_tree.probes) == 2
 
 
 def test_nested_builtins():
     # GIVEN a Ruleset (with builtin assertions) executes another Ruleset with builtin assertions
     yaml_content = """
     name: Test nested builtins
-    builtins:
-        applications:
-          - name: catalogue
-        relations:
-          - apps: [grafana:catalogue, catalogue:catalogue]
-        offers:
-          - name: loki-logging
     probes:
       - name: Local builtins
         type: ruleset
         url: file://tests/resources/probes/ruleset/builtins.yaml
+      - name: Builtin application-exists
+        type: builtin/application-exists
+        with:
+          - application-name: catalogue
+      - name: Builtin relation-exists
+        type: builtin/relation-exists
+        with:
+          - apps: [grafana:catalogue, catalogue:catalogue]
+      - name: Builtin offer-exists
+        type: builtin/offer-exists
+        with:
+          - offer-name: loki-logging
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(Path(tmpdir) / "nested-builtins.yaml", "w") as temp_file:
@@ -48,16 +62,4 @@ def test_nested_builtins():
         # WHEN the probes are fetched to a local filesystem
         probe_tree = Probe.from_url(url=f"file://{temp_file.name}", probes_root=Path(tmpdir))
     # THEN both the top-level and nested builtin assertions were aggregated
-    assert len(probe_tree.builtins) == 2
-    total_applications = len(
-        [a for b in probe_tree.builtins.values() for a in b.get("applications").assertions]
-    )
-    total_relations = len(
-        [a for b in probe_tree.builtins.values() for a in b.get("relations").assertions]
-    )
-    total_offers = len(
-        [a for b in probe_tree.builtins.values() for a in b.get("offers").assertions]
-    )
-    assert total_applications > 1
-    assert total_relations > 1
-    assert total_offers > 1
+    assert len(probe_tree.probes) > 3

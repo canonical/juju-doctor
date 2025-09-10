@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -17,25 +17,23 @@ console = Console()
 
 
 class ResultAggregator:
-    # TODO: Update this description
-    """Aggregate probe results."""
+    """Build a tree representation of probe results and display it."""
 
     def __init__(
         self,
         probes: List[Probe],
         output_fmt: OutputFormat,
-        tree: Tree = Tree(),
+        tree: Optional[Tree] = None,
     ):
-        """Prepare the aggregated results and its tree representation.
+        """Receive probes and instantiate the tree representation.
 
-        Leaf nodes will be created from the root of the tree for each probe result.
+        Leaf nodes will be created (per probe result) from the parent (calling) probes.
         """
         self._probes = probes
         self._output_fmt = output_fmt
         self._exceptions = []
-        self._tree = tree
-        # Create a root node if it does not exist
-        if not self._tree:
+        self._tree = tree if tree is not None else Tree()
+        if not self._tree.nodes:
             self._tree.create_node(ROOT_NODE_TAG, ROOT_NODE_ID)
 
     def _build_tree(self) -> Dict[str, int]:
@@ -53,20 +51,14 @@ class ResultAggregator:
 
             if not probe.is_root_node:
                 self._tree.create_node(
-                    node_info.node_tag,
-                    str(probe.uuid),
-                    str(probe.get_parent()),
-                    probe
+                    node_info.node_tag, str(probe.uuid), str(probe.get_parent()), probe
                 )
             else:
                 if str(probe.uuid) in self._tree:
                     self._tree.update_node(str(probe.uuid), tag=node_info.node_tag)
                 else:
                     self._tree.create_node(
-                        node_info.node_tag,
-                        str(probe.uuid),
-                        self._tree.root,
-                        probe
+                        node_info.node_tag, str(probe.uuid), self._tree.root, probe
                     )
         return results
 

@@ -27,7 +27,7 @@ class CustomModel(BaseModel):
 class ValidBuiltin(BaseBuiltin):
     assertions: List[CustomModel]
 
-    def validate(self, artifacts: Artifacts) -> List[AssertionResult]:
+    def validate_assertions(self, artifacts: Artifacts) -> List[AssertionResult]:
         pass
 ```
 

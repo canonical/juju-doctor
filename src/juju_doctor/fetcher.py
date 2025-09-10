@@ -11,6 +11,8 @@ from urllib.error import URLError
 
 import fsspec
 
+from juju_doctor.ruleset import BUILTIN_DIR
+
 log = logging.getLogger(__name__)
 
 
@@ -79,7 +81,7 @@ def copy_probes(
         # https://github.com/fsspec/filesystem_spec/blob/master/docs/source/copying.rst
         rpath = f"{path.as_posix()}/" if path.is_dir() else path.as_posix()
         lpath = probes_destination.as_posix()
-        if Path(lpath).exists():
+        if Path(lpath).exists() and BUILTIN_DIR.replace("/", "_") not in lpath:
             log.warning(
                 f"Duplicate file detected: ./{rpath}. Multiple RuleSets, or a "
                 "combination of probes and RuleSets, are calling the same probe."
