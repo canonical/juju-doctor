@@ -3,16 +3,23 @@
 # See LICENSE file for licensing details.
 """Helper module to fetch probes from local or remote endpoints."""
 
+import importlib.util
+import inspect
 import logging
+import sys
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple
+from types import ModuleType
+from typing import List, Tuple, Type
 from urllib.error import URLError
 
 import fsspec
+from pydantic import BaseModel
+from rich.logging import RichHandler
 
-from juju_doctor.ruleset import BUILTIN_DIR
+from juju_doctor.constants import BUILTIN_DIR
 
+logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 
@@ -88,10 +95,7 @@ def copy_probes(
             )
         filesystem.get(rpath, lpath, recursive=True, auto_mkdir=True)
     except FileNotFoundError as e:
-        log.warning(
-            f"{e} file not found when attempting to copy "
-            f"'{rpath}' to '{lpath}'"
-        )
+        log.warning(f"{e} file not found when attempting to copy '{rpath}' to '{lpath}'")
 
     # Create a Probe for each file in 'probes_destination' if it's a folder, else create just one
     if filesystem.isfile(rpath):
@@ -103,3 +107,30 @@ def copy_probes(
         log.info(f"copying {rpath} to {lpath} recursively")
 
     return probe_files
+
+
+def import_module_from_path(path: Path) -> ModuleType:
+    """Given a module's file path, return the module itself."""
+    if (spec := importlib.util.spec_from_file_location(path.stem, path)) is None:
+        raise ImportError(f"cannot create module spec for {path!s}")
+
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+
+    if not spec.loader:
+        raise RuntimeError(f"module spec for {path!s} has no loader")
+
+    try:
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception as exc:
+        raise ImportError(f"failed to execute module {path!s}") from exc
+
+
+def find_pydantic_models_in_module(mod: ModuleType) -> list[Type[BaseModel]]:
+    """Given a module, return its Pydantic BaseModel subclasses."""
+    return [
+        obj
+        for _, obj in inspect.getmembers(mod, inspect.isclass)
+        if issubclass(obj, BaseModel) and obj is not BaseModel
+    ]

@@ -5,15 +5,16 @@ import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Annotated, Dict, List, Optional, Set
+from typing import Annotated, Any, Dict, List, Optional, Set
 
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
-from juju_doctor.probes import Probe, ProbeTree
-from juju_doctor.ruleset import RuleSetModel
+from juju_doctor.constants import BUILTIN_DIR
+from juju_doctor.fetcher import find_pydantic_models_in_module, import_module_from_path
+from juju_doctor.probes import Probe, ProbeTree, RuleSetModel
 from juju_doctor.tree import OutputFormat, ResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
@@ -147,9 +148,13 @@ def check(
 
 @app.command(no_args_is_help=True)
 def schema(
-    stdout: Annotated[
+    builtins: Annotated[
         bool,
-        typer.Option("--stdout", help="Output the schema to stdout."),
+        typer.Option("--builtins", help="Output all Builtin schemas to stdout."),
+    ] = False,
+    ruleset: Annotated[
+        bool,
+        typer.Option("--ruleset", help="Output the RuleSet schema to stdout."),
     ] = False,
     file: Annotated[
         Optional[Path],
@@ -157,20 +162,43 @@ def schema(
     ] = None,
 ):
     """Generate and output the unified schema."""
-    schema = RuleSetModel.model_json_schema()
+    # Input validation
+    if ruleset and builtins:
+        raise typer.BadParameter("Schemas for ruleset and builtins are mutually exclusive.")
 
-    if file:
+    if ruleset:
+        schema = RuleSetModel.model_json_schema()
+    elif builtins:
+        root = Path(BUILTIN_DIR)
+        schema: Dict[str, Any] = {}
+        for path in sorted(root.glob("*.py")):
+            try:
+                mod = import_module_from_path(path)
+            except Exception as e:
+                log.error(f'Error importing module ({path.name}): {e}')
+                continue
+            plugin_name = Path(path.name).stem
+            schema.setdefault(plugin_name, {})
+            for cls in find_pydantic_models_in_module(mod):
+                try:
+                    schema[plugin_name][cls.__name__] = cls.model_json_schema()
+                except Exception as e:
+                    log.error(f'Error in file ({path.name}:{cls.__name__}): {e}')
+    else:
+        raise NotImplementedError
+
+    if not file:
+        console.print(json.dumps(schema, indent=2, default=str))
+    else:
         output_path = Path(file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the schema to the specified file
         with open(output_path, "w") as f:
             json.dump(schema, f, indent=2)
+            f.write("\n")
 
         console.print(f"Schema saved to {output_path}")
-
-    if stdout:
-        console.print(schema)
 
 
 if __name__ == "__main__":

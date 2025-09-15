@@ -3,8 +3,8 @@ from typing import Dict, List
 
 from typer.testing import CliRunner
 
+from juju_doctor.constants import ROOT_NODE_TAG
 from juju_doctor.main import app
-from juju_doctor.probes import ROOT_NODE_TAG
 
 
 def assert_tree_structure(
@@ -60,10 +60,10 @@ def test_check_groups_by_parent():
                 "children": [
                     {
                         "RuleSet - test failing probe": {
-                            "children": [{"🔴 tests_resources_probes_python_failing.py": {}}]
+                            "children": [{"🔴 Probe - test failing": {}}]
                         }
                     },
-                    {"🟢 tests_resources_probes_ruleset_small-dir/passing.py": {}},
+                    {"🟢 Probe - test directory": {}},
                 ]
             }
         },
@@ -73,8 +73,8 @@ def test_check_groups_by_parent():
                     {
                         "RuleSet - test scriptlet": {
                             "children": [
-                                {"🔴 tests_resources_probes_python_failing.py": {}},
-                                {"🟢 tests_resources_probes_python_passing.py": {}},
+                                {"🔴 Probe - test failing": {}},
+                                {"🟢 Probe - test passing": {}},
                             ]
                         }
                     }
@@ -84,8 +84,8 @@ def test_check_groups_by_parent():
         {
             "RuleSet - test scriptlet": {
                 "children": [
-                    {"🔴 tests_resources_probes_python_failing.py": {}},
-                    {"🟢 tests_resources_probes_python_passing.py": {}},
+                    {"🔴 Probe - test failing": {}},
+                    {"🟢 Probe - test passing": {}},
                 ]
             }
         },
@@ -116,9 +116,9 @@ def test_check_probes_and_builtins():
         {
             "RuleSet - test builtins": {
                 "children": [
-                    {"🟢 src_juju_doctor_builtin_application-exists.py": {}},
-                    {"🟢 src_juju_doctor_builtin_offer-exists.py": {}},
-                    {"🟢 src_juju_doctor_builtin_relation-exists.py": {}},
+                    {"🟢 Builtin application-exists": {}},
+                    {"🟢 Builtin offer-exists": {}},
+                    {"🟢 Builtin relation-exists": {}},
                 ]
             }
         },

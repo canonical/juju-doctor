@@ -5,10 +5,10 @@ import pytest
 import yaml
 from pydantic_core import ValidationError
 
-from juju_doctor.ruleset import RuleSetModel
+from juju_doctor.probes import RuleSetModel
 
 
-def test_rulesets_in_resources_dir():
+def test_rulesets_have_valid_schemas_in_resources_dir():
     # GIVEN a directory of ruleset YAML files
     yaml_files = [
         os.path.join(root, file)

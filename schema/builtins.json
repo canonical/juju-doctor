@@ -1,0 +1,105 @@
+{
+  "application-exists": {
+    "ApplicationAssertion": {
+      "additionalProperties": false,
+      "description": "Schema for a builtin Application definition in a RuleSet.",
+      "properties": {
+        "application-name": {
+          "title": "Application-Name",
+          "type": "string"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        }
+      },
+      "required": [
+        "application-name"
+      ],
+      "title": "ApplicationAssertion",
+      "type": "object"
+    }
+  },
+  "offer-exists": {
+    "OfferAssertion": {
+      "additionalProperties": false,
+      "description": "Schema for a builtin Offer definition in a RuleSet.",
+      "properties": {
+        "offer-name": {
+          "title": "Offer-Name",
+          "type": "string"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint"
+        },
+        "interface": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interface"
+        }
+      },
+      "required": [
+        "offer-name"
+      ],
+      "title": "OfferAssertion",
+      "type": "object"
+    }
+  },
+  "relation-exists": {
+    "RelationAssertion": {
+      "additionalProperties": false,
+      "description": "Schema for a builtin Relation definition in a RuleSet.",
+      "properties": {
+        "apps": {
+          "items": {},
+          "maxItems": 2,
+          "title": "Apps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "apps"
+      ],
+      "title": "RelationAssertion",
+      "type": "object"
+    }
+  }
+}

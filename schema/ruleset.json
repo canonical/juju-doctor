@@ -1,49 +1,40 @@
 {
   "$defs": {
-    "BaseBuiltin": {
-      "description": "Base class for all Pydantic models of builtins and their validations.",
-      "properties": {
-        "assertions": {
-          "items": {
-            "$ref": "#/$defs/BaseModel"
-          },
-          "title": "Assertions",
-          "type": "array"
-        }
-      },
-      "required": [
-        "assertions"
-      ],
-      "title": "BaseBuiltin",
-      "type": "object"
-    },
-    "BaseModel": {
-      "properties": {},
-      "title": "BaseModel",
-      "type": "object"
-    },
     "ProbeAssertion": {
       "additionalProperties": false,
       "description": "Schema for a builtin Probe definition in a RuleSet.",
       "properties": {
         "name": {
-          "title": "Name",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
         },
         "type": {
           "title": "Type",
           "type": "string"
         },
         "url": {
-          "title": "Url",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
         },
         "with": {
           "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
+            {},
             {
               "type": "null"
             }
@@ -53,9 +44,7 @@
         }
       },
       "required": [
-        "name",
-        "type",
-        "url"
+        "type"
       ],
       "title": "ProbeAssertion",
       "type": "object"
@@ -69,31 +58,16 @@
       "type": "string"
     },
     "probes": {
-      "anyOf": [
-        {
-          "items": {
-            "$ref": "#/$defs/ProbeAssertion"
-          },
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Probes"
-    },
-    "builtins": {
-      "additionalProperties": {
-        "$ref": "#/$defs/BaseBuiltin"
+      "items": {
+        "$ref": "#/$defs/ProbeAssertion"
       },
-      "default": null,
-      "title": "Builtins",
-      "type": "object"
+      "title": "Probes",
+      "type": "array"
     }
   },
   "required": [
-    "name"
+    "name",
+    "probes"
   ],
   "title": "RuleSetModel",
   "type": "object"

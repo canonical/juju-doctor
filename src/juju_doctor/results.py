@@ -7,8 +7,6 @@ from typing import Optional
 
 from rich.logging import RichHandler
 
-SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
-
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 

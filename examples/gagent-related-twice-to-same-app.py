@@ -16,7 +16,7 @@ from typing import Dict, Optional
 import yaml
 
 
-def status(juju_statuses: Dict[str, Dict]):
+def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for duplicate juju-info telemetry to grafana-agent.
 
     >>> status({"invalid-openstack-model": example_status_redundant_endpoints_agent_cos_proxy()})  # doctest: +ELLIPSIS

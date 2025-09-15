@@ -8,7 +8,8 @@ from rich.console import Console
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
-from juju_doctor.probes import ROOT_NODE_ID, ROOT_NODE_TAG, AssertionStatus, Probe
+from juju_doctor.constants import ROOT_NODE_ID, ROOT_NODE_TAG
+from juju_doctor.probes import AssertionStatus, Probe
 from juju_doctor.results import OutputFormat
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])

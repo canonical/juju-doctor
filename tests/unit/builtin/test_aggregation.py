@@ -30,7 +30,7 @@ def test_probes_and_builtins():
         with open(Path(tmpdir) / "probes_and_builtins.yaml", "w") as temp_file:
             temp_file.write(yaml_content)
         # WHEN the probes are fetched to a local filesystem
-        probe_tree = Probe.from_url(url=f"file://{temp_file.name}", probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(f"file://{temp_file.name}", Path(tmpdir))
     # THEN both the probe and builtin were aggregated
     assert len(probe_tree.probes) == 2
 
@@ -60,6 +60,6 @@ def test_nested_builtins():
         with open(Path(tmpdir) / "nested-builtins.yaml", "w") as temp_file:
             temp_file.write(yaml_content)
         # WHEN the probes are fetched to a local filesystem
-        probe_tree = Probe.from_url(url=f"file://{temp_file.name}", probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(f"file://{temp_file.name}", Path(tmpdir))
     # THEN both the top-level and nested builtin assertions were aggregated
     assert len(probe_tree.probes) > 3

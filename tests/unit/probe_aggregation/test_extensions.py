@@ -12,6 +12,6 @@ def test_ruleset_extensions(extension):
     probe_url = f"file://tests/resources/probes/ruleset/extensions/scriptlet.{extension}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probe_tree = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir))
         # THEN probes are found
         assert len(probe_tree.probes) > 0

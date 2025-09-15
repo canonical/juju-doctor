@@ -100,6 +100,25 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
           sudo snap install --classic just
-          pip install ".[example-probes]"
+          pip install ".[doctest]"  # from pyproject.toml[project.optional-dependencies]
       - name: Run tests
         run: just doctest
+
+  schema-tests:
+    name: Lint schema files against the code's generated schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          sudo snap install --classic astral-uv
+          sudo snap install --classic just
+      - name: Run tests
+        run: just schema

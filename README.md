@@ -20,26 +20,23 @@ You can run `juju-doctor` against a solution archive:
     --probe file://tests/resources/probes/python/failing.py \
     --probe file://tests/resources/probes/python/passing.py \
     --status=status.yaml \
-    --status=status.yaml
+    --bundle=bundle.yaml
 ```
 If you have a live deplyoment, you can also run `juju-doctor` against that:
 ```
 ∮ juju-doctor check \
     --probe file://tests/resources/probes/python/failing.py \
     --probe file://tests/resources/probes/python/passing.py \
-    --model testy \
-    --model testy-two
+    --model model-one \
+    --model model-two
 ```
 In either case, the output will look like so (configurable with `--format` and `--verbose`):
 ```
 Results
-├── fail
-│   └── 🔴 tests_resources_probes_python_failing.py (bundle, show_unit, status)
-└── pass
-    └── 🟢 tests_resources_probes_python_passing.py
+├── 🔴 tests_resources_probes_python_failing.py (✖️ bundle, ✖️ show_unit, ✖️ status)
+└── 🟢 tests_resources_probes_python_passing.py (✔️ bundle, ✔️ show_unit, ✔️ status)
 
-
-Total: 🟢 3 🔴 3
+Total: 🟢 3/6 🔴 3/6
 ```
 
 The path to a probe can also be a url:
@@ -51,7 +48,7 @@ The path to a probe can also be a url:
 ## Writing Probes
 
 ### Scriptlet
-Scriptlet probes are written in Python, and can run on standardized artifacts that can be provided either as static files, or gathered from a live model.
+Scriptlet probes are written in Python, and run on standardized artifacts that can be provided either as static files, or gathered from a live model.
 
 Currently, we support the following artifacts:
 - **`status`**: `juju status --format=yaml`
@@ -98,24 +95,13 @@ Ruleset probes are written in YAML, specifying which probes should be coordinate
 Currently, the following probe types are supported:
 - **`scriptlet`**: A Python probe
 - **`ruleset`**: A declarative deployment RuleSet
+- **`builtin/*`**: A builtin plugin of a type defined in the [supported plugins](schema/builtins.json)
 
-```yaml
-name: A declarative deployment RuleSet
-probes:
-  - name: Probe - test passing
-    type: scriptlet
-    url: file://tests/resources/probes/python/passing.py
-  - name: RuleSet - test scriptlet
-    type: ruleset
-    url: file://tests/resources/probes/ruleset/scriptlet.yaml
-  - name: Probe - test directory (may contain scriptlets and/or rulesets)
-    type: scriptlet
-    url: file://tests/resources/probes/ruleset/small-dir
-```
+See [this RuleSet probe](tests/resources/probes/ruleset/all.yaml) as an extensive example.
+See [this schema definition](schema/ruleset.json) for the RuleSet YAML file.
 
 #### Builtins
-TODO: clean this up or replace with our how-to
-While scriptlet probes are an escape hatch for complex, programmatic assertions, they are not intended to assert against common model patterns. For example, scriptlet probe authors may assert that certain applications or relations exist. This repetitiveness is abstracted into Builtin assertions. Refer to this [RuleSet with Builtin assertions](tests/resources/probes/ruleset/builtins.yaml) as a starting point.
+See [this doc](docs/how-to/contribute-a-builtin.md) about contributing a builtin.
 
 ## Development
 ```bash

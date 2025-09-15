@@ -1,8 +1,12 @@
+"""Application-exists verbatim builtin plugin."""
+
 import logging
-from typing import Optional
+from typing import Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from rich.logging import RichHandler
+
+from juju_doctor.artifacts import read_file
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -18,65 +22,68 @@ class ApplicationAssertion(BaseModel):
     maximum: Optional[int] = Field(None, ge=0)
 
 
-def status(juju_statuses, **kwargs):
+def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for applications existing verbatim.
 
-    >>> status({"invalid-openstack-model": example_status_cyclic_agent_cos_proxy()})  # doctest: +ELLIPSIS
+    >>> status({"0": example_status()}, with_args=example_with_fake_name())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: Remove the relation between ... (cos-proxy) and prometheus. ...
-    >>> status({"invalid-openstack-model": example_multiple_proxies()})  # doctest: +ELLIPSIS
+    Exception: Unable to find the app (alertmanager_fake) in [...] ...
+
+    >>> status({"0": example_status()}, with_args=example_with_scale_above_max())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: Remove the relation between "cp-2" (cos-proxy) and prometheus. ...
-    >>> status({"valid-model": example_status_valid()})
-    """
-    assert kwargs["custom"], "No arguments were provided"
+    Exception: The scale (1) of alertmanager exceeds the allowable limit: 0 ...
 
-    _apps = [ApplicationAssertion(**app) for app in kwargs["custom"]]
-    _app_names = [app.name for app in _apps]
-    for status_name, status in juju_statuses.items():
-        if not all(_app in status["applications"].keys() for _app in _app_names):
-            raise Exception(f'Not all apps: {_app_names} were found in "{status_name}"')
-        apps_relevant = {
-            name: app for name, app in status["applications"].items() if name in _app_names
-        }
-        for name, app in apps_relevant.items():
-            for _app in _apps:
-                if _app.name != name:
-                    continue
-                if _app.minimum is not None and app["scale"] < _app.minimum:
-                    raise Exception(
-                        f"{name} scale ({app['scale']}) is below the allowable limit: "
-                        f"{_app.minimum}"
-                    )
-                if _app.maximum is not None and app["scale"] > _app.maximum:
-                    raise Exception(
-                        f"{name} scale ({app['scale']}) exceeds the allowable limit: "
-                        f"{_app.maximum}"
-                    )
+    >>> status({"0": example_status()}, with_args=example_with_scale_below_min())  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    Exception: The scale (1) of alertmanager is below the allowable limit: 2 ...
+    """  # noqa: E501
+    assert kwargs["with_args"], "No arguments were provided"
+
+    _apps = [ApplicationAssertion(**_app) for _app in kwargs["with_args"]]
+    for _app in _apps:
+        for status_name, status in juju_statuses.items():
+            if not (apps := status.get("applications")):
+                continue
+            if not (found_app := apps.get(_app.name)):
+                raise Exception(
+                    f"Unable to find the app ({_app.name}) in "
+                    f'[{", ".join(apps.keys())}] in "{status_name}"'
+                )
+            if _app.minimum is not None and found_app["scale"] < _app.minimum:
+                raise Exception(
+                    f"The scale ({found_app['scale']}) of {_app.name} is below the allowable "
+                    f'limit: {_app.minimum} in "{status_name}"'
+                )
+            if _app.maximum is not None and found_app["scale"] > _app.maximum:
+                raise Exception(
+                    f"The scale ({found_app['scale']}) of {_app.name} exceeds the allowable "
+                    f'limit: {_app.maximum} in "{status_name}"'
+                )
 
 
-# TODO:
-# name: RuleSet - test builtin fails assertions
-# probes:
-#   - name: Builtin application-exists
-#     type: builtin/application-exists
-#     with:
-#       - application-name: alertmanager_fake
+# ==========================
+# Helper functions
+# ==========================
 
-# name: RuleSet - test builtin fails assertions
-# probes:
-#   - name: Builtin application-exists
-#     type: builtin/application-exists
-#     with:
-#       - application-name: alertmanager
-#         maximum: 0
 
-# name: RuleSet - test builtin fails assertions
-# probes:
-#   - name: Builtin application-exists
-#     type: builtin/application-exists
-#     with:
-#       - application-name: alertmanager
-#         minimum: 2
+def example_status():
+    """Doctest input."""
+    return read_file("tests/resources/artifacts/status.yaml")
+
+
+def example_with_fake_name():
+    """Doctest input."""
+    return [{"application-name": "alertmanager_fake"}]
+
+
+def example_with_scale_above_max():
+    """Doctest input."""
+    return [{"application-name": "alertmanager", "maximum": 0}]
+
+
+def example_with_scale_below_min():
+    """Doctest input."""
+    return [{"application-name": "alertmanager", "minimum": 2}]

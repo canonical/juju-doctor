@@ -15,7 +15,7 @@ from typing import Dict
 import yaml
 
 
-def status(juju_statuses: Dict[str, Dict]):
+def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.
 
     >>> status({"invalid-openstack-model": example_status_cyclic_agent_cos_proxy()})  # doctest: +ELLIPSIS

@@ -10,40 +10,26 @@ from urllib.parse import ParseResult, urlparse
 from uuid import UUID, uuid4
 
 import fsspec
-import yaml
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from rich.logging import RichHandler
 from treelib.tree import Tree
 
-from juju_doctor.artifacts import Artifacts
+from juju_doctor.artifacts import Artifacts, read_file
+from juju_doctor.constants import (
+    BUILTIN_DIR,
+    ROOT_NODE_ID,
+    ROOT_NODE_TAG,
+    SUPPORTED_PROBE_FUNCTIONS,
+)
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
 from juju_doctor.results import (
-    SUPPORTED_PROBE_FUNCTIONS,
     AssertionResult,
     AssertionStatus,
     OutputFormat,
 )
-from juju_doctor.ruleset import BUILTIN_DIR, RuleSetModel
-
-ROOT_NODE_ID = "root"
-ROOT_NODE_TAG = "Results"
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
-
-
-def _read_file(filename: Path) -> Optional[Dict]:
-    """Read a yaml probe file into a dict."""
-    try:
-        with open(str(filename), "r") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        log.warning(f"Error: File '{filename}' not found.")
-    except yaml.YAMLError as e:
-        log.warning(f"Error: Failed to parse YAML in '{filename}': {e}")
-    except Exception as e:
-        log.warning(f"Unexpected error while reading '{filename}': {e}")
-    return None
 
 
 @dataclass
@@ -111,10 +97,9 @@ class Probe:
     path: Path
     probes_root: Path
     probes_chain: str = ""
-    with_content: Optional[Dict[str, Any]] = None
+    probes_assertion: Optional["ProbeAssertion"] = None
     results: List[AssertionResult] = field(default_factory=list)
     uuid: UUID = field(default_factory=uuid4)
-    _name: Optional[str] = None
 
     @property
     def name(self) -> str:
@@ -123,11 +108,9 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
-        return self._name or self.path.relative_to(self.probes_root).as_posix()
-
-    def update_name(self, name: str):
-        """Update the Probe's name."""
-        self._name = name
+        if self.probes_assertion and self.probes_assertion.name:
+            return self.probes_assertion.name
+        return self.path.relative_to(self.probes_root).as_posix()
 
     @property
     def is_root_node(self) -> bool:
@@ -157,7 +140,7 @@ class Probe:
         url: str,
         probes_root: Path,
         probes_chain: str = "",
-        with_content: Optional[Dict[str, Any]] = None,
+        probe_assertion: Optional["ProbeAssertion"] = None,
         probe_tree: Optional[ProbeTree] = None,
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
@@ -175,7 +158,7 @@ class Probe:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
-            with_content: kwargs offering customizable inputs to the probe.
+            probe_assertion: assertion context (e.g. kwargs) provided as input to the probe.
             probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
         """
         if probe_tree is None:
@@ -190,7 +173,10 @@ class Probe:
 
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
-            probe = Probe(probe_path, probes_root, probes_chain, with_content)
+            if probe_assertion:
+                probe = Probe(probe_path, probes_root, probes_chain, probe_assertion)
+            else:
+                probe = Probe(probe_path, probes_root, probes_chain)
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
             if is_ruleset:
                 ruleset = RuleSet(probe)
@@ -261,9 +247,11 @@ class Probe:
                 log.warning(f"No {func_name} artifact was provided for probe: {self.path}.")
                 continue
             # Run the probe function, and record its result
-            # TODO: Do we like "custom" as the probe arg?
             try:
-                func(artifact, custom=self.with_content)
+                if self.probes_assertion:
+                    func(artifact, with_args=self.probes_assertion.with_)
+                else:
+                    func(artifact)
             except BaseException as e:
                 self.results.append(AssertionResult(func_name, passed=False, exception=e))
             else:
@@ -308,7 +296,26 @@ class Probe:
         return NodeResultInfo(node_tag, exception_msgs)
 
 
-# TODO: Consider merging ruleset.py and probes.py since they both do similar things
+class ProbeAssertion(BaseModel):
+    """Schema for a builtin Probe definition in a RuleSet."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = Field(None)
+    type: str
+    url: Optional[str] = Field(None)
+    with_: Optional[Any] = Field(None, alias="with")
+
+
+class RuleSetModel(BaseModel):
+    """A pydantic model of a declarative YAML RuleSet."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    probes: List[ProbeAssertion] = Field(...)
+
+
 class RuleSet:
     """Represents a set of probes defined in a declarative configuration file.
 
@@ -322,7 +329,7 @@ class RuleSet:
             probe: The Probe representing the ruleset configuration file.
         """
         self.probe = probe
-        if not (contents := _read_file(self.probe.path)):
+        if not (contents := read_file(str(self.probe.path))):
             self.content = None
         else:
             try:
@@ -382,7 +389,7 @@ class RuleSet:
                         ruleset_probe.url,
                         self.probe.probes_root,
                         self.probe.get_chain(),
-                        ruleset_probe.with_,
+                        ruleset_probe,
                         probe_tree,
                     )
                 case "ruleset":
@@ -402,7 +409,7 @@ class RuleSet:
                             ruleset_probe.url,
                             self.probe.probes_root,
                             self.probe.get_chain(),
-                            None,
+                            ruleset_probe,
                             probe_tree,
                         )
                         # If the probe is a directory of probes, capture it and continue to the
@@ -416,7 +423,6 @@ class RuleSet:
                             log.info(f"Fetched probes: {derived_ruleset_probe_tree.probes}")
                             probe_tree.probes.extend(derived_ruleset_probe_tree.probes)
                     else:
-                        # TODO: Why do I hit this when running test_aggregation?
                         raise NotImplementedError
                 case "builtin":
                     type_parts = ruleset_probe.type.split("/")
@@ -426,7 +432,7 @@ class RuleSet:
                         f"file://{BUILTIN_DIR}/{builtin_type}.py",
                         self.probe.probes_root,
                         self.probe.get_chain(),
-                        ruleset_probe.with_,
+                        ruleset_probe,
                         probe_tree,
                     )
                 case _:

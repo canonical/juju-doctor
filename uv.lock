@@ -224,6 +224,10 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+doctest = [
+    { name = "pyyaml" },
+    { name = "rich" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -233,13 +237,15 @@ requires-dist = [
     { name = "pyright", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pyyaml" },
+    { name = "pyyaml", marker = "extra == 'doctest'" },
     { name = "requests" },
+    { name = "rich", marker = "extra == 'doctest'" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sh" },
     { name = "treelib" },
     { name = "typer" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "doctest"]
 
 [[package]]
 name = "markdown-it-py"
