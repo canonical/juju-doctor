@@ -97,7 +97,7 @@ class Probe:
     path: Path
     probes_root: Path
     probes_chain: str = ""
-    probes_assertion: Optional["ProbeAssertion"] = None
+    probe_assertion: Optional["ProbeAssertion"] = None
     results: List[AssertionResult] = field(default_factory=list)
     uuid: UUID = field(default_factory=uuid4)
 
@@ -108,8 +108,8 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
-        if self.probes_assertion and self.probes_assertion.name:
-            return self.probes_assertion.name
+        if self.probe_assertion and self.probe_assertion.name:
+            return self.probe_assertion.name
         return self.path.relative_to(self.probes_root).as_posix()
 
     @property
@@ -248,8 +248,8 @@ class Probe:
                 continue
             # Run the probe function, and record its result
             try:
-                if self.probes_assertion:
-                    func(artifact, with_args=self.probes_assertion.with_)
+                if self.probe_assertion:
+                    func(artifact, with_args=self.probe_assertion.with_)
                 else:
                     func(artifact)
             except BaseException as e:
@@ -414,6 +414,7 @@ class RuleSet:
                         )
                         # If the probe is a directory of probes, capture it and continue to the
                         # next probe since it's not actually a Ruleset
+                        # TODO: This is suspicious, debug without dir and see if this code hits
                         if len(probe_tree.probes) > 1:
                             continue
                         # Recurses until we no longer have Ruleset probes
