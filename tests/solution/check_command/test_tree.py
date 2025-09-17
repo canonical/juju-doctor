@@ -44,7 +44,7 @@ def test_check_groups_by_parent():
         "--format=json",
         "--probe=file://tests/resources/probes/ruleset/dir.yaml",
         "--probe=file://tests/resources/probes/ruleset/nested.yaml",
-        "--probe=file://tests/resources/probes/ruleset/scriptlet.yaml",
+        "--probe=file://tests/resources/probes/ruleset/scriptlets.yaml",
         "--status=tests/resources/artifacts/status.yaml",
     ]
     # WHEN `juju-doctor check` is executed
@@ -63,7 +63,7 @@ def test_check_groups_by_parent():
                             "children": [{"🔴 Probe - test failing": {}}]
                         }
                     },
-                    {"🟢 Probe - test directory": {}},
+                    {"🟢 tests_resources_probes_ruleset_small-dir/passing.py": {}},
                 ]
             }
         },
@@ -71,7 +71,7 @@ def test_check_groups_by_parent():
             "RuleSet - test nested rulesets": {
                 "children": [
                     {
-                        "RuleSet - test scriptlet": {
+                        "RuleSet - test scriptlets": {
                             "children": [
                                 {"🔴 Probe - test failing": {}},
                                 {"🟢 Probe - test passing": {}},
@@ -82,7 +82,7 @@ def test_check_groups_by_parent():
             }
         },
         {
-            "RuleSet - test scriptlet": {
+            "RuleSet - test scriptlets": {
                 "children": [
                     {"🔴 Probe - test failing": {}},
                     {"🟢 Probe - test passing": {}},

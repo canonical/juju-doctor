@@ -26,7 +26,7 @@ format:
   uv run $uv_flags ruff check --fix-only
 
 # Run all tests
-test: lint static unit solution doctest
+test: lint static unit solution doctest schema
 
 # Run unit tests
 unit *args='':
@@ -37,10 +37,6 @@ unit *args='':
 solution *args='':
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/solution}"
   uv run $uv_flags coverage report
-
-# TODO: I need to test with all env vars enabled in CI YAML, it is assumed locally that user has:
-# - uv sync --extra=dev && source .venv/bin/activate
-# Make a doc out of THIS
 
 doctest: doctest-builtin doctest-examples
 

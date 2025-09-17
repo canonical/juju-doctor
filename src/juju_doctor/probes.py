@@ -174,7 +174,11 @@ class Probe:
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
             if probe_assertion:
-                probe = Probe(probe_path, probes_root, probes_chain, probe_assertion)
+                if probe_assertion.is_dir():
+                    # NOTE: If the calling probe is a directory of probes, default the probe name
+                    probe = Probe(probe_path, probes_root, probes_chain)
+                else:
+                    probe = Probe(probe_path, probes_root, probes_chain, probe_assertion)
             else:
                 probe = Probe(probe_path, probes_root, probes_chain)
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
@@ -306,6 +310,15 @@ class ProbeAssertion(BaseModel):
     url: Optional[str] = Field(None)
     with_: Optional[Any] = Field(None, alias="with")
 
+    def is_dir(self) -> bool:
+        """Is the url a directory-like path, i.e. it does not need to exist on disk."""
+        if not self.url:
+            return False
+        assertion_path = Path(str(urlparse(self.url).path))
+        return (
+            assertion_path.name.endswith("/") or not assertion_path.suffix
+        ) and self.type.split("/")[0] != "builtin"
+
 
 class RuleSetModel(BaseModel):
     """A pydantic model of a declarative YAML RuleSet."""
@@ -366,9 +379,6 @@ class RuleSet:
                 self.content.name, str(self.probe.uuid), str(self.probe.get_parent()), self.probe
             )
 
-        if not self.content.probes:
-            return probe_tree
-
         for ruleset_probe in self.content.probes:
             match ruleset_probe.type.split("/")[0]:
                 # If the probe URL is not a directory and the path's suffix does not match the
@@ -412,9 +422,8 @@ class RuleSet:
                             ruleset_probe,
                             probe_tree,
                         )
-                        # If the probe is a directory of probes, capture it and continue to the
-                        # next probe since it's not actually a Ruleset
-                        # TODO: This is suspicious, debug without dir and see if this code hits
+                        # If there are multiple probes, capture them and continue to the next probe
+                        # since it's not actually a Ruleset
                         if len(probe_tree.probes) > 1:
                             continue
                         # Recurses until we no longer have Ruleset probes

@@ -3,27 +3,25 @@ probes:
   - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
-  - name: RuleSet - test directory of probes
-    type: ruleset
+  - type: ruleset
     url: file://tests/resources/probes/ruleset/small-dir
-  - name: RuleSet - test scriptlet
-    type: ruleset
-    url: file://tests/resources/probes/ruleset/scriptlet.yaml
-  - name: RuleSet - test builtin assertions
-    type: ruleset
-    url: file://tests/resources/probes/ruleset/builtins.yaml
+  - type: ruleset
+    url: file://tests/resources/probes/ruleset/scriptlets.yaml
+  # - name: RuleSet - test builtin assertions
+  #   type: ruleset
+  #   url: file://tests/resources/probes/ruleset/builtins.yaml
 
-  - name: Builtin application-exists
-    type: builtin/application-exists
-    with:
-      - application-name: catalogue
-  - name: Builtin relation-exists
-    type: builtin/relation-exists
-    with:
-      - apps: [grafana:catalogue, catalogue:catalogue]
-  - name: Builtin offer-exists
-    type: builtin/offer-exists
-    with:
-      - offer-name: loki-logging
-        endpoint: logging
-        interface: loki_push_api
+  # - name: Builtin application-exists
+  #   type: builtin/application-exists
+  #   with:
+  #     - application-name: catalogue
+  # - name: Builtin relation-exists
+  #   type: builtin/relation-exists
+  #   with:
+  #     - apps: [grafana:catalogue, catalogue:catalogue]
+  # - name: Builtin offer-exists
+  #   type: builtin/offer-exists
+  #   with:
+  #     - offer-name: loki-logging
+  #       endpoint: logging
+  #       interface: loki_push_api

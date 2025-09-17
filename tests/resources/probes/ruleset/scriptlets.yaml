@@ -1,4 +1,4 @@
-name: RuleSet - test scriptlet
+name: RuleSet - test scriptlets
 probes:
   - name: Probe - test passing
     type: scriptlet

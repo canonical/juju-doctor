@@ -2,4 +2,4 @@ name: RuleSet - test nested rulesets
 probes:
   - name: RuleSet - test scriptlet
     type: ruleset
-    url: file://tests/resources/probes/ruleset/scriptlet.yaml
+    url: file://tests/resources/probes/ruleset/scriptlets.yaml

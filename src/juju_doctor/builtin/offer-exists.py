@@ -27,7 +27,7 @@ class OfferAssertion(BaseModel):
         """Validate that the endpoint exists if the endpoint is defined."""
         if self.interface is not None and self.endpoint is None:
             # TODO: Does endpoint need to exist? Premature optimization since the API comes first
-            #       Allowing interface to not depend on endpoint makes it more powerful
+            #       Interface not depending on endpoint makes it more powerful
             #       Add a test for this?
             raise ValueError("The endpoint must be defined if the interface is defined")
         return self
