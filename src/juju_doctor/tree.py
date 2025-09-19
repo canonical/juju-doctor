@@ -10,7 +10,7 @@ from treelib.tree import Tree
 
 from juju_doctor.constants import ROOT_NODE_ID, ROOT_NODE_TAG
 from juju_doctor.probes import AssertionStatus, Probe
-from juju_doctor.results import OutputFormat
+from juju_doctor.results import CheckFormat, FormatTracker
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class ResultAggregator:
     def __init__(
         self,
         probes: List[Probe],
-        output_fmt: OutputFormat,
+        output_fmt: FormatTracker,
         tree: Optional[Tree] = None,
     ):
         """Receive probes and instantiate the tree representation.
@@ -70,7 +70,7 @@ class ResultAggregator:
         failed = results[AssertionStatus.FAIL.value]
         total = passed + failed
         match self._output_fmt.format.lower():
-            case "":
+            case CheckFormat.tree.value:
                 self._tree.show()
                 for e in filter(None, self._exceptions):
                     console.print(e)
@@ -78,7 +78,7 @@ class ResultAggregator:
                 fail_string = f"🔴 {failed}/{total}" if failed != 0 else ""
                 if pass_string or fail_string:
                     console.print(f"\nTotal: {pass_string} {fail_string}")
-            case "json":
+            case CheckFormat.json.value:
                 tree_json = json.loads(self._tree.to_json())
                 meta_json = {
                     "passed": passed,
@@ -88,5 +88,3 @@ class ResultAggregator:
                     tree_json["exceptions"] = self._exceptions
                 tree_json.update(meta_json)
                 print(json.dumps(tree_json))
-            case _:
-                raise NotImplementedError

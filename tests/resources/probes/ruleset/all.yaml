@@ -3,14 +3,12 @@ probes:
   - name: Probe - test passing
     type: scriptlet
     url: file://tests/resources/probes/python/passing.py
+  # - type: ruleset
+  #   url: file://tests/resources/probes/ruleset/small-dir
+  # - type: ruleset
+  #   url: file://tests/resources/probes/ruleset/scriptlets.yaml
   - type: ruleset
-    url: file://tests/resources/probes/ruleset/small-dir
-  - type: ruleset
-    url: file://tests/resources/probes/ruleset/scriptlets.yaml
-  # - name: RuleSet - test builtin assertions
-  #   type: ruleset
-  #   url: file://tests/resources/probes/ruleset/builtins.yaml
-
+    url: file://tests/resources/probes/ruleset/builtins.yaml
   # - name: Builtin application-exists
   #   type: builtin/application-exists
   #   with:

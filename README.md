@@ -33,13 +33,13 @@ If you have a live deplyoment, you can also run `juju-doctor` against that:
 In either case, the output will look like so (configurable with `--format` and `--verbose`):
 ```
 Results
-├── 🔴 tests_resources_probes_python_failing.py (✖️ bundle, ✖️ show_unit, ✖️ status)
-└── 🟢 tests_resources_probes_python_passing.py (✔️ bundle, ✔️ show_unit, ✔️ status)
+├── 🔴 tests_resources_probes_python_failing.py
+└── 🟢 tests_resources_probes_python_passing.py
 
 Total: 🟢 3/6 🔴 3/6
 ```
 
-The path to a probe can also be a url:
+The path to a probe can also be a URL:
 ```bash
 # Run a remote probe against a live model
 ∮ juju-doctor check --model cos --probe github://canonical/grafana-k8s-operator//probes/some_probe.py
@@ -97,11 +97,10 @@ Currently, the following probe types are supported:
 - **`ruleset`**: A declarative deployment RuleSet
 - **`builtin/*`**: A builtin plugin of a type defined in the [supported plugins](schema/builtins.json)
 
-See [this RuleSet probe](tests/resources/probes/ruleset/all.yaml) as an extensive example.
-See [this schema definition](schema/ruleset.json) for the RuleSet YAML file.
+Run `juju-doctor schema` to output the schema of a RuleSet YAML file and check out [this RuleSet probe](tests/resources/probes/ruleset/all.yaml) as an extensive example.
 
 #### Builtins
-See [this doc](docs/how-to/contribute-a-builtin.md) about contributing a builtin.
+See [this doc](docs/how-to/contribute-a-builtin.md) for contributing a builtin and general information about the builtin plugin design.
 
 ## Development
 ```bash

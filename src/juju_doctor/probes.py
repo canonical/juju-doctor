@@ -22,11 +22,7 @@ from juju_doctor.constants import (
     SUPPORTED_PROBE_FUNCTIONS,
 )
 from juju_doctor.fetcher import FileExtensions, copy_probes, parse_terraform_notation
-from juju_doctor.results import (
-    AssertionResult,
-    AssertionStatus,
-    OutputFormat,
-)
+from juju_doctor.results import AssertionResult, AssertionStatus, CheckFormat, FormatTracker
 
 logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
@@ -66,6 +62,41 @@ class ProbeTree:
     probes: List["Probe"] = field(default_factory=list)
     tree: Tree = field(default_factory=Tree)
 
+    def summarize_results(self):
+        """Iterate over all probes and summarize their function name results."""
+        for probe in self.probes:
+            self._summarize_probe_results(probe)
+
+    @staticmethod
+    def _summarize_probe_results(probe: "Probe"):
+        """Summarize the results for each executed function name (if multiple exist) of a Probe.
+
+        For example, this:
+        🟢 Foo (✔️ bundle, ✔️ status, ✖️ bundle, ✔️ status, ✔️ bundle, ✔️ status)
+        becomes this:
+        🟢 Foo (✖️ bundle (2/3), ✔️ status (3/3))
+        """
+        if len([r.func_name for r in probe.results]) == len({r.func_name for r in probe.results}):
+            return  # if there are no duplicates
+
+        # Generate the score (passed/total) among duplicates
+        summary = {}
+        for probe_result in probe.results:
+            func_name = probe_result.func_name
+            summary.setdefault(func_name, {"score": [0, 0], "exceptions": []})
+            summary[func_name]["score"][0] += 1 if probe_result.passed else 0
+            summary[func_name]["score"][1] += 1
+            summary[func_name]["exceptions"].extend(probe_result.exceptions)
+
+        probe.results = []
+        for func_name, func_summary in summary.items():
+            passed = func_summary["score"][0]
+            total = func_summary["score"][1]
+            new_name = f"{func_name} ({passed}/{total})"
+            probe.results.append(
+                AssertionResult(new_name, passed == total, summary[func_name]["exceptions"])
+            )
+
 
 @dataclass
 class Probe:
@@ -97,7 +128,7 @@ class Probe:
     path: Path
     probes_root: Path
     probes_chain: str = ""
-    probe_assertion: Optional["ProbeAssertion"] = None
+    probe_definition: Optional["ProbeDefinition"] = None
     results: List[AssertionResult] = field(default_factory=list)
     uuid: UUID = field(default_factory=uuid4)
 
@@ -108,9 +139,12 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
-        if self.probe_assertion and self.probe_assertion.name:
-            return self.probe_assertion.name
-        return self.path.relative_to(self.probes_root).as_posix()
+        default = self.path.relative_to(self.probes_root).as_posix()
+        if not self.probe_definition:
+            return default
+        if not self.probe_definition.name:
+            return default
+        return self.probe_definition.name
 
     @property
     def is_root_node(self) -> bool:
@@ -140,7 +174,7 @@ class Probe:
         url: str,
         probes_root: Path,
         probes_chain: str = "",
-        probe_assertion: Optional["ProbeAssertion"] = None,
+        probe_definition: Optional["ProbeDefinition"] = None,
         probe_tree: Optional[ProbeTree] = None,
     ) -> ProbeTree:
         """Build a set of Probes from a URL.
@@ -158,7 +192,7 @@ class Probe:
             url: a string representing the Probe's URL.
             probes_root: the root folder for the probes on the local FS.
             probes_chain: the call chain of probes with format /uuid/uuid/uuid.
-            probe_assertion: assertion context (e.g. kwargs) provided as input to the probe.
+            probe_definition: context provided as input to the probe, e.g. url, name, etc.
             probe_tree: a ProbeTree representing the discovered probes in a treelib.Tree format.
         """
         if probe_tree is None:
@@ -173,19 +207,14 @@ class Probe:
 
         probe_paths = copy_probes(fs.fs, fs.path, probes_destination=probes_root / url_flattened)
         for probe_path in probe_paths:
-            if probe_assertion:
-                if probe_assertion.is_dir():
-                    # NOTE: If the calling probe is a directory of probes, default the probe name
-                    probe = Probe(probe_path, probes_root, probes_chain)
-                else:
-                    probe = Probe(probe_path, probes_root, probes_chain, probe_assertion)
-            else:
-                probe = Probe(probe_path, probes_root, probes_chain)
+            if probe_definition and probe_definition.is_dir():
+                probe_definition.name = None
+            probe = Probe(probe_path, probes_root, probes_chain, probe_definition)
+
             is_ruleset = probe.path.suffix.lower() in FileExtensions.RULESET.value
             if is_ruleset:
                 ruleset = RuleSet(probe)
                 probe_tree = ruleset.aggregate_probes(probe_tree)
-
             else:
                 if probe.is_root_node:
                     probe_tree.tree.create_node(
@@ -239,7 +268,7 @@ class Probe:
             if name in SUPPORTED_PROBE_FUNCTIONS
         }
 
-    def run(self, artifacts: Artifacts):
+    def run(self, artifacts: Artifacts, **kwargs):
         """Execute each Probe function that matches the supported probe types.
 
         The results of each function are aggregated and assigned to the probe itself
@@ -252,16 +281,13 @@ class Probe:
                 continue
             # Run the probe function, and record its result
             try:
-                if self.probe_assertion:
-                    func(artifact, with_args=self.probe_assertion.with_)
-                else:
-                    func(artifact)
+                func(artifact, **kwargs)
             except BaseException as e:
-                self.results.append(AssertionResult(func_name, passed=False, exception=e))
+                self.results.append(AssertionResult(func_name, passed=False, exceptions=[e]))
             else:
                 self.results.append(AssertionResult(func_name, passed=True))
 
-    def result_text(self, output_fmt: OutputFormat) -> NodeResultInfo:
+    def result_text(self, output_fmt: FormatTracker) -> NodeResultInfo:
         """Probe results (formatted with Pretty-print) as text."""
         failed = False
         func_statuses = []
@@ -271,15 +297,13 @@ class Probe:
         for result in self.results:
             if not result.passed:
                 failed = True
-                if result.func_name:
-                    exception_suffix = f"({self.name}/{result.func_name}): {result.exception}"
-                else:
-                    exception_suffix = f"({self.name}): {result.exception}"
-                if output_fmt.format.lower() == "json":
-                    exception_msgs.append(f"Exception {exception_suffix}")
-                else:
-                    if output_fmt.verbose:
-                        exception_msgs.append(f"[b]Exception[/b] {exception_suffix}")
+                for exception in result.exceptions:
+                    exception_suffix = f"({self.name}/{result.func_name}): {exception}"
+                    if output_fmt and output_fmt.format.lower() == CheckFormat.json.value:
+                        exception_msgs.append(f"Exception {exception_suffix}")
+                    else:
+                        if output_fmt.verbose:
+                            exception_msgs.append(f"[b]Exception[/b] {exception_suffix}")
 
             symbol = (
                 output_fmt.rich_map["check_mark"]
@@ -300,7 +324,7 @@ class Probe:
         return NodeResultInfo(node_tag, exception_msgs)
 
 
-class ProbeAssertion(BaseModel):
+class ProbeDefinition(BaseModel):
     """Schema for a builtin Probe definition in a RuleSet."""
 
     model_config = ConfigDict(extra="forbid")
@@ -317,7 +341,11 @@ class ProbeAssertion(BaseModel):
         assertion_path = Path(str(urlparse(self.url).path))
         return (
             assertion_path.name.endswith("/") or not assertion_path.suffix
-        ) and self.type.split("/")[0] != "builtin"
+        ) and self.get_type() != "builtin"
+
+    def get_type(self):
+        """Convert the user input into a base type."""
+        return self.type.split("/")[0]
 
 
 class RuleSetModel(BaseModel):
@@ -326,7 +354,7 @@ class RuleSetModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    probes: List[ProbeAssertion] = Field(...)
+    probes: List[ProbeDefinition] = Field(...)
 
 
 class RuleSet:
@@ -380,7 +408,7 @@ class RuleSet:
             )
 
         for ruleset_probe in self.content.probes:
-            match ruleset_probe.type.split("/")[0]:
+            match ruleset_probe.get_type():
                 # If the probe URL is not a directory and the path's suffix does not match the
                 # expected type, warn and return no probes
                 case "scriptlet":

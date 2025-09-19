@@ -1,9 +1,9 @@
 """Helper module for displaying the result in a tree."""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from rich.logging import RichHandler
 
@@ -11,12 +11,26 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 
+class CheckFormat(str, Enum):
+    """Options for formatting the output of the check command."""
+
+    tree = "tree"
+    json = "json"
+
+
+class SchemaType(str, Enum):
+    """Options for which schema type to output."""
+
+    ruleset = "ruleset"
+    builtins = "builtins"
+
+
 @dataclass
-class OutputFormat:
+class FormatTracker:
     """Output formatting for the application."""
 
     verbose: bool
-    format: str = ""
+    format: CheckFormat
     rich_map = {
         "green": "🟢",
         "red": "🔴",
@@ -38,7 +52,7 @@ class AssertionResult:
 
     func_name: Optional[str]
     passed: bool
-    exception: Optional[BaseException] = None
+    exceptions: List[Optional[BaseException]] = field(default_factory=list)
 
     @property
     def status(self) -> str:

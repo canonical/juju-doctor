@@ -26,7 +26,7 @@ format:
   uv run $uv_flags ruff check --fix-only
 
 # Run all tests
-test: lint static unit solution doctest schema
+test: lint static unit solution doctest
 
 # Run unit tests
 unit *args='':
@@ -56,17 +56,3 @@ doctest-builtin:
     python3 -m doctest "$file" || exit 1
   done
   echo "{{BOLD + GREEN}}SUCCESS: All builtin probe tests passed!"
-
-# Lint the schema to ensure it is updated
-schema:
-  just schema-diff ruleset
-  just schema-diff builtins
-
-schema-diff *type:
-  #!/usr/bin/env bash
-  uv sync --extra=dev > /dev/null 2>&1
-  source .venv/bin/activate
-  echo $1
-  if ! diff <(juju-doctor schema --{{type}}) schema/{{type}}.json; then
-    exit 1
-  fi

@@ -7,62 +7,60 @@ Builtins are probes, serving as complementary (or isolated) assertions, dependin
 ```yaml
 name: RuleSet - demo
 probes:
-  - name: Probe - test passing
-    type: scriptlet
+  - type: scriptlet
     url: file://tests/resources/probes/python/passing.py
   - name: My builtin
     type: builtin/my-builtin
-    with:
-      - foo: one
-      - foo: two
 ```
 
 ## Builtin plugins
 
-Juju-doctor is designed to accept builtin plugins via contributions made in the [src.juju_doctor.builtin](../../src/juju_doctor/builtin/) directory. Each of these files are a builtin and the name of the plugin is derived from the Python file name. Additionally, each builtin conforms to the [scriptlet interface](../../README.md#scriptlet):
+Juju-doctor is designed to accept builtin plugins via contributions made in the [src.juju_doctor.builtin](../../src/juju_doctor/builtin/) directory. Each of these files are a builtin and the name of the plugin is derived from the Python file name. Additionally, each builtin Python file conforms to the [scriptlet interface](../../README.md#scriptlet), i.e. it must define, at least one of, the supported functions (e.g., `status`, `bundle`, etc.):
 
 ```python
 # src/juju_doctor/builtins/my-builtin.py
-class FooModel(BaseModel):
-    foo: str
-
 def status(juju_statuses: Dict[str, Dict], **kwargs):
-    assert kwargs["with_args"], "No arguments were provided"
-    foo_models = [FooModel(**foo) for foo in kwargs["with_args"]]
-    for foo_model in foo_models:
-        # Run your assertion on each foo_model (FooModel) here ...
+    foo_model = FooModel(**kwargs)
+    for status_name, status in juju_statuses.items():
+        # Run your assertion (FooModel) against all supplied status artifacts ...
+        # NOTE: you can import any dependency that juju-doctor has access to
 ```
 
-This would create the following API in a RuleSet:
-
-```yaml
-name: My builtin
-  type: builtin/my-builtin
-  with:
-    - foo: one  # FooModel
-    - foo: two  # FooModel
-    # list more assertions here ...
-```
-
-Using [Pydantic's BaseModel](https://docs.pydantic.dev/latest/api/base_model/), you can control the schema of your builtin. For example, to improve on the `FooModel` from the previous example, we can forbid extra attributes to our builtin. 
-
-```python
-class FooModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    foo: str
-```
-
-This would create the following API in a RuleSet:
+This would allow you to use it in a RuleSet:
 
 ```yaml
 name: My builtin
   type: builtin/my-builtin
   with:
     - foo: one
-      invalid-key: this will raise a pydantic ValidationError
+      bar: two
+    - foo: three
+      bar: four
+    # list more assertions here ...
+```
+Any arguments under `with` will be passed to the `status` function, accessed via `**kwargs`. In favor of readability, we can list multiple assertions nested under `with` to avoid duplicate `type` definitions.
+
+Using [Pydantic's BaseModel](https://docs.pydantic.dev/latest/api/base_model/), you can control the schema of the builtin. For example, creating a `FooModel` can forbid extra attributes to the builtin.
+
+```python
+class FooModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    foo: str
+    bar: str
+```
+
+This would enforce the following API in a RuleSet:
+
+```yaml
+name: My builtin
+  type: builtin/my-builtin
+  with:
+    - foo: one
+      bar: two
+      invalid-key: raises a pydantic ValidationError
 ```
 
 ## How to test the plugin
 
-To ensure that each builtin asserts correctly, its functional tests are defined in [doctest(s)](https://docs.python.org/3/library/doctest.html). Providing invalid user input and asserting that juju-doctor warns the user of mistakes, is a great way to ensure functionality of the builtin. To execute all the builtin probe doctests, run:
-- `just doctest-builtin`.
+To ensure that each builtin asserts correctly, its functional tests are defined in [doctest(s)](https://docs.python.org/3/library/doctest.html). Providing invalid user input and asserting that juju-doctor warns the user of mistakes, is a great way to ensure functionality of the builtin. Check out one of the existing plugins in the [src.juju_doctor.builtin](../../src/juju_doctor/builtin/) directory as an example. To execute all the probe doctests, run:
+- `just doctest`

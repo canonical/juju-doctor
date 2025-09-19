@@ -1,13 +1,14 @@
 """Main Typer application to assemble the CLI."""
 
-import json
 import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Set
+from typing import Annotated, Dict, List, Set
 
 import typer
+import yaml
+from pydantic.json_schema import models_json_schema
 from rich.console import Console
 from rich.logging import RichHandler
 
@@ -15,7 +16,8 @@ from juju_doctor.artifacts import Artifacts, ModelArtifact
 from juju_doctor.constants import BUILTIN_DIR
 from juju_doctor.fetcher import find_pydantic_models_in_module, import_module_from_path
 from juju_doctor.probes import Probe, ProbeTree, RuleSetModel
-from juju_doctor.tree import OutputFormat, ResultAggregator
+from juju_doctor.results import CheckFormat, SchemaType
+from juju_doctor.tree import FormatTracker, ResultAggregator
 
 # pyright: reportAttributeAccessIssue=false
 
@@ -61,10 +63,10 @@ def check(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output."),
     ] = False,
-    format: Annotated[
-        str,
-        typer.Option("--format", "-o", help="Specify output format."),
-    ] = "",
+    format_type: Annotated[
+        CheckFormat,
+        typer.Option("--format", "-o", help="Specify output format.", case_sensitive=False),
+    ] = CheckFormat.tree,
 ):
     """Validate deployments, i.e. artifacts against assertions, i.e. probes.
 
@@ -81,7 +83,7 @@ def check(
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
 
     # Ensure valid JSON format in stdout
-    if format.lower() == "json":
+    if format_type and format_type.lower() == CheckFormat.json.value:
         logging.disable(logging.ERROR)
 
     unique_probe_urls: Set[str] = set()
@@ -131,7 +133,13 @@ def check(
         check_functions: Set[str] = set()
         for probe in probe_tree.probes:
             check_functions |= set(probe.get_functions().keys())
-            probe.run(artifacts)
+            if probe.probe_definition and probe.probe_definition.with_:
+                for with_ in probe.probe_definition.with_:
+                    probe.run(artifacts, **with_)
+            else:
+                probe.run(artifacts)
+
+        probe_tree.summarize_results()
 
         if not provided_artifacts.issubset(check_functions):
             useless_artifacts = ", ".join(provided_artifacts - check_functions)
@@ -141,64 +149,44 @@ def check(
             )
 
         if probe_tree.tree:
-            output_fmt = OutputFormat(verbose, format)
-            aggregator = ResultAggregator(probe_tree.probes, output_fmt, probe_tree.tree)
+            fmt = FormatTracker(verbose, format_type)
+            aggregator = ResultAggregator(probe_tree.probes, fmt, probe_tree.tree)
             aggregator.print_results()
 
 
 @app.command(no_args_is_help=True)
 def schema(
-    builtins: Annotated[
-        bool,
-        typer.Option("--builtins", help="Output all Builtin schemas to stdout."),
-    ] = False,
-    ruleset: Annotated[
-        bool,
-        typer.Option("--ruleset", help="Output the RuleSet schema to stdout."),
-    ] = False,
-    file: Annotated[
-        Optional[Path],
-        typer.Option("--output", "-o", help="Specify the file's relative destination path."),
-    ] = None,
+    schema_type: Annotated[
+        SchemaType,
+        typer.Option(
+            "--type", "-t", help="Specify which schema type to output.", case_sensitive=False
+        ),
+    ] = SchemaType.ruleset,
 ):
-    """Generate and output the unified schema."""
-    # Input validation
-    if ruleset and builtins:
-        raise typer.BadParameter("Schemas for ruleset and builtins are mutually exclusive.")
-
-    if ruleset:
+    """Generate and output the schema."""
+    if schema_type == SchemaType.ruleset.value:
         schema = RuleSetModel.model_json_schema()
-    elif builtins:
+    elif schema_type == SchemaType.builtins.value:
         root = Path(BUILTIN_DIR)
-        schema: Dict[str, Any] = {}
+        models = []
         for path in sorted(root.glob("*.py")):
             try:
                 mod = import_module_from_path(path)
             except Exception as e:
-                log.error(f'Error importing module ({path.name}): {e}')
+                log.error(f"Error importing module ({path.name}): {e}")
                 continue
-            plugin_name = Path(path.name).stem
-            schema.setdefault(plugin_name, {})
             for cls in find_pydantic_models_in_module(mod):
                 try:
-                    schema[plugin_name][cls.__name__] = cls.model_json_schema()
+                    models.append(cls)
                 except Exception as e:
-                    log.error(f'Error in file ({path.name}:{cls.__name__}): {e}')
+                    log.error(f"Error in file ({path.name}:{cls.__name__}): {e}")
+        _, schema = models_json_schema(
+            [(model, "validation") for model in models],
+        )
     else:
         raise NotImplementedError
 
-    if not file:
-        console.print(json.dumps(schema, indent=2, default=str))
-    else:
-        output_path = Path(file)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Write the schema to the specified file
-        with open(output_path, "w") as f:
-            json.dump(schema, f, indent=2)
-            f.write("\n")
-
-        console.print(f"Schema saved to {output_path}")
+    console.print(yaml.dump(schema, indent=2), no_wrap=True)
 
 
 if __name__ == "__main__":
