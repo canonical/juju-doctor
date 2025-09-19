@@ -5,7 +5,7 @@ To call this builtin within a RuleSet YAML file:
 ```yaml
 name: RuleSet
 probes:
-    - name: Offer exists
+    - name: Offers exist
       type: builtin/offer-exists
       with:
         - offer-name: loki-logging

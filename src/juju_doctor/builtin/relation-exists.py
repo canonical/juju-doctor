@@ -5,7 +5,7 @@ To call this builtin within a RuleSet YAML file:
 ```yaml
 name: RuleSet
 probes:
-    - name: Builtin relation-exists
+    - name: Relations exists
       type: builtin/relation-exists
       with:
         - apps: [alertmanager:catalogue, catalogue:catalogue]
