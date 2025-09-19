@@ -89,6 +89,8 @@ def show_unit(juju_show_units):
 
 **Remember**: `juju-doctor` will only run functions that exactly match a supported artifact name, and will always pass to them a dictionary of *model name* mapped to the proper artifact.
 
+For some real-world examples, check out the [examples directory](examples/) and this [Grafana charm probe](https://github.com/canonical/grafana-k8s-operator/blob/main/probes/relation_dashboard_uid.py). 
+
 ### Ruleset
 Ruleset probes are written in YAML, specifying which probes should be coordinated for a deployment validation.
 
