@@ -1,5 +1,9 @@
 """Application-exists verbatim builtin plugin.
 
+The probe checks that the given application names (not charm names!) exist. This could be useful
+when you need to check that a subset of a status (or bundle) is present, or when the scale of some
+applications may vary after day-1.
+
 To call this builtin within a RuleSet YAML file:
 
 ```yaml
@@ -37,6 +41,11 @@ class ApplicationExists(BaseModel):
 def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for applications existing verbatim.
 
+    >>> status({"0": example_status_missing_applications()}, **{"application-name": "foo"})  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    Exception: There are no applications present in ...
+
     >>> status({"0": example_status()}, **example_with_fake_name())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
@@ -55,7 +64,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     _app = ApplicationExists(**kwargs)
     for status_name, status in juju_statuses.items():
         if not (apps := status.get("applications")):
-            continue
+            raise Exception(f'There are no applications present in "{status_name}"')
         if not (found_app := apps.get(_app.name)):
             raise Exception(
                 f"Unable to find the app ({_app.name}) in "
@@ -81,6 +90,14 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 def example_status():
     """Doctest input."""
     return read_file("tests/resources/artifacts/status.yaml")
+
+
+def example_status_missing_applications():
+    """Doctest input.
+
+    This deployment status is missing applications.
+    """
+    return {}
 
 
 def example_with_fake_name():

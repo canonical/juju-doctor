@@ -7,8 +7,8 @@ probes:
       - application-name: prometheus
         minimum: 1
         maximum: 4
-  - name: Builtin relation-exists
-    type: builtin/relation-exists
+  - name: Builtin app-relation-exists
+    type: builtin/app-relation-exists
     with:
       - apps: [alertmanager:catalogue, catalogue:catalogue]
       - apps: [traefik:ingress, alertmanager:ingress]

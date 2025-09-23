@@ -55,7 +55,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
 
 # ==========================
-# Helper methods
+# Helper functions
 # ==========================
 
 

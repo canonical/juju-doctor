@@ -1,9 +1,11 @@
 """Helper module to wrap and execute probes."""
 
-import importlib.util
 import inspect
 import logging
+import sys
+import types
 from dataclasses import dataclass, field
+from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
@@ -16,7 +18,6 @@ from treelib.tree import Tree
 
 from juju_doctor.artifacts import Artifacts, read_file
 from juju_doctor.constants import (
-    BUILTIN_DIR,
     ROOT_NODE_ID,
     ROOT_NODE_TAG,
     SUPPORTED_PROBE_FUNCTIONS,
@@ -126,7 +127,7 @@ class Probe:
     """
 
     path: Path
-    probes_root: Path
+    probes_root: Optional[Path] = None
     probes_chain: str = ""
     probe_definition: Optional["ProbeDefinition"] = None
     results: List[AssertionResult] = field(default_factory=list)
@@ -139,7 +140,11 @@ class Probe:
         This converts the probe's path relative to the root directory into a string format
         suitable for use in filenames or identifiers.
         """
-        default = self.path.relative_to(self.probes_root).as_posix()
+        default = (
+            self.path.relative_to(self.probes_root).as_posix()
+            if self.probes_root
+            else str(self.path)
+        )
         if not self.probe_definition:
             return default
         if not self.probe_definition.name:
@@ -245,22 +250,36 @@ class Probe:
         return FileSystem(fs=filesystem, path=path)
 
     def get_functions(self) -> Dict:
+        # TODO: In builtins try to import from juju-doctor helpers or pydantic should work from uvx
+        # TODO: Try also with example probes import from juju-doctor helpers or pydantic from uvx
         """Dynamically load a Python script from self.path, making its functions available.
 
-        We need to import the module dynamically with the 'spec' mechanism because the path of the
-        probe is only known at runtime.
-
+        We import the module dynamically because the path of the probe is only known at runtime.
         Only returns the supported 'status', 'bundle', and 'show_unit' functions (if present).
         """
+        # module from filesystem path
+        if self.probes_root:
+            package_name = ""
+            source_path = Path(self.path).resolve()
+            src_text = source_path.read_text()
+            origin = str(source_path)
+        # module from package resources (wheel or source)
+        else:
+            package_name = "juju_doctor"
+            resource = resources.files(package_name).joinpath(str(self.path))
+            src_text = resource.read_text()
+            origin = f"{package_name}/{self.path}"
+
+        # create the module, set context, register and execute
         module_name = "probe"
-        # Get the spec (metadata) for Python to be able to import the probe as a module
-        spec = importlib.util.spec_from_file_location(module_name, self.path.resolve())
-        if not spec:
-            raise ValueError(f"Probe not found at its 'path': {self}")
-        # Import the module dynamically
-        module = importlib.util.module_from_spec(spec)
-        if spec.loader:
-            spec.loader.exec_module(module)
+        module = types.ModuleType(module_name)
+        module.__file__ = origin
+        # ff the probe is inside the package, set a package context so relative imports work
+        module.__package__ = package_name or None
+        sys.modules[module_name] = module
+
+        exec(compile(src_text, origin, "exec"), module.__dict__)
+
         # Return the functions defined in the probe module
         return {
             name: func
@@ -287,16 +306,26 @@ class Probe:
             else:
                 self.results.append(AssertionResult(func_name, passed=True))
 
+    def succeeded(self) -> bool:
+        """Return the probe's status.
+
+        For a probe to succeed, it must have been executed, i.e. have results, and have no failing
+        function results.
+        """
+        if not self.results:
+            return False
+        if all(result.passed for result in self.results):
+            return True
+        return False
+
     def result_text(self, output_fmt: FormatTracker) -> NodeResultInfo:
         """Probe results (formatted with Pretty-print) as text."""
-        failed = False
         func_statuses = []
         exception_msgs = []
         red = output_fmt.rich_map["red"]
         green = output_fmt.rich_map["green"]
         for result in self.results:
             if not result.passed:
-                failed = True
                 for exception in result.exceptions:
                     exception_suffix = f"({self.name}/{result.func_name}): {exception}"
                     if output_fmt and output_fmt.format.lower() == CheckFormat.json.value:
@@ -313,10 +342,10 @@ class Probe:
             if result.func_name:
                 func_statuses.append(f"{symbol} {result.func_name}")
 
-        if failed or not self.results:
-            node_tag = f"{red} {self.name}"
-        else:
+        if self.succeeded():
             node_tag = f"{green} {self.name}"
+        else:
+            node_tag = f"{red} {self.name}"
         if output_fmt.verbose:
             if func_statuses:
                 node_tag += f" ({', '.join(func_statuses)})"
@@ -423,6 +452,9 @@ class RuleSet:
                             f"{ruleset_probe.url} is not a scriptlet but was specified as such."
                         )
                         return probe_tree
+                    if not self.probe.probes_root:
+                        log.error(f"{self.probe.name} does not have a probes_root.")
+                        return probe_tree
                     probe_tree = Probe.from_url(
                         ruleset_probe.url,
                         self.probe.probes_root,
@@ -443,6 +475,9 @@ class RuleSet:
                         )
                         return probe_tree
                     if ruleset_probe.url:
+                        if not self.probe.probes_root:
+                            log.error(f"{self.probe.name} does not have a probes_root.")
+                            return probe_tree
                         probe_tree = Probe.from_url(
                             ruleset_probe.url,
                             self.probe.probes_root,
@@ -466,12 +501,12 @@ class RuleSet:
                     type_parts = ruleset_probe.type.split("/")
                     if not (builtin_type := type_parts[1] if len(type_parts) == 2 else None):
                         raise NotImplementedError
-                    probe_tree = Probe.from_url(
-                        f"file://{BUILTIN_DIR}/{builtin_type}.py",
-                        self.probe.probes_root,
-                        self.probe.get_chain(),
-                        ruleset_probe,
-                        probe_tree,
+                    probe_tree.probes.append(
+                        Probe(
+                            Path(f"builtin/{builtin_type}.py"),
+                            probes_chain=self.probe.get_chain(),
+                            probe_definition=ruleset_probe,
+                        )
                     )
                 case _:
                     raise NotImplementedError

@@ -38,7 +38,6 @@ def assert_tree_structure(
 
 def test_check_groups_by_parent():
     # GIVEN multiple Ruleset probes
-    runner = CliRunner()
     test_args = [
         "check",
         "--format=json",
@@ -48,7 +47,7 @@ def test_check_groups_by_parent():
         "--status=tests/resources/artifacts/status.yaml",
     ]
     # WHEN `juju-doctor check` is executed
-    result = runner.invoke(app, test_args)
+    result = CliRunner().invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     check_result = json.loads(result.output)
@@ -95,7 +94,6 @@ def test_check_groups_by_parent():
 
 def test_check_probes_and_builtins():
     # GIVEN a Ruleset with probes and builtins
-    runner = CliRunner()
     test_args = [
         "check",
         "--format=json",
@@ -106,7 +104,7 @@ def test_check_probes_and_builtins():
         "--show-unit=tests/resources/artifacts/show-unit.yaml",
     ]
     # WHEN `juju-doctor check` is executed
-    result = runner.invoke(app, test_args)
+    result = CliRunner().invoke(app, test_args)
     # THEN the command succeeds
     assert result.exit_code == 0
     check_result = json.loads(result.output)
@@ -118,7 +116,7 @@ def test_check_probes_and_builtins():
                 "children": [
                     {"🟢 Builtin application-exists": {}},
                     {"🟢 Builtin offer-exists": {}},
-                    {"🟢 Builtin relation-exists": {}},
+                    {"🟢 Builtin app-relation-exists": {}},
                 ]
             }
         },

@@ -1,18 +1,22 @@
-"""Relation-exists verbatim builtin plugin.
+"""App-relation-exists verbatim builtin plugin.
+
+The probe checks that the given application names (not charm names!) exist and are related over the
+specified endpoints. This could be useful when you need to check that a subset of a status
+(or bundle) is present.
 
 To call this builtin within a RuleSet YAML file:
 
 ```yaml
 name: RuleSet
 probes:
-    - name: Relations exists
-      type: builtin/relation-exists
+    - name: App relations exist
+      type: builtin/app-relation-exists
       with:
         - apps: [alertmanager:catalogue, catalogue:catalogue]
         - apps: [traefik:ingress, alertmanager:ingress]
 ```
 
-Multiple assertions can be listed under the `with` key, adhering to the `RelationExists` schema.
+Multiple assertions can be listed under the `with` key, adhering to the `AppRelationExists` schema.
 """
 
 from dataclasses import dataclass
@@ -23,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from juju_doctor.artifacts import read_file
 
 
-class RelationExists(BaseModel):
+class AppRelationExists(BaseModel):
     """Schema for a builtin Relation definition in a RuleSet."""
 
     model_config = ConfigDict(extra="forbid")
@@ -54,7 +58,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     ...
     Exception: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = RelationExists(**kwargs)
+    _rel = AppRelationExists(**kwargs)
     _rel_obj = Relation.from_rel_pair(_rel.apps)
 
     for status_name, status in juju_statuses.items():
@@ -74,6 +78,11 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
 def bundle(juju_bundles: Dict[str, Dict], **kwargs):
     """Bundle assertion for relations existing verbatim.
+
+    >>> bundle({"0": example_bundle_missing_relations()}, **{"apps": ["foo:fake", "bar:fake"]})  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    Exception: There are no relations present in ...
 
     >>> bundle({"0": example_bundle()}, **example_with_fake_app_0())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
@@ -95,13 +104,13 @@ def bundle(juju_bundles: Dict[str, Dict], **kwargs):
     ...
     Exception: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = RelationExists(**kwargs)
+    _rel = AppRelationExists(**kwargs)
     _rel_obj = Relation.from_rel_pair(_rel.apps)
 
     rel_found = False
     for bundle_name, bundle in juju_bundles.items():
         if not (rels := bundle.get("relations")):
-            continue
+            raise Exception(f'There are no relations present in "{bundle_name}"')
         for rel in rels:
             rel_obj = Relation.from_rel_pair(rel)
             if rel_obj.equals(_rel_obj):
@@ -165,6 +174,14 @@ def example_status():
 def example_bundle():
     """Doctest input."""
     return read_file("tests/resources/artifacts/bundle.yaml")
+
+
+def example_bundle_missing_relations():
+    """Doctest input.
+
+    This deployment bundle is missing relations.
+    """
+    return {}
 
 
 def example_with_fake_app_0():

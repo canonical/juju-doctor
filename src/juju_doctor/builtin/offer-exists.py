@@ -1,5 +1,8 @@
 """Offer-exists verbatim builtin plugin.
 
+The probe checks that the given offer names exist with the specified endpoints and interfaces. This
+could be useful when you need to check that a subset of a status (or bundle) is present.
+
 To call this builtin within a RuleSet YAML file:
 
 ```yaml
@@ -8,6 +11,7 @@ probes:
     - name: Offers exist
       type: builtin/offer-exists
       with:
+        - offer-name: grafana-dashboards
         - offer-name: loki-logging
           endpoint: logging
           interface: loki_push_api
@@ -46,6 +50,11 @@ class OfferExists(BaseModel):
 def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for offers existing verbatim.
 
+    >>> status({"0": example_status_missing_offers()}, **{"offer-name": "foo"})  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    Exception: There are no offers present in ...
+
     >>> status({"0": example_status()}, **example_with_fake_name())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
@@ -70,7 +79,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
     for status_name, status in juju_statuses.items():
         if not (offers := status.get("offers")):
-            continue
+            raise Exception(f'There are no offers present in "{status_name}"')
         if not (found_offer := offers.get(_offer.name)):
             raise Exception(
                 f"Unable to find the offer ({_offer.name}) in "
@@ -97,6 +106,14 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 def example_status():
     """Doctest input."""
     return read_file("tests/resources/artifacts/status.yaml")
+
+
+def example_status_missing_offers():
+    """Doctest input.
+
+    This deployment status is missing offers.
+    """
+    return {}
 
 
 def example_with_fake_name():

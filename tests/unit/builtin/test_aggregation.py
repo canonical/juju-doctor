@@ -47,8 +47,8 @@ def test_nested_builtins():
         type: builtin/application-exists
         with:
           - application-name: catalogue
-      - name: Builtin relation-exists
-        type: builtin/relation-exists
+      - name: Builtin app-relation-exists
+        type: builtin/app-relation-exists
         with:
           - apps: [grafana:catalogue, catalogue:catalogue]
       - name: Builtin offer-exists

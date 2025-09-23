@@ -14,6 +14,9 @@ from typing import Dict
 
 import yaml
 
+# TODO: Test this once committed to the branch, otherwise uvx @branch wont be updated
+from juju_doctor.probe_helpers import get_apps_by_charm_name
+
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.
@@ -76,18 +79,10 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
 
 # ==========================
-# Helper methods
+# Helper functions
 # ==========================
 
-
-def get_apps_by_charm_name(status: dict, charm_name: str) -> Dict[str, Dict]:
-    """Helper function to get the application object from a charm name."""
-    return {
-        app_name: context
-        for app_name, context in status.get("applications", {}).items()
-        if context["charm"] == charm_name
-    }
-
+# TODO: Put this function back
 
 def example_status_cyclic_agent_cos_proxy():
     """Invalid topology of cos-proxy and grafana-agent.

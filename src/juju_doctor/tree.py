@@ -42,13 +42,16 @@ class ResultAggregator:
 
         Create a new node in the tree per probe with an assertion summary.
         """
-        results = {AssertionStatus.PASS.value: 0, AssertionStatus.FAIL.value: 0}
+        pass_key = AssertionStatus.PASS.value
+        fail_key = AssertionStatus.FAIL.value
+        results = {pass_key: 0, fail_key: 0}
         for probe in self._probes:
             node_info = probe.result_text(self._output_fmt)
             self._exceptions.extend(node_info.exception_msgs)
-            result = None
-            for result in probe.results:
-                results[result.status] += 1
+            if probe.succeeded():
+                results[pass_key] += 1
+            else:
+                results[fail_key] += 1
 
             if not probe.is_root_node:
                 self._tree.create_node(

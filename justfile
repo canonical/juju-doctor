@@ -47,7 +47,7 @@ doctest-examples:
   for file in *.py; do
     python3 -m doctest "$file" || exit 1
   done
-  echo "{{BOLD + GREEN}}SUCCESS: All COS probe tests passed!"
+  echo "SUCCESS: All example probe tests passed!"
 
 # Run doctests on builtin COS probes
 doctest-builtin:
@@ -55,4 +55,4 @@ doctest-builtin:
   for file in ./src/juju_doctor/builtin/*.py; do
     python3 -m doctest "$file" || exit 1
   done
-  echo "{{BOLD + GREEN}}SUCCESS: All builtin probe tests passed!"
+  echo "SUCCESS: All builtin probe tests passed!"
