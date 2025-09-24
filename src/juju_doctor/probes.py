@@ -250,8 +250,6 @@ class Probe:
         return FileSystem(fs=filesystem, path=path)
 
     def get_functions(self) -> Dict:
-        # TODO: In builtins try to import from juju-doctor helpers or pydantic should work from uvx
-        # TODO: Try also with example probes import from juju-doctor helpers or pydantic from uvx
         """Dynamically load a Python script from self.path, making its functions available.
 
         We import the module dynamically because the path of the probe is only known at runtime.

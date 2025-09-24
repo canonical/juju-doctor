@@ -41,8 +41,6 @@ class OfferExists(BaseModel):
     def check_endpoint_if_interface(self) -> Self:
         """Validate that the endpoint exists if the endpoint is defined."""
         if self.interface is not None and self.endpoint is None:
-            # TODO: Does endpoint need to exist to assert the interface? the API comes first
-            # and interface not depending on endpoint makes it more powerful
             raise ValueError("The endpoint must be defined if the interface is defined")
         return self
 

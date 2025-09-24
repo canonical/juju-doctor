@@ -14,7 +14,6 @@ from typing import Dict
 
 import yaml
 
-# TODO: Test this once committed to the branch, otherwise uvx @branch wont be updated
 from juju_doctor.probe_helpers import get_apps_by_charm_name
 
 
@@ -82,7 +81,6 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # Helper functions
 # ==========================
 
-# TODO: Put this function back
 
 def example_status_cyclic_agent_cos_proxy():
     """Invalid topology of cos-proxy and grafana-agent.

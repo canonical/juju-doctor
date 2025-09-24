@@ -1,8 +1,14 @@
 # How to contribute a Builtin plugin
 
-Within a [RuleSet YAML file](../../README.md#ruleset), scriptlet probes are an escape hatch for complex, programmatic assertions. They are not intended to assert against common model patterns. For example, scriptlet probe authors may assert that certain applications or relations exist. This repetitiveness can be abstracted into Builtin assertions. Refer to this sample [RuleSet with Builtin assertions](../../tests/resources/probes/ruleset/builtins.yaml) as a starting point.
+## Goal
+Create a builtin plugin that juju-doctor can reference from a RuleSet. This guide shows where to place the code, which interface to implement, how to validate user input, and how to test your builtin.
 
-Builtins are probes, serving as complementary (or isolated) assertions, depending on the scope of their assertions.
+Before you start
+- Familiarity with Python and the repository layout.
+- Basic knowledge of Pydantic for schema validation.
+- The builtin files live under src/juju_doctor/builtin/ in the repository.
+
+Quick example of using a builtin in a RuleSet:
 
 ```yaml
 name: RuleSet - demo
@@ -13,9 +19,14 @@ probes:
     type: builtin/my-builtin
 ```
 
-## Builtin plugins
+## What a builtin is
+Builtins are reusable probes. They implement the same probe interface as scriptlets (for example, `status`, `bundle`, etc.), but they encapsulate common, repeatable assertions so RuleSets stay concise and maintainable.
 
-Juju-doctor is designed to accept builtin plugins via contributions made in the [src.juju_doctor.builtin](../../src/juju_doctor/builtin/) directory. Each of these files are a builtin and the name of the plugin is derived from the Python file name. Additionally, each builtin Python file conforms to the [scriptlet interface](../../README.md#scriptlet), i.e. it must define, at least one of, the supported functions (e.g., `status`, `bundle`, etc.):
+## Where to put the code
+Add a Python file to src/juju_doctor/builtin/. The filename determines the builtin name used in RuleSets. For example, a file named my-builtin.py is referenced as type: builtin/my-builtin.
+
+## Implementing the interface
+A builtin must implement one or more of the supported probe entry points (for example `status`, `bundle`). Each entry point receives probe artifacts and any extra options passed from the RuleSet as keyword arguments.
 
 ```python
 # src/juju_doctor/builtins/my-builtin.py
@@ -26,7 +37,8 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
         # NOTE: you can import any dependency that juju-doctor has access to
 ```
 
-This would allow you to use it in a RuleSet:
+## Accepting multiple assertions in a RuleSet
+To keep RuleSets readable, you can pass a list of argument sets under `with`. Each list item becomes the kwargs passed to the builtin function.
 
 ```yaml
 name: My builtin
@@ -38,9 +50,9 @@ name: My builtin
       bar: four
     # list more assertions here ...
 ```
-Any arguments under `with` will be passed to the `status` function, accessed via `**kwargs`. In favor of readability, we can list multiple assertions nested under `with` to avoid duplicate `type` definitions.
 
-Using [Pydantic's BaseModel](https://docs.pydantic.dev/latest/api/base_model/), you can control the schema of the builtin. For example, creating a `FooModel` can forbid extra attributes to the builtin.
+## Validating input with Pydantic
+Use Pydantic models to validate and document the expected options for your builtin. This makes error messages clear and avoids raising internal errors when users pass invalid data.
 
 ```python
 class FooModel(BaseModel):
@@ -49,7 +61,7 @@ class FooModel(BaseModel):
     bar: str
 ```
 
-This would enforce the following API in a RuleSet:
+This enforces the expected API and will raise a ValidationError for unexpected keys:
 
 ```yaml
 name: My builtin
@@ -60,7 +72,20 @@ name: My builtin
       invalid-key: raises a pydantic ValidationError
 ```
 
-## How to test the plugin
+## How to add a builtin — step-by-step
+1. Create a new file src/juju_doctor/builtin/my-builtin.py.
+2. Implement the probe function(s) you need (e.g., `status`, `bundle`).
+3. Recommended: Validate inputs with a Pydantic model to enforce an input schema for usability benefits.
+4. Add doctests (see next section) to cover expected and invalid inputs.
+5. Run the test suite and doctests.
 
-To ensure that each builtin asserts correctly, its functional tests are defined in [doctest(s)](https://docs.python.org/3/library/doctest.html). Providing invalid user input and asserting that juju-doctor warns the user of mistakes, is a great way to ensure functionality of the builtin. Check out one of the existing plugins in the [src.juju_doctor.builtin](../../src/juju_doctor/builtin/) directory as an example. To execute all the probe doctests, run:
+## Testing your builtin
+Write functional tests as Python doctests that exercise both valid and invalid usage. Doctests are a good place to assert that invalid input produces helpful messages for users.
+
+To run all probe doctests:
 - `just doctest`
+
+## Tips
+
+- Keep builtins focused and small — one purpose per builtin is easier to test and reuse.
+- If you need an example to copy from, check the existing builtin plugins in src/juju_doctor/builtin/.
