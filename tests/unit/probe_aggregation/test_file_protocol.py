@@ -10,7 +10,8 @@ def test_parse_python_file():
     probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir))
+        probes = probe_tree.probes
         # THEN only 1 probe exists
         assert len(probes) == 1
         probe = probes[0]
@@ -25,7 +26,8 @@ def test_parse_dir():
     probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir))
+        probes = probe_tree.probes
         # THEN 3 probes exist
         assert len(probes) == 3
         passing_probe = [probe for probe in probes if "passing.py" in probe.name][0]
@@ -40,13 +42,14 @@ def test_parse_dir():
 
 def test_parse_ruleset_file():
     # GIVEN a local RuleSet probe file
-    path_str = "tests/resources/probes/ruleset/scriptlet.yaml"
+    path_str = "tests/resources/probes/ruleset/scriptlets.yaml"
     probe_url = f"file://{path_str}"
     with tempfile.TemporaryDirectory() as tmpdir:
         # WHEN the probes are fetched to a local filesystem
-        found_probes = Probe.from_url(url=probe_url, probes_root=Path(tmpdir))
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir))
+        probes = probe_tree.probes
         # THEN probes are found
-        assert len(found_probes) > 0
+        assert len(probes) > 0
         # AND the Probe does not leak information about which RuleSet called it
-        for probe in found_probes:
+        for probe in probes:
             assert all("ruleset" not in value for value in [probe.name, str(probe.path)])

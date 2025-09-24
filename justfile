@@ -38,11 +38,21 @@ solution *args='':
   uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/solution}"
   uv run $uv_flags coverage report
 
+doctest: doctest-builtin doctest-examples
+
 # Run doctests on example COS probes
 [working-directory("./examples")]
-doctest:
+doctest-examples:
   #!/usr/bin/env sh
   for file in *.py; do
     python3 -m doctest "$file" || exit 1
   done
-  echo "{{BOLD + GREEN}}SUCCESS: All tests passed!"
+  echo "SUCCESS: All example probe tests passed!"
+
+# Run doctests on builtin COS probes
+doctest-builtin:
+  #!/usr/bin/env sh
+  for file in ./src/juju_doctor/builtin/*.py; do
+    python3 -m doctest "$file" || exit 1
+  done
+  echo "SUCCESS: All builtin probe tests passed!"

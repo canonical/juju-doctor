@@ -14,8 +14,10 @@ from typing import Dict
 
 import yaml
 
+from juju_doctor.probe_helpers import get_apps_by_charm_name
 
-def status(juju_statuses: Dict[str, Dict]):
+
+def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.
 
     >>> status({"invalid-openstack-model": example_status_cyclic_agent_cos_proxy()})  # doctest: +ELLIPSIS
@@ -76,17 +78,8 @@ def status(juju_statuses: Dict[str, Dict]):
 
 
 # ==========================
-# Helper methods
+# Helper functions
 # ==========================
-
-
-def get_apps_by_charm_name(status: dict, charm_name: str) -> Dict[str, Dict]:
-    """Helper function to get the application object from a charm name."""
-    return {
-        app_name: context
-        for app_name, context in status.get("applications", {}).items()
-        if context["charm"] == charm_name
-    }
 
 
 def example_status_cyclic_agent_cos_proxy():

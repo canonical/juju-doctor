@@ -1,23 +1,32 @@
 """Helper module to represent the input artifacts for Juju doctor."""
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import sh
 import yaml
+from rich.logging import RichHandler
 
 # pyright: reportAttributeAccessIssue=false
 
+logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
+log = logging.getLogger(__name__)
 
-def _read_file(filename: Optional[str]) -> Optional[Dict]:
+
+def read_file(filename: Optional[str]) -> Optional[Dict]:
     """Read a file into a string."""
     if not filename:
         return None
-    with open(filename, "r") as f:
-        contents = f.read()
-        # Parse all YAML documents and return only the first one
-        # https://github.com/canonical/juju-doctor/issues/10
-        return list(yaml.safe_load_all(contents))[0]
+    try:
+        with open(filename, "r") as f:
+            contents = f.read()
+            # Parse all YAML documents and return only the first one
+            # https://github.com/canonical/juju-doctor/issues/10
+            return list(yaml.safe_load_all(contents))[0]
+    except Exception as e:
+        log.error(e)
+    return None
 
 
 @dataclass
@@ -63,9 +72,9 @@ class ModelArtifact:
     ) -> "ModelArtifact":
         """Gather information from static files."""
         return ModelArtifact(
-            status=_read_file(status_file) or None,
-            bundle=_read_file(bundle_file) or None,
-            show_units=_read_file(show_unit_file) or None,
+            status=read_file(status_file) or None,
+            bundle=read_file(bundle_file) or None,
+            show_units=read_file(show_unit_file) or None,
         )
 
 

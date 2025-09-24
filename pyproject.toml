@@ -22,6 +22,7 @@ dependencies = [
   "fsspec",
   "requests",
   "treelib",
+  "pydantic",
 ]
 
 [project.optional-dependencies]
@@ -34,8 +35,9 @@ dev = [
   "pytest",
   "coverage[toml]",
 ]
-example-probes = [
+doctest = [
   "pyyaml",
+  "rich",
 ]
 
 [project.urls]

@@ -20,29 +20,26 @@ You can run `juju-doctor` against a solution archive:
     --probe file://tests/resources/probes/python/failing.py \
     --probe file://tests/resources/probes/python/passing.py \
     --status=status.yaml \
-    --status=status.yaml
+    --bundle=bundle.yaml
 ```
 If you have a live deplyoment, you can also run `juju-doctor` against that:
 ```
 ∮ juju-doctor check \
     --probe file://tests/resources/probes/python/failing.py \
     --probe file://tests/resources/probes/python/passing.py \
-    --model testy \
-    --model testy-two
+    --model model-one \
+    --model model-two
 ```
 In either case, the output will look like so (configurable with `--format` and `--verbose`):
 ```
 Results
-├── fail
-│   └── 🔴 tests_resources_probes_python_failing.py (bundle, show_unit, status)
-└── pass
-    └── 🟢 tests_resources_probes_python_passing.py
+├── 🔴 tests_resources_probes_python_failing.py
+└── 🟢 tests_resources_probes_python_passing.py
 
-
-Total: 🟢 3 🔴 3
+Total: 🟢 3/6 🔴 3/6
 ```
 
-The path to a probe can also be a url:
+The path to a probe can also be a URL:
 ```bash
 # Run a remote probe against a live model
 ∮ juju-doctor check --model cos --probe github://canonical/grafana-k8s-operator//probes/some_probe.py
@@ -51,7 +48,7 @@ The path to a probe can also be a url:
 ## Writing Probes
 
 ### Scriptlet
-Scriptlet probes are written in Python, and can run on standardized artifacts that can be provided either as static files, or gathered from a live model.
+Scriptlet probes are written in Python, and run on standardized artifacts that can be provided either as static files, or gathered from a live model.
 
 Currently, we support the following artifacts:
 - **`status`**: `juju status --format=yaml`
@@ -92,27 +89,20 @@ def show_unit(juju_show_units):
 
 **Remember**: `juju-doctor` will only run functions that exactly match a supported artifact name, and will always pass to them a dictionary of *model name* mapped to the proper artifact.
 
+For some real-world examples, check out the [examples directory](examples/) and this [Grafana charm probe](https://github.com/canonical/grafana-k8s-operator/blob/main/probes/relation_dashboard_uid.py). 
+
 ### Ruleset
 Ruleset probes are written in YAML, specifying which probes should be coordinated for a deployment validation.
 
-Currently, we support the following probe types:
+Currently, the following probe types are supported:
 - **`scriptlet`**: A Python probe
 - **`ruleset`**: A declarative deployment RuleSet
-- **`directory`**: A directory of probes (from the types in this list)
+- **`builtin/*`**: A builtin plugin of a type defined in the [supported plugins](schema/builtins.json)
 
-```yaml
-name: A declarative deployment RuleSet
-probes:
-  - name: Local probe - passing
-    type: scriptlet
-    url: file://tests/resources/probes/python/passing.py
-  - name: Local ruleset
-    type: ruleset
-    url: file://tests/resources/probes/ruleset/ruleset.yaml
-  - name: Local probe directory (may contain scriptlets and/or rulesets)
-    type: directory
-    url: file://tests/resources/probes/ruleset/small-dir
-```
+Run `juju-doctor schema` to output the schema of a RuleSet YAML file and check out [this RuleSet probe](tests/resources/probes/ruleset/all.yaml) as an extensive example.
+
+#### Builtins
+See [this doc](docs/how-to/contribute-a-builtin.md) for contributing a builtin and general information about the builtin plugin design.
 
 ## Development
 ```bash

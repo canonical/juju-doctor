@@ -1,0 +1,24 @@
+name: RuleSet - test builtins
+probes:
+  - name: Builtin application-exists
+    type: builtin/application-exists
+    with:
+      - application-name: alertmanager
+      - application-name: prometheus
+        minimum: 1
+        maximum: 4
+  - name: Builtin app-relation-exists
+    type: builtin/app-relation-exists
+    with:
+      - apps: [alertmanager:catalogue, catalogue:catalogue]
+      - apps: [traefik:ingress, alertmanager:ingress]
+      - apps: [loki:grafana-source, grafana:grafana-source]
+  - name: Builtin offer-exists
+    type: builtin/offer-exists
+    with:
+      - offer-name: loki-logging
+        endpoint: logging
+        interface: loki_push_api
+      - offer-name: grafana-dashboards
+        endpoint: grafana-dashboard
+        interface: grafana_dashboard

@@ -100,6 +100,6 @@ jobs:
         run: |
           sudo snap install --classic astral-uv
           sudo snap install --classic just
-          pip install ".[example-probes]"
+          pip install ".[doctest]"  # from pyproject.toml[project.optional-dependencies]
       - name: Run tests
         run: just doctest
