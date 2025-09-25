@@ -4,7 +4,7 @@ These functions simplify the artifact (status, bundle, etc.) content parsing.
 
 Add this line to your probe and you have access to all these functions:
 
-`from juju_doctor.probe_helpers import PICK_YOUR_FUNCTION`
+`from juju_doctor.helpers import PICK_YOUR_FUNCTION`
 """
 import contextlib
 from typing import Dict, Optional

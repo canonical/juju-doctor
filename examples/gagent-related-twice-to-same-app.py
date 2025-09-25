@@ -10,11 +10,10 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-from typing import Dict
+import contextlib
+from typing import Dict, Optional
 
 import yaml
-
-from juju_doctor.probe_helpers import get_apps_by_charm_name, get_charm_name_by_app_name
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
@@ -58,6 +57,22 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 # Helper functions
 # ==========================
+
+
+def get_apps_by_charm_name(status: dict, charm_name: str) -> Dict[str, Dict]:
+    """Helper function to get the application object from a charm name."""
+    return {
+        app_name: context
+        for app_name, context in status.get("applications", {}).items()
+        if context["charm"] == charm_name
+    }
+
+
+def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
+    """Helper function to get the (predictable) charm name from an application name."""
+    with contextlib.suppress(KeyError):
+        return status["applications"][app_name]["charm"]
+    return None
 
 
 def example_status_redundant_endpoints_agent_cos_proxy():
