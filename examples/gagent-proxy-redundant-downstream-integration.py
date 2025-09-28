@@ -10,8 +10,7 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-import contextlib
-from typing import Dict, Optional
+from typing import Dict
 
 import yaml
 
@@ -33,7 +32,6 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
     >>> status({"valid-model": example_status_valid()})
     """  # noqa: E501
-    assert False, f"WORKING: {get_apps_by_charm_name}"
     agent_and_proxy_rel = False
     suspicious_endpoint_apps = {}
     for status_name, status in juju_statuses.items():
@@ -82,22 +80,6 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 # Helper functions
 # ==========================
-
-
-def get_apps_by_charm_name(status: dict, charm_name: str) -> Dict[str, Dict]:
-    """Helper function to get the application object from a charm name."""
-    return {
-        app_name: context
-        for app_name, context in status.get("applications", {}).items()
-        if context["charm"] == charm_name
-    }
-
-
-def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
-    """Helper function to get the (predictable) charm name from an application name."""
-    with contextlib.suppress(KeyError):
-        return status["applications"][app_name]["charm"]
-    return None
 
 
 def example_status_cyclic_agent_cos_proxy():

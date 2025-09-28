@@ -255,15 +255,15 @@ class Probe:
         We import the module dynamically because the path of the probe is only known at runtime.
         Only returns the supported 'status', 'bundle', and 'show_unit' functions (if present).
         """
+        package_name = "juju_doctor"
+
         # module from filesystem path
         if self.probes_root:
-            package_name = "juju_doctor"
             source_path = Path(self.path).resolve()
             src_text = source_path.read_text()
             origin = str(source_path)
         # module from package resources (wheel or source)
         else:
-            package_name = "juju_doctor"
             resource = resources.files(package_name).joinpath(str(self.path))
             src_text = resource.read_text()
             origin = f"{package_name}/{self.path}"
@@ -273,7 +273,7 @@ class Probe:
         module = types.ModuleType(module_name)
         module.__file__ = origin
         # ff the probe is inside the package, set a package context so relative imports work
-        module.__package__ = package_name or None
+        module.__package__ = package_name
         sys.modules[module_name] = module
 
         exec(compile(src_text, origin, "exec"), module.__dict__)
