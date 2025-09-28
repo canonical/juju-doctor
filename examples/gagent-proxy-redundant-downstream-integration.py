@@ -15,6 +15,8 @@ from typing import Dict, Optional
 
 import yaml
 
+from juju_doctor.helpers import get_apps_by_charm_name
+
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.

@@ -257,7 +257,7 @@ class Probe:
         """
         # module from filesystem path
         if self.probes_root:
-            package_name = ""
+            package_name = "juju_doctor"
             source_path = Path(self.path).resolve()
             src_text = source_path.read_text()
             origin = str(source_path)
