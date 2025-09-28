@@ -33,6 +33,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
     >>> status({"valid-model": example_status_valid()})
     """  # noqa: E501
+    assert False, f"WORKING: {get_apps_by_charm_name}"
     agent_and_proxy_rel = False
     suspicious_endpoint_apps = {}
     for status_name, status in juju_statuses.items():
