@@ -21,6 +21,8 @@ jobs:
         # Ref: https://github.com/grst/python-ci-versioneer
         run: |
           # from refs/tags/1.2.3 get 1.2.3
+          echo $GITHUB_REF
+          echo $github.ref
           VERSION=$(echo $GITHUB_REF | sed 's#.*/##')
           if [[ -z "$VERSION" ]]; then
               echo "❌ ERROR: Could not extract version from GITHUB_REF ($ref)"
