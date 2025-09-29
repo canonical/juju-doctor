@@ -14,7 +14,7 @@ from typing import Dict
 
 import yaml
 
-from juju_doctor.probe_helpers import get_apps_by_charm_name, get_charm_name_by_app_name
+from juju_doctor.helpers import get_apps_by_charm_name, get_charm_name_by_app_name
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
@@ -44,8 +44,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
         # Assert that either juju-info or cos-agent exists per app, not both
         for agent, related_app in apps_related_to_agent.get("cos-agent", {}):
-            # other_charm = get_charm_name_by_app_name(status, related_app)
-            other_charm = get_charm_name_by_app_name(status, "fart")
+            other_charm = get_charm_name_by_app_name(status, related_app)
             for _, _related_app in apps_related_to_agent.get("juju-info", {}):
                 assert related_app != _related_app, (
                     f'Remove either the "juju-info" or "cos-agent" integration between "{agent}" '

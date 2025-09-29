@@ -1,7 +1,7 @@
 # 🩺 juju-doctor 🩺
 
 [![PyPI](https://img.shields.io/pypi/v/juju-doctor)](https://pypi.org/project/juju-doctor/)
-[![Release](https://github.com/canonical/juju-doctor/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/loki-k8s-operator/actions/workflows/release.yaml)
+[![Release](https://github.com/canonical/juju-doctor/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/juju-doctor/actions/workflows/release.yaml)
 
 Run a configurable set of `probes` (assertions) against Juju deployment `artifacts`, which are the output of other tools like `juju`, `sosreport`, and `kubectl`. To enforce best practices, these probes are organized into a `ruleset`, which acts as a guide for correct deployment configurations.
 
