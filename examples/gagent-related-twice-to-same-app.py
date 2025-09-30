@@ -14,7 +14,7 @@ from typing import Dict
 
 import yaml
 
-from juju_doctor.helpers import get_apps_by_charm_name, get_charm_name_by_app_name
+from juju_doctor.helpers.artifacts import get_apps_by_charm_name, get_charm_name_by_app_name
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
