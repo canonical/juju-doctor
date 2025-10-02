@@ -1,0 +1,32 @@
+applications:
+  ga-one:
+    charm: grafana-agent
+    relations:
+      cos-agent:
+      - related-application: foo
+        interface: cos_agent
+      juju-info:
+      - related-application: foo
+        interface: juju-info
+  ga-two:
+    charm: grafana-agent
+    relations:
+      cos-agent:
+      - related-application: foo
+        interface: cos_agent
+      juju-info:
+      - related-application: foo
+        interface: juju-info
+  foo:
+    charm: foo-charm
+    relations:
+      foo-cos-agent:
+      - related-application: ga-one
+        interface: cos_agent
+      - related-application: ga-two
+        interface: cos_agent
+      foo-juju-info:
+      - related-application: ga-one
+        interface: juju-info
+      - related-application: ga-two
+        interface: juju-info
