@@ -24,7 +24,9 @@ def get_charm_name_by_app_name(status: dict, app_name: str) -> Optional[str]:
         return status["applications"][app_name]["charm"]
     return None
 
-def get_charm_config(bundle: dict, app_name: str, config_key:str) -> Optional[Union[str, int, float, bool]]:
+def get_charm_config(bundle: dict, app_name: str, config_key:str) -> Optional[
+    Union[str, int, float, bool]
+]:
     """Helper function to get the value of a config option from an application name.
 
     If None, might mean that the config key does not exist, or that it's unset (default value).
