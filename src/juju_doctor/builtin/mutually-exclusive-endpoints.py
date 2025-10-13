@@ -2,7 +2,8 @@
 
 The probe checks that all apps of the given charm type are not related to another app over multiple
 of the endpoints in the list. This could be useful when endpoints duplicate data, or they conflict
-in any way.
+in any way. Applications which are exceptions to this assertion for the given charm type can be
+added to the ignore list.
 
 To call this builtin within a RuleSet YAML file:
 
@@ -14,12 +15,15 @@ probes:
       with:
         - charm-name: grafana-agent
           endpoints:
-              - juju-info
-              - cos_agent
-          # ignore:
+            - juju-info
+            - cos_agent
+          ignore_apps:
+            - grafana-agent
+
 ```
 
-Multiple assertions can be listed under the `with` key, adhering to the `ApplicationExists` schema.
+Multiple assertions can be listed under the `with` key, adhering to the
+`MutuallyExclusiveEndpoints` schema.
 """
 
 from typing import Dict, List, Optional
@@ -37,39 +41,42 @@ class MutuallyExclusiveEndpoints(BaseModel):
 
     charm_name: str = Field(alias="charm-name")
     endpoints: List[str] = Field()
-    ignore: Optional[List[str]] = Field(None)
+    ignore_apps: Optional[List[str]] = Field(None)
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
     """Status assertion for applications existing verbatim.
 
-    >>> status({"0": example_status_missing_applications()}, **example_args())  # doctest: +ELLIPSIS
+    >>> status({"valid-model": example_status_valid()}, **example_args_without_ignore())
+
+    >>> status({"0": example_status_multiple_endpoints_violating()}, **example_args_ignoring_all_apps())  # doctest: +ELLIPSIS
+
+    >>> status({"0": example_status_missing_applications()}, **example_args_without_ignore())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     AssertionError: There are no applications present in ...
 
-    >>> status({"valid-model": example_status_valid()}, **example_args())
-
-    >>> status({"0": example_status_single_endpoint_violating()}, **example_args())  # doctest: +ELLIPSIS
+    >>> status({"0": example_status_single_endpoint_violating()}, **example_args_without_ignore())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: Remove either the ... or ... integration between ...
+    AssertionError: Remove either the ... or ... integration between ga ... and foo ...
+
+    >>> status({"0": example_status_multiple_endpoints_violating()}, **example_args_without_ignore())  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    AssertionError: Remove either the ... or ... integration between ga-one ... and foo ...
 
     >>> status({"0": example_status_multiple_endpoints_violating()}, **example_args_ignoring_app_one())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: Remove either the ... or ... integration between ga-two ...
+    AssertionError: Remove either the ... or ... integration between ga-two ... and foo ...
 
     >>> status({"0": example_status_multiple_endpoints_violating()}, **example_args_ignoring_app_two())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    AssertionError: Remove either the ... or ... integration between ga-one ...
-
-    >>> status({"0": example_status_multiple_endpoints_violating()}, **example_args_ignoring_all_apps())  # doctest: +ELLIPSIS
+    AssertionError: Remove either the ... or ... integration between ga-one ... and foo ...
     """  # noqa: E501
-    _input = MutuallyExclusiveEndpoints(
-        **kwargs
-    )  # TODO: Do we want to rename other builtins to _input from _app
+    _input = MutuallyExclusiveEndpoints(**kwargs)
     for status_name, status in juju_statuses.items():
         endpoints_with_relations = {}
         if not status.get("applications"):
@@ -78,7 +85,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
         if not (apps := get_apps_by_charm_name(status, _input.charm_name)):
             continue
         for app_name, app in apps.items():
-            if _input.ignore and app_name in _input.ignore:
+            if _input.ignore_apps and app_name in _input.ignore_apps:
                 continue
             for endpoint, relations in app.get("relations", {}).items():
                 if endpoint not in (_input.endpoints):
@@ -222,7 +229,7 @@ applications:
 """)
 
 
-def example_args():
+def example_args_without_ignore():
     """Doctest input."""
     return {"charm-name": "grafana-agent", "endpoints": ["cos-agent", "juju-info"]}
 
@@ -232,7 +239,7 @@ def example_args_ignoring_app_one():
     return {
         "charm-name": "grafana-agent",
         "endpoints": ["cos-agent", "juju-info"],
-        "ignore": ["ga-one"],
+        "ignore_apps": ["ga-one"],
     }
 
 
@@ -241,7 +248,7 @@ def example_args_ignoring_app_two():
     return {
         "charm-name": "grafana-agent",
         "endpoints": ["cos-agent", "juju-info"],
-        "ignore": ["ga-two"],
+        "ignore_apps": ["ga-two"],
     }
 
 
@@ -250,5 +257,5 @@ def example_args_ignoring_all_apps():
     return {
         "charm-name": "grafana-agent",
         "endpoints": ["cos-agent", "juju-info"],
-        "ignore": ["ga-one", "ga-two"],
+        "ignore_apps": ["ga-one", "ga-two"],
     }

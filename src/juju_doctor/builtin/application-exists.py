@@ -61,24 +61,24 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     ...
     AssertionError: The scale (1) of alertmanager is below the allowable limit: 2 ...
     """  # noqa: E501
-    _app = ApplicationExists(**kwargs)
+    _input = ApplicationExists(**kwargs)
     for status_name, status in juju_statuses.items():
         if not (apps := status.get("applications")):
             raise AssertionError(f'There are no applications present in "{status_name}"')
-        if not (found_app := apps.get(_app.name)):
+        if not (found_app := apps.get(_input.name)):
             raise AssertionError(
-                f"Unable to find the app ({_app.name}) in "
+                f"Unable to find the app ({_input.name}) in "
                 f'[{", ".join(apps.keys())}] in "{status_name}"'
             )
-        if _app.minimum is not None and found_app["scale"] < _app.minimum:
+        if _input.minimum is not None and found_app["scale"] < _input.minimum:
             raise AssertionError(
-                f"The scale ({found_app['scale']}) of {_app.name} is below the allowable "
-                f'limit: {_app.minimum} in "{status_name}"'
+                f"The scale ({found_app['scale']}) of {_input.name} is below the allowable "
+                f'limit: {_input.minimum} in "{status_name}"'
             )
-        if _app.maximum is not None and found_app["scale"] > _app.maximum:
+        if _input.maximum is not None and found_app["scale"] > _input.maximum:
             raise AssertionError(
-                f"The scale ({found_app['scale']}) of {_app.name} exceeds the allowable "
-                f'limit: {_app.maximum} in "{status_name}"'
+                f"The scale ({found_app['scale']}) of {_input.name} exceeds the allowable "
+                f'limit: {_input.maximum} in "{status_name}"'
             )
 
 

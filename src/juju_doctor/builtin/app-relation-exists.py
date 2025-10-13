@@ -58,8 +58,8 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     ...
     AssertionError: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = AppRelationExists(**kwargs)
-    _rel_obj = Relation.from_rel_pair(_rel.apps)
+    _input = AppRelationExists(**kwargs)
+    _rel_obj = Relation.from_rel_pair(_input.apps)
 
     for status_name, status in juju_statuses.items():
         app_0 = status.get("applications", {}).get(_rel_obj.name_0, {})
@@ -73,7 +73,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
             for rel in app_1.get("relations", {}).get(_rel_obj.endpoint_1, {})
         )
         if not all((app_0, app_1, rel_0_to_1, rel_1_to_0)):
-            raise AssertionError(f'The relation {_rel.apps} was not found in "{status_name}"')
+            raise AssertionError(f'The relation {_input.apps} was not found in "{status_name}"')
 
 
 def bundle(juju_bundles: Dict[str, Dict], **kwargs):
@@ -104,8 +104,8 @@ def bundle(juju_bundles: Dict[str, Dict], **kwargs):
     ...
     AssertionError: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = AppRelationExists(**kwargs)
-    _rel_obj = Relation.from_rel_pair(_rel.apps)
+    _input = AppRelationExists(**kwargs)
+    _rel_obj = Relation.from_rel_pair(_input.apps)
 
     rel_found = False
     for bundle_name, bundle in juju_bundles.items():
@@ -116,7 +116,7 @@ def bundle(juju_bundles: Dict[str, Dict], **kwargs):
             if rel_obj.equals(_rel_obj):
                 rel_found = True
         if not rel_found:
-            raise AssertionError(f'The relation {_rel.apps} was not found in "{bundle_name}"')
+            raise AssertionError(f'The relation {_input.apps} was not found in "{bundle_name}"')
 
 
 # ==========================
