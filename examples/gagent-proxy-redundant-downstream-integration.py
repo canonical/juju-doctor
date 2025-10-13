@@ -10,11 +10,10 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-from typing import Dict
+from typing import Any, Dict
 
 import yaml
-
-from juju_doctor.helpers import get_apps_by_charm_name
+from jsonpath_ng.ext import parse
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
@@ -80,6 +79,11 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 # Helper functions
 # ==========================
+
+
+def get_apps_by_charm_name(status: Dict[str, Any], charm_name: str) -> dict:
+    expr = parse(f'$.applications.*[?(@.charm=="{charm_name}")]')
+    return {m.context.value[0]: m.value for m in expr.find(status)}
 
 
 def example_status_cyclic_agent_cos_proxy():

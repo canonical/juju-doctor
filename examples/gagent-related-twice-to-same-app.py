@@ -10,11 +10,11 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-from typing import Dict
+import contextlib
+from typing import Any, Dict, Optional
 
 import yaml
-
-from juju_doctor.helpers import get_apps_by_charm_name, get_charm_name_by_app_name
+from jsonpath_ng.ext import parse
 
 
 def status(juju_statuses: Dict[str, Dict], **kwargs):
@@ -57,6 +57,25 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 # Helper functions
 # ==========================
+
+
+def get_charm_name_by_app_name(status: Dict[str, Any], app_name: str) -> Optional[str]:
+    """Helper function to get the (predictable) charm name from an application name."""
+    with contextlib.suppress(KeyError):
+        return status["applications"][app_name]["charm"]
+    return None
+
+
+def get_apps_by_charm_name(status: Dict[str, Any], charm_name: str) -> dict:
+    """Helper function to get the application object from a charm name."""
+    # expr = parse(f'$.applications.*[?(@.charm=="{charm_name}")]')
+    # return {m.context.value[0]: m.value for m in expr.find(status)}
+    expr_apps = parse(f'$.applications[?(@.charm=="{charm_name}")]')
+    import json
+    apps = [match.value for match in expr_apps.find(status)]
+    print("applications (values):", json.dumps(apps, indent=2))
+    # expr = ext_parse(f'$.applications[?(@.charm == "{charm_name}")]')
+    # return {m.context.value[0]: m.value for m in expr.find(status)}
 
 
 def example_status_redundant_endpoints_agent_cos_proxy():

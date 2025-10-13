@@ -23,6 +23,7 @@ dependencies = [
   "requests",
   "treelib",
   "pydantic",
+  "jsonpath_ng",
 ]
 
 [project.optional-dependencies]
