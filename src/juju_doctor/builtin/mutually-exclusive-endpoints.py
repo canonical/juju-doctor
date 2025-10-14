@@ -19,7 +19,6 @@ probes:
             - cos_agent
           ignore_apps:
             - grafana-agent
-
 ```
 
 Multiple assertions can be listed under the `with` key, adhering to the
