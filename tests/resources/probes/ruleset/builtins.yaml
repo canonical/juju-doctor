@@ -22,3 +22,8 @@ probes:
       - offer-name: grafana-dashboards
         endpoint: grafana-dashboard
         interface: grafana_dashboard
+  - name: Builtin risk is stable
+    type: builtin/risk
+    with:
+      - type: stable
+      - type: edge
