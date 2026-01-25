@@ -23,6 +23,7 @@ dependencies = [
   "requests",
   "treelib",
   "pydantic",
+  "networkx>=3.4.2",
 ]
 
 [project.optional-dependencies]
