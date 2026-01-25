@@ -1,7 +1,6 @@
 set export  # Just variables are exported to environment variable
 
-uv := `which uv`
-uv_flags := "--frozen --isolated --extra=dev"
+uv_run := "uv run --frozen --isolated --extra=dev"
 PYTHONPATH := "src/juju_doctor"
 
 [private]
@@ -14,29 +13,29 @@ lock:
 
 # Lint the code
 lint:
-  uv run $uv_flags ruff check
+  {{uv_run}} ruff check
 
 # Run static checks
 static:
-  uv run $uv_flags pyright
+  {{uv_run}} pyright
 
 alias fmt := format
 # Format the code
 format:
-  uv run $uv_flags ruff check --fix-only
+  {{uv_run}} ruff check --fix-only
 
 # Run all tests
 test: lint static unit solution doctest
 
 # Run unit tests
 unit *args='':
-  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/unit}"
-  uv run $uv_flags coverage report
+  {{uv_run}} coverage run --source=src/juju_doctor -m pytest "${args:-tests/unit}"
+  {{uv_run}} coverage report
   
 # Run solution tests
 solution *args='':
-  uv run $uv_flags coverage run --source=src/juju_doctor -m pytest "${args:-tests/solution}"
-  uv run $uv_flags coverage report
+  {{uv_run}} coverage run --source=src/juju_doctor -m pytest "${args:-tests/solution}"
+  {{uv_run}} coverage report
 
 doctest: doctest-builtin doctest-examples
 
@@ -45,7 +44,7 @@ doctest: doctest-builtin doctest-examples
 doctest-examples:
   #!/usr/bin/env sh
   for file in *.py; do
-    python3 -m doctest "$file" || exit 1
+    {{uv_run}} python -m doctest "$file" || exit 1
   done
   echo "SUCCESS: All example probe tests passed!"
 
@@ -53,6 +52,6 @@ doctest-examples:
 doctest-builtin:
   #!/usr/bin/env sh
   for file in ./src/juju_doctor/builtin/*.py; do
-    python3 -m doctest "$file" || exit 1
+    {{uv_run}} python -m doctest "$file" || exit 1
   done
   echo "SUCCESS: All builtin probe tests passed!"
