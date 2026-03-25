@@ -441,10 +441,10 @@ class RuleSet:
                 case "scriptlet":
                     if ruleset_probe.url is None:
                         raise Exception('"url" must be defined for scriptlet probes')
+                    url_path_suffix = Path(urlparse(ruleset_probe.url).path).suffix.lower()
                     if (
-                        Path(ruleset_probe.url).suffix.lower()
-                        and Path(ruleset_probe.url).suffix.lower()
-                        not in FileExtensions.PYTHON.value
+                        url_path_suffix
+                        and url_path_suffix not in FileExtensions.PYTHON.value
                     ):
                         log.warning(
                             f"{ruleset_probe.url} is not a scriptlet but was specified as such."
@@ -462,11 +462,11 @@ class RuleSet:
                     )
                 case "ruleset":
                     if ruleset_probe.url is None:
-                        raise Exception('"url" must be defined for scriptlet probes')
+                        raise Exception('"url" must be defined for ruleset probes')
+                    url_path_suffix = Path(urlparse(ruleset_probe.url).path).suffix.lower()
                     if (
-                        Path(ruleset_probe.url).suffix.lower()
-                        and Path(ruleset_probe.url).suffix.lower()
-                        not in FileExtensions.RULESET.value
+                        url_path_suffix
+                        and url_path_suffix not in FileExtensions.RULESET.value
                     ):
                         log.warning(
                             f"{ruleset_probe.url} is not a ruleset but was specified as such."
