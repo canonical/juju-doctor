@@ -1,0 +1,8 @@
+name: RuleSet - test scriptlets with query parameters in URL
+probes:
+  - name: Probe - test passing
+    type: scriptlet
+    url: file://tests/resources/probes/python/passing.py?main
+  - name: Probe - test failing
+    type: scriptlet
+    url: file://tests/resources/probes/python/failing.py?main

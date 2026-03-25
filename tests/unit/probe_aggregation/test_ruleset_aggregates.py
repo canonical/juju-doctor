@@ -70,3 +70,14 @@ def test_ruleset_finds_probes_and_builtins():
         probe_tree = Probe.from_url(probe_url, Path(tmpdir))
         # THEN probes are found
         contains_only_one_passing_and_failing_probe(probe_tree.probes)
+
+
+def test_ruleset_calls_scriptlet_with_query_in_url():
+    # GIVEN a ruleset probe file calls scriptlet probes whose URLs have a query parameter
+    probe_url = "file://tests/resources/probes/ruleset/scriptlets_with_query.yaml"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # WHEN the probes are fetched to a local filesystem
+        probe_tree = Probe.from_url(probe_url, Path(tmpdir))
+        probes = probe_tree.probes
+        # THEN probes are found (i.e. the query parameter is not mistaken as part of the extension)
+        contains_only_one_passing_and_failing_probe(probes)
