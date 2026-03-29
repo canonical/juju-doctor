@@ -250,4 +250,4 @@ def test_check_not_from_repo_root(tmp_path):
     result = CliRunner().invoke(app, test_args)
     # THEN they are all found
     assert json.loads(result.stdout)["failed"] == 0
-    assert json.loads(result.stdout)["passed"] == 3
+    assert json.loads(result.stdout)["passed"] == 4

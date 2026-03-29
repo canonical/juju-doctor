@@ -117,6 +117,7 @@ def test_check_probes_and_builtins():
                     {"🟢 Builtin application-exists": {}},
                     {"🟢 Builtin offer-exists": {}},
                     {"🟢 Builtin app-relation-exists": {}},
+                    {"🟢 Mutually exclusive endpoints exist": {}},
                 ]
             }
         },
