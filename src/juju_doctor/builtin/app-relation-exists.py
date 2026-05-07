@@ -41,25 +41,25 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     >>> status({"0": example_status()}, **example_with_fake_app_0())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager_fake:alerting', 'loki:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager_fake:alerting', 'loki:alertmanager'] was not found ...
 
     >>> status({"0": example_status()}, **example_with_fake_app_1())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting', 'loki_fake:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting', 'loki_fake:alertmanager'] was not found ...
 
     >>> status({"0": example_status()}, **example_with_fake_endpoint_0())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting_fake', 'loki:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting_fake', 'loki:alertmanager'] was not found ...
 
     >>> status({"0": example_status()}, **example_with_fake_endpoint_1())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = AppRelationExists(**kwargs)
-    _rel_obj = Relation.from_rel_pair(_rel.apps)
+    _input = AppRelationExists(**kwargs)
+    _rel_obj = Relation.from_rel_pair(_input.apps)
 
     for status_name, status in juju_statuses.items():
         app_0 = status.get("applications", {}).get(_rel_obj.name_0, {})
@@ -73,7 +73,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
             for rel in app_1.get("relations", {}).get(_rel_obj.endpoint_1, {})
         )
         if not all((app_0, app_1, rel_0_to_1, rel_1_to_0)):
-            raise Exception(f'The relation {_rel.apps} was not found in "{status_name}"')
+            raise AssertionError(f'The relation {_input.apps} was not found in "{status_name}"')
 
 
 def bundle(juju_bundles: Dict[str, Dict], **kwargs):
@@ -82,41 +82,41 @@ def bundle(juju_bundles: Dict[str, Dict], **kwargs):
     >>> bundle({"0": example_bundle_missing_relations()}, **{"apps": ["foo:fake", "bar:fake"]})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: There are no relations present in ...
+    AssertionError: There are no relations present in ...
 
     >>> bundle({"0": example_bundle()}, **example_with_fake_app_0())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager_fake:alerting', 'loki:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager_fake:alerting', 'loki:alertmanager'] was not found ...
 
     >>> bundle({"0": example_bundle()}, **example_with_fake_app_1())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting', 'loki_fake:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting', 'loki_fake:alertmanager'] was not found ...
 
     >>> bundle({"0": example_bundle()}, **example_with_fake_endpoint_0())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting_fake', 'loki:alertmanager'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting_fake', 'loki:alertmanager'] was not found ...
 
     >>> bundle({"0": example_bundle()}, **example_with_fake_endpoint_1())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
+    AssertionError: The relation ['alertmanager:alerting', 'loki:alertmanager_fake'] was not found ...
     """  # noqa: E501
-    _rel = AppRelationExists(**kwargs)
-    _rel_obj = Relation.from_rel_pair(_rel.apps)
+    _input = AppRelationExists(**kwargs)
+    _rel_obj = Relation.from_rel_pair(_input.apps)
 
     rel_found = False
     for bundle_name, bundle in juju_bundles.items():
         if not (rels := bundle.get("relations")):
-            raise Exception(f'There are no relations present in "{bundle_name}"')
+            raise AssertionError(f'There are no relations present in "{bundle_name}"')
         for rel in rels:
             rel_obj = Relation.from_rel_pair(rel)
             if rel_obj.equals(_rel_obj):
                 rel_found = True
         if not rel_found:
-            raise Exception(f'The relation {_rel.apps} was not found in "{bundle_name}"')
+            raise AssertionError(f'The relation {_input.apps} was not found in "{bundle_name}"')
 
 
 # ==========================

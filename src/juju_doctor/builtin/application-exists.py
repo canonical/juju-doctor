@@ -44,41 +44,41 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     >>> status({"0": example_status_missing_applications()}, **{"application-name": "foo"})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: There are no applications present in ...
+    AssertionError: There are no applications present in ...
 
     >>> status({"0": example_status()}, **example_with_fake_name())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: Unable to find the app (alertmanager_fake) in [...] ...
+    AssertionError: Unable to find the app (alertmanager_fake) in [...] ...
 
     >>> status({"0": example_status()}, **example_with_scale_above_max())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The scale (1) of alertmanager exceeds the allowable limit: 0 ...
+    AssertionError: The scale (1) of alertmanager exceeds the allowable limit: 0 ...
 
     >>> status({"0": example_status()}, **example_with_scale_below_min())  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    Exception: The scale (1) of alertmanager is below the allowable limit: 2 ...
+    AssertionError: The scale (1) of alertmanager is below the allowable limit: 2 ...
     """  # noqa: E501
-    _app = ApplicationExists(**kwargs)
+    _input = ApplicationExists(**kwargs)
     for status_name, status in juju_statuses.items():
         if not (apps := status.get("applications")):
-            raise Exception(f'There are no applications present in "{status_name}"')
-        if not (found_app := apps.get(_app.name)):
-            raise Exception(
-                f"Unable to find the app ({_app.name}) in "
+            raise AssertionError(f'There are no applications present in "{status_name}"')
+        if not (found_app := apps.get(_input.name)):
+            raise AssertionError(
+                f"Unable to find the app ({_input.name}) in "
                 f'[{", ".join(apps.keys())}] in "{status_name}"'
             )
-        if _app.minimum is not None and found_app["scale"] < _app.minimum:
-            raise Exception(
-                f"The scale ({found_app['scale']}) of {_app.name} is below the allowable "
-                f'limit: {_app.minimum} in "{status_name}"'
+        if _input.minimum is not None and found_app["scale"] < _input.minimum:
+            raise AssertionError(
+                f"The scale ({found_app['scale']}) of {_input.name} is below the allowable "
+                f'limit: {_input.minimum} in "{status_name}"'
             )
-        if _app.maximum is not None and found_app["scale"] > _app.maximum:
-            raise Exception(
-                f"The scale ({found_app['scale']}) of {_app.name} exceeds the allowable "
-                f'limit: {_app.maximum} in "{status_name}"'
+        if _input.maximum is not None and found_app["scale"] > _input.maximum:
+            raise AssertionError(
+                f"The scale ({found_app['scale']}) of {_input.name} exceeds the allowable "
+                f'limit: {_input.maximum} in "{status_name}"'
             )
 
 

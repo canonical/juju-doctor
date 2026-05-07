@@ -85,7 +85,7 @@ jobs:
         run: just solution
 
   doctest-tests:
-    name: Doctest tests on example probes
+    name: Doctest probes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -73,25 +73,25 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     ...
     pydantic_core._pydantic_core.ValidationError: ... The endpoint must be defined if the interface is defined ...
     """  # noqa: E501
-    _offer = OfferExists(**kwargs)
+    _input = OfferExists(**kwargs)
 
     for status_name, status in juju_statuses.items():
         if not (offers := status.get("offers")):
             raise Exception(f'There are no offers present in "{status_name}"')
-        if not (found_offer := offers.get(_offer.name)):
+        if not (found_offer := offers.get(_input.name)):
             raise Exception(
-                f"Unable to find the offer ({_offer.name}) in "
+                f"Unable to find the offer ({_input.name}) in "
                 f'[{", ".join(offers.keys())}] in "{status_name}"'
             )
-        if _offer.endpoint is not None and _offer.endpoint not in found_offer["endpoints"]:
+        if _input.endpoint is not None and _input.endpoint not in found_offer["endpoints"]:
             raise Exception(
-                f"The endpoint of {_offer.name} ({_offer.endpoint}) is not found in "
+                f"The endpoint of {_input.name} ({_input.endpoint}) is not found in "
                 f'[{", ".join(found_offer["endpoints"].keys())}] in "{status_name}"'
             )
-        interface = found_offer["endpoints"][_offer.endpoint]["interface"]
-        if _offer.interface is not None and _offer.interface != interface:
+        interface = found_offer["endpoints"][_input.endpoint]["interface"]
+        if _input.interface is not None and _input.interface != interface:
             raise Exception(
-                f"The interface ({_offer.interface}) of the provided offer ({_offer.name}) "
+                f"The interface ({_input.interface}) of the provided offer ({_input.name}) "
                 f'does not match the expected interface ({interface}) in "{status_name}"'
             )
 

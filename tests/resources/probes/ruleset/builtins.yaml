@@ -22,3 +22,12 @@ probes:
       - offer-name: grafana-dashboards
         endpoint: grafana-dashboard
         interface: grafana_dashboard
+  - name: Mutually exclusive endpoints exist
+    type: builtin/mutually-exclusive-endpoints
+    with:
+      - charm-name: grafana-agent
+        endpoints:
+            - juju-info
+            - cos-agent
+        ignore_apps:
+            - ga-one
