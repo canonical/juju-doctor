@@ -269,7 +269,7 @@ def test_show_model_artifact_from_file():
     artifact = ModelArtifact.from_files(show_model_file=SHOW_MODEL_FILE)
     assert artifact.show_model is not None
     assert isinstance(artifact.show_model, ModelInfo)
-    assert artifact.show_model.name == "sixx"
+    assert artifact.show_model.name == "admin/sixx"
     assert artifact.show_model.model_uuid == "0d9f03ae-cc37-4f68-8cae-3a6a6590a538"
 
 

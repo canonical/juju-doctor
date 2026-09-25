@@ -73,8 +73,10 @@ def _parse_show_units(show_units: Dict[str, Any]) -> Dict[str, UnitInfo]:
     failing the whole artifact. If none of the entries can be parsed, the
     artifact is considered invalid.
     """
+    if not isinstance(show_units, Mapping):
+        raise ArtifactError("Invalid show-unit artifact: expected a mapping of unit names")
     units: Dict[str, UnitInfo] = {}
-    for unit_name, unit_data in (show_units or {}).items():
+    for unit_name, unit_data in show_units.items():
         try:
             units[unit_name] = UnitInfo._from_dict(unit_data)
         except Exception as e:
@@ -90,6 +92,8 @@ def _parse_show_model(model_data: Dict[str, Any]) -> ModelInfo:
     The Juju CLI wraps the model information in a single-key mapping
     (``{<model-name>: {...}}``); unwrap it when present.
     """
+    if not isinstance(model_data, Mapping):
+        raise ArtifactError("Invalid show-model artifact: expected a mapping")
     if len(model_data) == 1:
         only_value = next(iter(model_data.values()))
         if isinstance(only_value, dict) and "model-uuid" in only_value:
@@ -163,7 +167,7 @@ class ModelArtifact:
         )
         show_model = _gather_live(model, "show-model", juju.show_model)
         model_dump = _gather_live(
-            model, "model_dump", lambda: yaml.safe_load(juju.cli("dump-model"))
+            model, "dump-model", lambda: yaml.safe_load(juju.cli("dump-model"))
         )
 
         # Gather the show-unit information for every principal and subordinate unit
@@ -205,10 +209,10 @@ class ModelArtifact:
         model_dump = read_artifact_file(model_dump_file) if model_dump_file else None
 
         return ModelArtifact(
-            status=_parse_status(status) if status else None,
+            status=_parse_status(status) if status is not None else None,
             bundle=bundle,
-            show_units=_parse_show_units(show_units) if show_units else None,
-            show_model=_parse_show_model(show_model) if show_model else None,
+            show_units=_parse_show_units(show_units) if show_units is not None else None,
+            show_model=_parse_show_model(show_model) if show_model is not None else None,
             model_dump=model_dump,
         )
 

@@ -1,23 +1,26 @@
 sixx:
-  name: sixx
+  name: admin/sixx
   short-name: sixx
   model-uuid: 0d9f03ae-cc37-4f68-8cae-3a6a6590a538
   model-type: caas
   controller-uuid: 8b9d1a2c-1234-4f68-8cae-3a6a6590a539
   controller-name: k8s
   is-controller: false
+  owner: admin
   cloud: microk8s
   life: alive
   region: localhost
-  type: caas
+  type: kubernetes
   status:
     current: available
     since: 06 Mar 2025 09:29:06+01:00
   users:
     admin:
+      display-name: admin
       access: admin
       last-connection: 06 Mar 2025 09:29:06+01:00
-  machines: {}
-  secret-backends: {}
   agent-version: "4.0-beta4"
-  supported-features: []
+  supported-features:
+  - name: juju
+    description: the version of Juju used by the model
+    version: "4.0-beta4"
