@@ -10,33 +10,28 @@ Context: As openstack incrementally transitioned from cos-proxy to grafana-agent
 ended up with hybrid, invalid topologies.
 """
 
-from pathlib import Path
 from typing import Dict
 
+import yaml
 from jubilant import Status
 
-from juju_doctor.artifacts import read_artifact_file
 from juju_doctor.helpers import get_apps_by_charm_name
-
-_FIXTURES = (
-    Path(__file__).resolve().parent.parent / "tests" / "resources" / "artifacts" / "examples"
-)
 
 
 def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for a cyclic relation between cos-proxy, grafana-agent, and prometheus.
 
-    >>> status({"invalid-openstack-model": example_status("gagent-proxy-cyclic.yaml")})  # doctest: +ELLIPSIS
+    >>> status({"invalid-openstack-model": example_status_cyclic_agent_cos_proxy()})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     AssertionError: Remove the relation between ... (cos-proxy) and prometheus. ...
 
-    >>> status({"invalid-openstack-model": example_status("gagent-proxy-multiple.yaml")})  # doctest: +ELLIPSIS
+    >>> status({"invalid-openstack-model": example_multiple_proxies()})  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
     AssertionError: Remove the relation between "cp-2" (cos-proxy) and prometheus. ...
 
-    >>> status({"valid-model": example_status("gagent-proxy-valid.yaml")})
+    >>> status({"valid-model": example_status_valid()})
     """  # noqa: E501
     agent_and_proxy_rel = False
     suspicious_endpoint_apps = {}
@@ -88,6 +83,200 @@ def status(juju_statuses: Dict[str, Status], **kwargs):
 # ==========================
 
 
-def example_status(filename: str) -> Status:
-    """Load a full ``juju status`` fixture used by the doctests."""
-    return Status._from_dict(read_artifact_file(str(_FIXTURES / filename)))
+def example_status_cyclic_agent_cos_proxy() -> Status:
+    """Invalid topology of cos-proxy and grafana-agent.
+
+    In this status, cos-proxy and grafana-agent are inter-related, while being
+    related to the same prometheus.
+    """
+    return Status._from_dict(
+        yaml.safe_load("""
+model:
+  name: example
+  type: caas
+  controller: example
+  cloud: kubernetes
+  version: 4.0.0
+machines: {}
+applications:
+  ga:
+    charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: cp
+        interface: cos_agent
+      send-remote-write:
+      - related-application: prom
+        interface: prometheus_remote_write
+  cp:
+    charm: cos-proxy
+    charm-origin: charmhub
+    charm-name: cos-proxy
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: ga
+        interface: cos_agent
+      downstream-prometheus-scrape:
+      - related-application: prom
+        interface: prometheus_scrape
+  prom:
+    charm: prometheus-k8s
+    charm-origin: charmhub
+    charm-name: prometheus-k8s
+    charm-rev: 1
+    exposed: false
+    relations:
+      receive-remote-write:
+      - related-application: ga
+        interface: prometheus_remote_write
+      metrics-endpoint:
+      - related-application: cp
+        interface: prometheus_scrape
+""")
+    )
+
+
+def example_multiple_proxies() -> Status:
+    """Invalid topology of cos-proxy and grafana-agent.
+
+    In this status, grafana-agent is related to 2 different cos-proxy apps. Only "cp-2" is related
+    to the same prometheus as grafana-agent.
+    """
+    return Status._from_dict(
+        yaml.safe_load("""
+model:
+  name: example
+  type: caas
+  controller: example
+  cloud: kubernetes
+  version: 4.0.0
+machines: {}
+applications:
+  ga:
+    charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: cp-1
+        interface: cos_agent
+      - related-application: cp-2
+        interface: cos_agent
+      send-remote-write:
+      - related-application: prom
+        interface: prometheus_remote_write
+  cp-1:
+    charm: cos-proxy
+    charm-origin: charmhub
+    charm-name: cos-proxy
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: ga
+        interface: cos_agent
+  cp-2:
+    charm: cos-proxy
+    charm-origin: charmhub
+    charm-name: cos-proxy
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: ga
+        interface: cos_agent
+      downstream-prometheus-scrape:
+      - related-application: prom
+        interface: prometheus_scrape
+  prom:
+    charm: prometheus-k8s
+    charm-origin: charmhub
+    charm-name: prometheus-k8s
+    charm-rev: 1
+    exposed: false
+    relations:
+      receive-remote-write:
+      - related-application: ga
+        interface: prometheus_remote_write
+      metrics-endpoint:
+      - related-application: cp-2
+        interface: prometheus_scrape
+""")
+    )
+
+
+def example_status_valid() -> Status:
+    """Valid topology of cos-proxy and grafana-agent.
+
+    In this status, cos-proxy and grafana-agent are inter-related, and
+    not related to the same prometheus.
+    """
+    return Status._from_dict(
+        yaml.safe_load("""
+model:
+  name: example
+  type: caas
+  controller: example
+  cloud: kubernetes
+  version: 4.0.0
+machines: {}
+applications:
+  ga:
+    charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: cp
+        interface: cos_agent
+      send-remote-write:
+      - related-application: foo
+        interface: prometheus_remote_write
+  cp:
+    charm: cos-proxy
+    charm-origin: charmhub
+    charm-name: cos-proxy
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: ga
+        interface: cos_agent
+      downstream-prometheus-scrape:
+      - related-application: prom
+        interface: prometheus_scrape
+  prom:
+    charm: prometheus-k8s
+    charm-origin: charmhub
+    charm-name: prometheus-k8s
+    charm-rev: 1
+    exposed: false
+    relations:
+      receive-remote-write:
+      - related-application: ga
+        interface: prometheus_remote_write
+      metrics-endpoint:
+      - related-application: cp
+        interface: prometheus_scrape
+  foo:
+    charm: foo-k8s
+    charm-origin: charmhub
+    charm-name: foo-k8s
+    charm-rev: 1
+    exposed: false
+    relations:
+      receive-remote-write:
+      - related-application: ga
+        interface: prometheus_remote_write
+""")
+    )
