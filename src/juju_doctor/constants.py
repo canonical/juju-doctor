@@ -2,4 +2,4 @@
 ROOT_NODE_ID = "root"
 ROOT_NODE_TAG = "Results"
 BUILTIN_DIR = "src/juju_doctor/builtin"
-SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit"]
+SUPPORTED_PROBE_FUNCTIONS = ["status", "bundle", "show_unit", "show_model", "model_dump"]

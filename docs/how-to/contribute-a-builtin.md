@@ -26,14 +26,21 @@ Builtins are reusable probes. They implement the same probe interface as scriptl
 Add a Python file to src/juju_doctor/builtin/. The filename determines the builtin name used in RuleSets. For example, a file named my-builtin.py is referenced as type: builtin/my-builtin.
 
 ## Implementing the interface
-A builtin must implement one or more of the supported probe entry points (for example `status`, `bundle`). Each entry point receives probe artifacts and any extra options passed from the RuleSet as keyword arguments.
+A builtin must implement one or more of the supported probe entry points (`status`, `bundle`, `show_unit`, `show_model`, `model_dump`). Each entry point receives probe artifacts and any extra options passed from the RuleSet as keyword arguments.
+
+Artifacts are parsed with Jubilant's dataclasses: `status` is a `jubilant.Status`, `show_unit` is a mapping of `jubilant.UnitInfo`, and `show_model` is a `jubilant.ModelInfo`. `bundle` and `model_dump` are raw dictionaries.
 
 ```python
 # src/juju_doctor/builtins/my-builtin.py
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+from jubilant import Status
+
+
+def status(juju_statuses: dict[str, Status], **kwargs):
     foo_model = FooModel(**kwargs)
     for status_name, status in juju_statuses.items():
         # Run your assertion (FooModel) against all supplied status artifacts ...
+        # Typed accessors from Jubilant, e.g. status.apps, app.charm_name,
+        # app.relations.
         # NOTE: you can import any dependency that juju-doctor has access to
 ```
 

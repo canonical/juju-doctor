@@ -253,7 +253,8 @@ class Probe:
         """Dynamically load a Python script from self.path, making its functions available.
 
         We import the module dynamically because the path of the probe is only known at runtime.
-        Only returns the supported 'status', 'bundle', and 'show_unit' functions (if present).
+        Only returns the supported 'status', 'bundle', 'show_unit', and 'show_model' functions (if
+        present).
         """
         package_name = "juju_doctor"
 
