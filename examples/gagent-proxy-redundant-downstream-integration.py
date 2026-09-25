@@ -91,12 +91,7 @@ def example_status_cyclic_agent_cos_proxy() -> Status:
     """
     return Status._from_dict(
         yaml.safe_load("""
-model:
-  name: example
-  type: caas
-  controller: example
-  cloud: kubernetes
-  version: 4.0.0
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
 machines: {}
 applications:
   ga:
@@ -106,12 +101,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: cp
-        interface: cos_agent
-      send-remote-write:
-      - related-application: prom
-        interface: prometheus_remote_write
+      cos-agent: [{related-application: cp}]
+      send-remote-write: [{related-application: prom}]
   cp:
     charm: cos-proxy
     charm-origin: charmhub
@@ -119,12 +110,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: ga
-        interface: cos_agent
-      downstream-prometheus-scrape:
-      - related-application: prom
-        interface: prometheus_scrape
+      cos-agent: [{related-application: ga}]
+      downstream-prometheus-scrape: [{related-application: prom}]
   prom:
     charm: prometheus-k8s
     charm-origin: charmhub
@@ -132,12 +119,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      receive-remote-write:
-      - related-application: ga
-        interface: prometheus_remote_write
-      metrics-endpoint:
-      - related-application: cp
-        interface: prometheus_scrape
+      receive-remote-write: [{related-application: ga}]
+      metrics-endpoint: [{related-application: cp}]
 """)
     )
 
@@ -150,12 +133,7 @@ def example_multiple_proxies() -> Status:
     """
     return Status._from_dict(
         yaml.safe_load("""
-model:
-  name: example
-  type: caas
-  controller: example
-  cloud: kubernetes
-  version: 4.0.0
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
 machines: {}
 applications:
   ga:
@@ -165,14 +143,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: cp-1
-        interface: cos_agent
-      - related-application: cp-2
-        interface: cos_agent
-      send-remote-write:
-      - related-application: prom
-        interface: prometheus_remote_write
+      cos-agent: [{related-application: cp-1}, {related-application: cp-2}]
+      send-remote-write: [{related-application: prom}]
   cp-1:
     charm: cos-proxy
     charm-origin: charmhub
@@ -180,9 +152,7 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: ga
-        interface: cos_agent
+      cos-agent: [{related-application: ga}]
   cp-2:
     charm: cos-proxy
     charm-origin: charmhub
@@ -190,12 +160,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: ga
-        interface: cos_agent
-      downstream-prometheus-scrape:
-      - related-application: prom
-        interface: prometheus_scrape
+      cos-agent: [{related-application: ga}]
+      downstream-prometheus-scrape: [{related-application: prom}]
   prom:
     charm: prometheus-k8s
     charm-origin: charmhub
@@ -203,12 +169,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      receive-remote-write:
-      - related-application: ga
-        interface: prometheus_remote_write
-      metrics-endpoint:
-      - related-application: cp-2
-        interface: prometheus_scrape
+      receive-remote-write: [{related-application: ga}]
+      metrics-endpoint: [{related-application: cp-2}]
 """)
     )
 
@@ -221,12 +183,7 @@ def example_status_valid() -> Status:
     """
     return Status._from_dict(
         yaml.safe_load("""
-model:
-  name: example
-  type: caas
-  controller: example
-  cloud: kubernetes
-  version: 4.0.0
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
 machines: {}
 applications:
   ga:
@@ -236,12 +193,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: cp
-        interface: cos_agent
-      send-remote-write:
-      - related-application: foo
-        interface: prometheus_remote_write
+      cos-agent: [{related-application: cp}]
+      send-remote-write: [{related-application: foo}]
   cp:
     charm: cos-proxy
     charm-origin: charmhub
@@ -249,12 +202,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: ga
-        interface: cos_agent
-      downstream-prometheus-scrape:
-      - related-application: prom
-        interface: prometheus_scrape
+      cos-agent: [{related-application: ga}]
+      downstream-prometheus-scrape: [{related-application: prom}]
   prom:
     charm: prometheus-k8s
     charm-origin: charmhub
@@ -262,12 +211,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      receive-remote-write:
-      - related-application: ga
-        interface: prometheus_remote_write
-      metrics-endpoint:
-      - related-application: cp
-        interface: prometheus_scrape
+      receive-remote-write: [{related-application: ga}]
+      metrics-endpoint: [{related-application: cp}]
   foo:
     charm: foo-k8s
     charm-origin: charmhub
@@ -275,8 +220,6 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      receive-remote-write:
-      - related-application: ga
-        interface: prometheus_remote_write
+      receive-remote-write: [{related-application: ga}]
 """)
     )

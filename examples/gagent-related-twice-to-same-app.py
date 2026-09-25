@@ -68,12 +68,7 @@ def example_status_redundant_endpoints_agent_cos_proxy() -> Status:
     """
     return Status._from_dict(
         yaml.safe_load("""
-model:
-  name: example
-  type: caas
-  controller: example
-  cloud: kubernetes
-  version: 4.0.0
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
 machines: {}
 applications:
   ga:
@@ -83,12 +78,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: foo
-        interface: cos_agent
-      juju-info:
-      - related-application: foo
-        interface: juju-info
+      cos-agent: [{related-application: foo}]
+      juju-info: [{related-application: foo}]
   foo:
     charm: foo-charm
     charm-origin: charmhub
@@ -96,12 +87,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      foo-cos-agent:
-      - related-application: ga
-        interface: cos_agent
-      foo-juju-info:
-      - related-application: ga
-        interface: juju-info
+      foo-cos-agent: [{related-application: ga}]
+      foo-juju-info: [{related-application: ga}]
 """)
     )
 
@@ -114,12 +101,7 @@ def example_status_valid() -> Status:
     """
     return Status._from_dict(
         yaml.safe_load("""
-model:
-  name: example
-  type: caas
-  controller: example
-  cloud: kubernetes
-  version: 4.0.0
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
 machines: {}
 applications:
   ga:
@@ -129,12 +111,8 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      cos-agent:
-      - related-application: foo
-        interface: cos_agent
-      juju-info:
-      - related-application: bar
-        interface: juju-info
+      cos-agent: [{related-application: foo}]
+      juju-info: [{related-application: bar}]
   foo:
     charm: foo-charm
     charm-origin: charmhub
@@ -142,9 +120,7 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      foo-cos-agent:
-      - related-application: ga
-        interface: cos_agent
+      foo-cos-agent: [{related-application: ga}]
   bar:
     charm: bar-charm
     charm-origin: charmhub
@@ -152,8 +128,6 @@ applications:
     charm-rev: 1
     exposed: false
     relations:
-      bar-juju-info:
-      - related-application: ga
-        interface: juju-info
+      bar-juju-info: [{related-application: ga}]
 """)
     )
