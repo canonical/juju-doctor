@@ -1,8 +1,9 @@
 """Helper module to represent the input artifacts for Juju doctor."""
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import sh
 import yaml
@@ -15,116 +16,199 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 
+class ArtifactError(Exception):
+    """Raised when an artifact cannot be read or parsed."""
+
+
+def _load_yaml(filename: str) -> Any:
+    """Load the first YAML document of a file."""
+    with open(filename, "r") as f:
+        documents = list(yaml.safe_load_all(f.read()))
+    return documents[0] if documents else None
+
+
 def read_file(filename: Optional[str]) -> Optional[Dict]:
-    """Read a file into a string."""
+    """Read a YAML file into a dict, leniently.
+
+    This is the lenient reader used by probes and RuleSets: a missing file is
+    logged and returned as ``None``. Use :func:`read_artifact_file` when the
+    artifact was explicitly requested and must fail loudly if it is missing.
+    """
     if not filename:
         return None
     try:
-        with open(filename, "r") as f:
-            contents = f.read()
-            # Parse all YAML documents and return only the first one
-            # https://github.com/canonical/juju-doctor/issues/10
-            return list(yaml.safe_load_all(contents))[0]
+        return _load_yaml(filename)
     except Exception as e:
         log.error(e)
     return None
 
 
-def _from_status(status_data: Optional[Dict[str, Any]]) -> Optional[Status]:
+def read_artifact_file(filename: str) -> Dict:
+    """Read an artifact file, raising :class:`ArtifactError` if it cannot be read.
+
+    Artifacts that were explicitly requested (e.g. via ``--status``) must never
+    silently turn into an empty artifact, so this reader fails loudly.
+    """
+    try:
+        contents = _load_yaml(filename)
+    except Exception as e:
+        raise ArtifactError(f"Unable to read artifact file '{filename}': {e}") from e
+    if contents is None:
+        raise ArtifactError(f"Artifact file '{filename}' is empty")
+    return contents
+
+
+def _parse_status(status_data: Dict[str, Any]) -> Status:
     """Parse a ``juju status`` artifact into a :class:`jubilant.Status`."""
-    if not status_data:
-        return None
     try:
         return Status._from_dict(status_data)
     except Exception as e:
-        log.error(e)
-        return None
+        raise ArtifactError(f"Invalid Juju status artifact: {e}") from e
 
 
-def _parse_show_units(show_units: Optional[Dict[str, Any]]) -> Dict[str, UnitInfo]:
-    """Parse a ``juju show-unit`` artifact into :class:`jubilant.UnitInfo` objects."""
+def _parse_show_units(show_units: Dict[str, Any]) -> Dict[str, UnitInfo]:
+    """Parse a ``juju show-unit`` artifact into :class:`jubilant.UnitInfo` objects.
+
+    ``show-unit`` is a collection of independent units, so a single unit that
+    does not match the Jubilant schema is skipped with a warning rather than
+    failing the whole artifact. If none of the entries can be parsed, the
+    artifact is considered invalid.
+    """
     units: Dict[str, UnitInfo] = {}
     for unit_name, unit_data in (show_units or {}).items():
         try:
             units[unit_name] = UnitInfo._from_dict(unit_data)
         except Exception as e:
-            log.error(e)
+            log.warning(f"Skipping show-unit artifact for '{unit_name}': {e}")
+    if show_units and not units:
+        raise ArtifactError("None of the show-unit entries could be parsed")
     return units
 
 
-def _from_show_model(model_data: Optional[Dict[str, Any]]) -> Optional[ModelInfo]:
+def _parse_show_model(model_data: Dict[str, Any]) -> ModelInfo:
     """Parse a ``juju show-model`` artifact into a :class:`jubilant.ModelInfo`.
 
     The Juju CLI wraps the model information in a single-key mapping
     (``{<model-name>: {...}}``); unwrap it when present.
     """
-    if not model_data:
-        return None
+    if len(model_data) == 1:
+        only_value = next(iter(model_data.values()))
+        if isinstance(only_value, dict) and "model-uuid" in only_value:
+            model_data = only_value
     try:
-        if len(model_data) == 1:
-            only_value = next(iter(model_data.values()))
-            if isinstance(only_value, dict) and "model-uuid" in only_value:
-                model_data = only_value
         return ModelInfo._from_dict(model_data)
     except Exception as e:
-        log.error(e)
+        raise ArtifactError(f"Invalid show-model artifact: {e}") from e
+
+
+def _gather(model: str, artifact: str, command: Callable[[], Any]) -> Optional[Any]:
+    """Run a Juju command and parse its YAML output, tolerating failures.
+
+    Different Juju versions expose different commands (for example,
+    ``export-bundle`` was removed in Juju 4), so gathering an optional artifact
+    must not abort the whole run when a single command is unavailable.
+    """
+    try:
+        return yaml.safe_load(command())
+    except Exception as e:
+        log.warning(f"Unable to gather the {artifact} artifact for model '{model}': {e}")
         return None
+
+
+def _unit_names(status: Dict[str, Any]) -> List[str]:
+    """Return the principal and subordinate unit names of a raw status artifact."""
+    units: List[str] = []
+    for app_status in status.get("applications", {}).values():
+        if "units" in app_status:  # subordinate charms have no "units" key
+            units.extend(app_status["units"].keys())
+            for unit_status in app_status["units"].values():
+                units.extend(unit_status.get("subordinates", {}).keys())
+    return units
 
 
 @dataclass
 class ModelArtifact:
-    """Wrapper around multiple Juju artifacts for the same model."""
+    """Wrapper around multiple Juju artifacts for the same model.
+
+    ``status``, ``show_units``, and ``show_model`` are parsed into the
+    dataclasses that Jubilant provides for those commands. ``bundle`` and
+    ``model_dump`` are intentionally left as opaque mappings: Jubilant does not
+    model them (``export-bundle`` was removed in Juju 4 and ``dump-model`` is an
+    internal database representation), so juju-doctor does not guess at their
+    schema.
+    """
 
     status: Optional[Status]
-    bundle: Optional[Dict]
+    bundle: Optional[Mapping[str, Any]]
     show_units: Optional[Dict[str, UnitInfo]]
     show_model: Optional[ModelInfo] = None
-    model_dump: Optional[Dict] = None
+    model_dump: Optional[Mapping[str, Any]] = None
 
     @staticmethod
     def from_live_model(model: str) -> "ModelArtifact":
-        """Gather information from a live model."""
-        juju_status = yaml.safe_load(sh.juju.status(model=model, format="yaml", _tty_out=False))
-        bundle = yaml.safe_load(sh.juju("export-bundle", model=model, _tty_out=False))
-        # Get unit data information
-        units: List[str] = []
-        show_units: Dict[str, Any] = {}  # List of show-unit results in dictionary form
-        for app in juju_status["applications"]:
-            # Subordinate charms don't have a "units" key, so the parsing is different
-            app_status = juju_status["applications"][app]
-            if "units" in app_status:  # if the app is not a subordinate
-                units.extend(app_status["units"].keys())
-                # Check for subordinates to each unit
-                for unit in app_status["units"].keys():
-                    unit_status = app_status["units"][unit]
-                    if "subordinates" in unit_status:
-                        units.extend(unit_status["subordinates"].keys())
-        for unit in units:
-            show_unit = yaml.safe_load(
-                sh.juju("show-unit", unit, model=model, format="yaml", _tty_out=False)
-            )
-            show_units.update(show_unit)
+        """Gather information from a live model.
 
-        # Model information, e.g. the model UUID, users, and secret backends
-        show_model = yaml.safe_load(
-            sh.juju("show-model", model=model, format="yaml", _tty_out=False)
+        The ``status`` artifact is required and raises if it cannot be gathered.
+        The remaining artifacts are gathered on a best-effort basis so that a
+        command that is missing or removed in a given Juju version does not fail
+        the whole run.
+        """
+        raw_status = _gather(
+            model,
+            "status",
+            lambda: sh.juju.status(model=model, format="yaml", _tty_out=False),
+        )
+        if raw_status is None:
+            raise ArtifactError(f"Unable to gather the status artifact for model '{model}'")
+        status = _parse_status(raw_status)
+
+        bundle = _gather(
+            model, "bundle", lambda: sh.juju("export-bundle", model=model, _tty_out=False)
+        )
+        show_model_data = _gather(
+            model,
+            "show-model",
+            lambda: sh.juju("show-model", model=model, format="yaml", _tty_out=False),
+        )
+        model_dump = _gather(
+            model,
+            "dump-model",
+            lambda: sh.juju("dump-model", model=model, format="yaml", _tty_out=False),
         )
 
-        # Full model dump, which contains the charm metadata and relation graph
-        try:
-            model_dump = yaml.safe_load(
-                sh.juju("dump-model", model=model, format="yaml", _tty_out=False)
+        # Get unit data information
+        show_units: Dict[str, Any] = {}
+        for unit in _unit_names(raw_status):
+            show_unit = _gather(
+                model,
+                f"show-unit ({unit})",
+                lambda unit=unit: sh.juju(
+                    "show-unit", unit, model=model, format="yaml", _tty_out=False
+                ),
             )
-        except Exception as e:  # dump-model is deprecated on newer Juju versions
-            log.warning(f"Unable to gather the model dump for {model}: {e}")
-            model_dump = None
+            if show_unit:
+                show_units.update(show_unit)
+
+        show_model = None
+        if show_model_data:
+            try:
+                show_model = _parse_show_model(show_model_data)
+            except ArtifactError as e:
+                log.warning(str(e))
+
+        parsed_units = None
+        if show_units:
+            try:
+                parsed_units = _parse_show_units(show_units)
+            except ArtifactError as e:
+                log.warning(str(e))
 
         return ModelArtifact(
-            status=_from_status(juju_status),
+            status=status,
             bundle=bundle,
-            show_units=_parse_show_units(show_units),
-            show_model=_from_show_model(show_model),
-            model_dump=model_dump or None,
+            show_units=parsed_units,
+            show_model=show_model,
+            model_dump=model_dump,
         )
 
     @staticmethod
@@ -136,13 +220,24 @@ class ModelArtifact:
         show_model_file: Optional[str] = None,
         model_dump_file: Optional[str] = None,
     ) -> "ModelArtifact":
-        """Gather information from static files."""
+        """Gather information from static files.
+
+        Files that were explicitly provided are read strictly: a missing or
+        malformed file raises :class:`ArtifactError` instead of being silently
+        ignored.
+        """
+        status = read_artifact_file(status_file) if status_file else None
+        bundle = read_artifact_file(bundle_file) if bundle_file else None
+        show_units = read_artifact_file(show_unit_file) if show_unit_file else None
+        show_model = read_artifact_file(show_model_file) if show_model_file else None
+        model_dump = read_artifact_file(model_dump_file) if model_dump_file else None
+
         return ModelArtifact(
-            status=_from_status(read_file(status_file)),
-            bundle=read_file(bundle_file) or None,
-            show_units=_parse_show_units(read_file(show_unit_file)) or None,
-            show_model=_from_show_model(read_file(show_model_file)),
-            model_dump=read_file(model_dump_file) or None,
+            status=_parse_status(status) if status else None,
+            bundle=bundle,
+            show_units=_parse_show_units(show_units) if show_units else None,
+            show_model=_parse_show_model(show_model) if show_model else None,
+            model_dump=model_dump,
         )
 
 
@@ -162,9 +257,9 @@ class Artifacts:
         return result
 
     @property
-    def bundle(self) -> Dict[str, Dict]:
-        """Get the Juju bundle for all the models."""
-        result: Dict[str, Dict] = {}
+    def bundle(self) -> Dict[str, Mapping[str, Any]]:
+        """Get the Juju bundle for all the models (opaque mapping)."""
+        result: Dict[str, Mapping[str, Any]] = {}
         for model, model_artifact in self.artifacts.items():
             if model_artifact.bundle:
                 result[model] = model_artifact.bundle
@@ -189,9 +284,9 @@ class Artifacts:
         return result
 
     @property
-    def model_dump(self) -> Dict[str, Dict]:
-        """Get the Juju dump-model information for all the models."""
-        result: Dict[str, Dict] = {}
+    def model_dump(self) -> Dict[str, Mapping[str, Any]]:
+        """Get the Juju dump-model information for all the models (opaque mapping)."""
+        result: Dict[str, Mapping[str, Any]] = {}
         for model, model_artifact in self.artifacts.items():
             if model_artifact.model_dump:
                 result[model] = model_artifact.model_dump

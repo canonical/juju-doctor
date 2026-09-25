@@ -12,7 +12,7 @@ from pydantic.json_schema import models_json_schema
 from rich.console import Console
 from rich.logging import RichHandler
 
-from juju_doctor.artifacts import Artifacts, ModelArtifact
+from juju_doctor.artifacts import ArtifactError, Artifacts, ModelArtifact
 from juju_doctor.constants import BUILTIN_DIR
 from juju_doctor.fetcher import find_pydantic_models_in_module, import_module_from_path
 from juju_doctor.probes import Probe, ProbeTree, RuleSetModel
@@ -113,23 +113,25 @@ def check(
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
-    if models:
-        for model in models:
-            model_artifact = ModelArtifact.from_live_model(model)
-            input[model] = model_artifact
-        artifacts = Artifacts(input)
-    else:
-        for f in status_files:
-            input[f] = ModelArtifact.from_files(status_file=f)
-        for f in bundle_files:
-            input[f] = ModelArtifact.from_files(bundle_file=f)
-        for f in show_unit_files:
-            input[f] = ModelArtifact.from_files(show_unit_file=f)
-        for f in show_model_files:
-            input[f] = ModelArtifact.from_files(show_model_file=f)
-        for f in model_dump_files:
-            input[f] = ModelArtifact.from_files(model_dump_file=f)
-        artifacts = Artifacts(input)
+    try:
+        if models:
+            for model in models:
+                model_artifact = ModelArtifact.from_live_model(model)
+                input[model] = model_artifact
+        else:
+            for f in status_files:
+                input[f] = ModelArtifact.from_files(status_file=f)
+            for f in bundle_files:
+                input[f] = ModelArtifact.from_files(bundle_file=f)
+            for f in show_unit_files:
+                input[f] = ModelArtifact.from_files(show_unit_file=f)
+            for f in show_model_files:
+                input[f] = ModelArtifact.from_files(show_model_file=f)
+            for f in model_dump_files:
+                input[f] = ModelArtifact.from_files(model_dump_file=f)
+    except ArtifactError as e:
+        raise typer.BadParameter(str(e))
+    artifacts = Artifacts(input)
 
     # Gather the probes
     probe_tree = ProbeTree()

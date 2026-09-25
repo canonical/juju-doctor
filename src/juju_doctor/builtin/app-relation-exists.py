@@ -25,7 +25,7 @@ from typing import Dict, List
 from jubilant import Status
 from pydantic import BaseModel, ConfigDict, Field
 
-from juju_doctor.artifacts import read_file
+from juju_doctor.artifacts import read_artifact_file
 
 
 class AppRelationExists(BaseModel):
@@ -169,12 +169,12 @@ class Relation:
 
 def example_status():
     """Doctest input."""
-    return Status._from_dict(read_file("tests/resources/artifacts/status.yaml") or {})
+    return Status._from_dict(read_artifact_file("tests/resources/artifacts/status.yaml"))
 
 
 def example_bundle():
     """Doctest input."""
-    return read_file("tests/resources/artifacts/bundle.yaml")
+    return read_artifact_file("tests/resources/artifacts/bundle.yaml")
 
 
 def example_bundle_missing_relations():

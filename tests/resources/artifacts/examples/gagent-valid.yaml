@@ -1,0 +1,41 @@
+model:
+  name: example
+  type: caas
+  controller: example
+  cloud: kubernetes
+  version: 4.0.0
+machines: {}
+applications:
+  ga:
+    charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
+    relations:
+      cos-agent:
+      - related-application: foo
+        interface: cos_agent
+      juju-info:
+      - related-application: bar
+        interface: juju-info
+  foo:
+    charm: foo-charm
+    charm-origin: charmhub
+    charm-name: foo-charm
+    charm-rev: 1
+    exposed: false
+    relations:
+      foo-cos-agent:
+      - related-application: ga
+        interface: cos_agent
+  bar:
+    charm: bar-charm
+    charm-origin: charmhub
+    charm-name: bar-charm
+    charm-rev: 1
+    exposed: false
+    relations:
+      bar-juju-info:
+      - related-application: ga
+        interface: juju-info

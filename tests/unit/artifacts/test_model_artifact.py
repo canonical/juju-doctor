@@ -1,10 +1,11 @@
 from importlib import resources
 from unittest.mock import mock_open, patch
 
+import pytest
 import yaml
 from jubilant import ModelInfo, Status, UnitInfo
 
-from juju_doctor.artifacts import Artifacts, ModelArtifact
+from juju_doctor.artifacts import ArtifactError, Artifacts, ModelArtifact, read_file
 
 JUJU_STATUS = """
 model:
@@ -250,3 +251,78 @@ def test_model_dump_artifact_from_file():
 
 def test_py_typed_marker_is_shipped():
     assert resources.files("juju_doctor").joinpath("py.typed").is_file()
+
+
+def test_read_file_is_lenient_for_missing_files():
+    # The lenient reader is used for optional probe files and returns None.
+    assert read_file("does-not-exist.yaml") is None
+
+
+def test_from_files_missing_file_raises():
+    with pytest.raises(ArtifactError):
+        ModelArtifact.from_files(status_file="does-not-exist.yaml")
+
+
+def test_from_files_empty_file_raises():
+    with patch("builtins.open", mock_open(read_data="")):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(status_file="empty.yaml")
+
+
+def test_from_files_invalid_status_raises():
+    with patch("builtins.open", mock_open(read_data="not-a-status: true")):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(status_file="invalid.yaml")
+
+
+def test_from_live_model_requires_status():
+    with patch("juju_doctor.artifacts.sh") as sh_mock:
+        sh_mock.juju.status.side_effect = RuntimeError("no controller connection")
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_live_model(model="some-model")
+
+
+def test_show_unit_skips_malformed_units():
+    show_units = """
+k6/0:
+  opened-ports: []
+  charm: local:k6-k8s-60
+  leader: true
+k6/1:
+  not-a-unit: true
+"""
+    with patch("builtins.open", mock_open(read_data=show_units)):
+        artifact = ModelArtifact.from_files(show_unit_file="show-unit.yaml")
+    # The malformed unit is skipped, the valid one is kept.
+    assert list(artifact.show_units or {}) == ["k6/0"]
+
+
+def test_show_unit_all_malformed_raises():
+    show_units = """
+k6/0:
+  not-a-unit: true
+"""
+    with patch("builtins.open", mock_open(read_data=show_units)):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(show_unit_file="show-unit.yaml")
+
+
+def test_from_live_model_tolerates_removed_commands():
+    def _juju_side_effect(command, *args, **kwargs):
+        if command == "export-bundle":
+            raise RuntimeError("export-bundle was removed in Juju 4")
+        if command == "show-unit":
+            return JUJU_SHOW_UNIT
+        return ""
+
+    with patch("juju_doctor.artifacts.sh") as sh_mock:
+        sh_mock.juju.status.return_value = JUJU_STATUS
+        sh_mock.juju.side_effect = _juju_side_effect
+        artifact = ModelArtifact.from_live_model(model="some-model")
+
+    # The removed command is skipped, but the remaining artifacts are gathered.
+    assert artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
+    assert artifact.bundle is None
+    assert artifact.show_units == {
+        "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+    }

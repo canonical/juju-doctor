@@ -38,6 +38,36 @@ def test_no_artifacts():
     assert "No artifacts were specified" in result.output
 
 
+def test_check_missing_artifact_file_fails_loudly():
+    # GIVEN a status artifact file that does not exist
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/python/passing.py",
+        "--status=tests/resources/artifacts/does-not-exist.yaml",
+    ]
+    # WHEN `juju-doctor check` is executed
+    result = CliRunner().invoke(app, test_args)
+    # THEN the command fails loudly instead of running with an empty artifact
+    assert result.exit_code == 2
+    assert "Unable to read artifact file" in result.output
+
+
+def test_check_invalid_status_file_fails_loudly():
+    # GIVEN a bundle artifact passed where a status artifact is expected
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/python/passing.py",
+        "--status=tests/resources/artifacts/bundle.yaml",
+    ]
+    # WHEN `juju-doctor check` is executed
+    result = CliRunner().invoke(app, test_args)
+    # THEN the command fails loudly instead of running with an empty artifact
+    assert result.exit_code == 2
+    assert "Invalid Juju status artifact" in result.output
+
+
 def test_check_multiple_artifacts():
     # GIVEN a file probe, missing the Status artifact
     # AND all artifacts are provided

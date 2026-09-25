@@ -26,7 +26,7 @@ from typing import Dict, Optional
 from jubilant import Status
 from pydantic import BaseModel, ConfigDict, Field
 
-from juju_doctor.artifacts import read_file
+from juju_doctor.artifacts import read_artifact_file
 
 
 class ApplicationExists(BaseModel):
@@ -90,7 +90,7 @@ def status(juju_statuses: Dict[str, Status], **kwargs):
 
 def example_status():
     """Doctest input."""
-    return Status._from_dict(read_file("tests/resources/artifacts/status.yaml") or {})
+    return Status._from_dict(read_artifact_file("tests/resources/artifacts/status.yaml"))
 
 
 def example_status_missing_applications():
@@ -98,7 +98,7 @@ def example_status_missing_applications():
 
     This deployment status is missing applications.
     """
-    raw = read_file("tests/resources/artifacts/status.yaml") or {}
+    raw = read_artifact_file("tests/resources/artifacts/status.yaml")
     return Status._from_dict({**raw, "applications": {}})
 
 

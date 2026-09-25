@@ -58,7 +58,7 @@ To write a probe, you should start by choosing an artifact. Your code will only 
 
 Then, write a function named after your artifact (e.g., `status`, `bundle`, etc.) that takes one argument: the artifact of choice indexed by model name. The function should raise an exception if you want your probe to fail, explaining why it failed.
 
-Artifacts are parsed with the dataclasses provided by [Jubilant](https://github.com/canonical/jubilant): `status` is a `jubilant.Status`, `show_unit` is a mapping of `jubilant.UnitInfo`, and `show_model` is a `jubilant.ModelInfo`. This gives you autocomplete and removes the need to guess the shape of the Juju output. The `bundle` and `model_dump` artifacts are passed through as dictionaries because Jubilant does not model them.
+Artifacts are parsed with the dataclasses provided by [Jubilant](https://github.com/canonical/jubilant): `status` is a `jubilant.Status`, `show_unit` is a mapping of `jubilant.UnitInfo`, and `show_model` is a `jubilant.ModelInfo`. This gives you autocomplete and removes the need to guess the shape of the Juju output. The `bundle` and `model_dump` artifacts are passed through as opaque mappings, because Jubilant does not model them and juju-doctor does not guess at their schema.
 
 ```python
 from jubilant import Status
@@ -82,14 +82,14 @@ def show_unit(juju_show_units):
 Let's look at an example.
 
 ```python
-from typing import Dict
+from jubilant import Status
 
-def status(juju_statuses: Dict[str, Dict]): # {'cos': juju_status_dict, ...}
+def status(juju_statuses: dict[str, Status]): # {'cos': jubilant.Status, ...}
     ... # do things with the Juju statuses
     if not all_good:
         raise Exception("'coconut' charm shouldn't be there!")
 
-def bundle(juju_bundles: Dict[str, Dict]):
+def bundle(juju_bundles: dict[str, dict]):
     ... # do things with the Juju bundles
     if not passing:
       raise Exception("who deployed the 'coconut' charm?")
