@@ -142,6 +142,27 @@ def test_check_builtin_missing_required_artifacts(caplog):
     assert re.search(r"No.*bundle.*provided", caplog.text)
 
 
+def test_check_show_model_and_model_dump_artifacts(caplog):
+    # GIVEN a probe with show_model and model_dump functions
+    test_args = [
+        "check",
+        "--format=json",
+        "--probe=file://tests/resources/probes/python/passing.py",
+        "--show-model=tests/resources/artifacts/show-model.yaml",
+        "--model-dump=tests/resources/artifacts/dump-model.yaml",
+    ]
+    # WHEN `juju-doctor check` is executed
+    with caplog.at_level("WARNING"):
+        result = CliRunner().invoke(app, test_args)
+    # THEN the command succeeds
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["passed"] == 1
+    assert json.loads(result.stdout)["failed"] == 0
+    # AND both new artifacts were used by the probe
+    assert not re.search(r"show_model.*not used", caplog.text)
+    assert not re.search(r"model_dump.*not used", caplog.text)
+
+
 def test_check_returns_valid_json():
     # GIVEN any probe
     test_args = [

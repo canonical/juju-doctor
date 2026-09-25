@@ -1,0 +1,23 @@
+sixx:
+  name: sixx
+  short-name: sixx
+  model-uuid: 0d9f03ae-cc37-4f68-8cae-3a6a6590a538
+  model-type: caas
+  controller-uuid: 8b9d1a2c-1234-4f68-8cae-3a6a6590a539
+  controller-name: k8s
+  is-controller: false
+  cloud: microk8s
+  life: alive
+  region: localhost
+  type: caas
+  status:
+    current: available
+    since: 06 Mar 2025 09:29:06+01:00
+  users:
+    admin:
+      access: admin
+      last-connection: 06 Mar 2025 09:29:06+01:00
+  machines: {}
+  secret-backends: {}
+  agent-version: "4.0-beta4"
+  supported-features: []

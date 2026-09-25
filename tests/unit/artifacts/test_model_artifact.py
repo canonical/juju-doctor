@@ -1,6 +1,8 @@
-from unittest.mock import MagicMock, mock_open, patch
+from importlib import resources
+from unittest.mock import mock_open, patch
 
 import yaml
+from jubilant import ModelInfo, Status, UnitInfo
 
 from juju_doctor.artifacts import Artifacts, ModelArtifact
 
@@ -146,9 +148,11 @@ def test_model_artifact_parsing_from_file():
         model_artifact = ModelArtifact.from_files(
             status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
         )
-        assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
+        assert model_artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
         assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
-        assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+        assert model_artifact.show_units == {
+            "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+        }
 
 
 def test_only_provided_artifacts():
@@ -178,13 +182,15 @@ def test_model_artifact_parsing_from_live_model():
             return JUJU_SHOW_UNIT
         return ""
 
-    with patch("sh.juju", MagicMock()) as juju_mock:
-        juju_mock.status.return_value = JUJU_STATUS
-        juju_mock.side_effect = _juju_side_effect
+    with patch("juju_doctor.artifacts.sh") as sh_mock:
+        sh_mock.juju.status.return_value = JUJU_STATUS
+        sh_mock.juju.side_effect = _juju_side_effect
         model_artifact = ModelArtifact.from_live_model(model="some-model")
-        assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
+        assert model_artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
         assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
-        assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+        assert model_artifact.show_units == {
+            "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+        }
 
 
 def test_model_artifacts_are_equivalent():
@@ -202,9 +208,9 @@ def test_model_artifacts_are_equivalent():
         return ""
 
     with patch("builtins.open", side_effect=_open_side_effect):
-        with patch("sh.juju", MagicMock()) as juju_mock:
-            juju_mock.status.return_value = JUJU_STATUS
-            juju_mock.side_effect = _juju_side_effect
+        with patch("juju_doctor.artifacts.sh") as sh_mock:
+            sh_mock.juju.status.return_value = JUJU_STATUS
+            sh_mock.juju.side_effect = _juju_side_effect
 
             from_files_artifact = ModelArtifact.from_files(
                 status_file="status.yaml",
@@ -214,3 +220,33 @@ def test_model_artifacts_are_equivalent():
 
             from_live_model_artifact = ModelArtifact.from_live_model(model="some-model")
             assert from_files_artifact == from_live_model_artifact
+
+
+SHOW_MODEL_FILE = "tests/resources/artifacts/show-model.yaml"
+DUMP_MODEL_FILE = "tests/resources/artifacts/dump-model.yaml"
+
+
+def test_show_model_artifact_from_file():
+    artifact = ModelArtifact.from_files(show_model_file=SHOW_MODEL_FILE)
+    assert artifact.show_model is not None
+    assert isinstance(artifact.show_model, ModelInfo)
+    assert artifact.show_model.name == "sixx"
+    assert artifact.show_model.model_uuid == "0d9f03ae-cc37-4f68-8cae-3a6a6590a538"
+
+
+def test_show_model_artifact_aggregation():
+    artifact = ModelArtifact.from_files(show_model_file=SHOW_MODEL_FILE)
+    artifacts = Artifacts({"sixx": artifact})
+    assert artifacts.show_model["sixx"].short_name == "sixx"
+
+
+def test_model_dump_artifact_from_file():
+    artifact = ModelArtifact.from_files(model_dump_file=DUMP_MODEL_FILE)
+    assert artifact.model_dump is not None
+    assert artifact.model_dump["applications"]["applications"]
+    artifacts = Artifacts({"cos": artifact})
+    assert artifacts.model_dump["cos"]["type"] == "caas"
+
+
+def test_py_typed_marker_is_shipped():
+    assert resources.files("juju_doctor").joinpath("py.typed").is_file()

@@ -13,11 +13,12 @@ ended up with hybrid, invalid topologies.
 from typing import Dict
 
 import yaml
+from jubilant import Status
 
 from juju_doctor.helpers import get_apps_by_charm_name, get_charm_name_by_app_name
 
 
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for duplicate juju-info telemetry to grafana-agent.
 
     >>> status({"invalid-openstack-model": example_status_redundant_endpoints_agent_cos_proxy()})  # doctest: +ELLIPSIS
@@ -33,13 +34,13 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
         if not (agents := get_apps_by_charm_name(status, "grafana-agent")):
             continue
         for agent_name, agent in agents.items():
-            for endpoint, relations in agent.get("relations", {}).items():
+            for endpoint, relations in agent.relations.items():
                 if endpoint not in ("cos-agent", "juju-info"):
                     continue
                 apps_related_to_agent.setdefault(endpoint, [])
                 for rel in relations:
                     apps_related_to_agent[endpoint].append(
-                        (agent_name, rel["related-application"])
+                        (agent_name, rel.related_app)
                     )
 
         # Assert that either juju-info or cos-agent exists per app, not both
@@ -59,13 +60,42 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 
 
+def _status(data: dict) -> Status:
+    """Build a minimal, valid :class:`jubilant.Status` from application/relation data."""
+    applications = data.get("applications", data)
+    return Status._from_dict(
+        {
+            "model": {
+                "name": "model",
+                "type": "caas",
+                "controller": "controller",
+                "cloud": "kubernetes",
+                "version": "3.6.1",
+            },
+            "machines": {},
+            "applications": {
+                name: {
+                    "charm": app["charm"],
+                    "charm-origin": "charmhub",
+                    "charm-name": app["charm"],
+                    "charm-rev": 1,
+                    "exposed": False,
+                    "relations": app.get("relations", {}),
+                }
+                for name, app in applications.items()
+            },
+        }
+    )
+
+
 def example_status_redundant_endpoints_agent_cos_proxy():
     """Invalid topology of grafana-agent and another charm.
 
     In this status, grafana-agent and foo-charm are inter-related over both of the
     cos_agent and juju-info interfaces.
     """
-    return yaml.safe_load("""
+    return _status(
+        yaml.safe_load("""
 applications:
   ga:
     charm: grafana-agent
@@ -86,6 +116,7 @@ applications:
       - related-application: ga
         interface: juju-info
 """)
+    )
 
 
 def example_status_valid():
@@ -94,7 +125,8 @@ def example_status_valid():
     In this status, grafana-agent is related to two different charms: foo and bar. For each
     relation, grafana-agent is related to only one of the cos_agent and juju-info interfaces.
     """
-    return yaml.safe_load("""
+    return _status(
+        yaml.safe_load("""
 applications:
   ga:
     charm: grafana-agent
@@ -118,3 +150,4 @@ applications:
       - related-application: ga
         interface: juju-info
 """)
+    )

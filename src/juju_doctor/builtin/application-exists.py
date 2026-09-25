@@ -23,6 +23,7 @@ Multiple assertions can be listed under the `with` key, adhering to the `Applica
 
 from typing import Dict, Optional
 
+from jubilant import Status
 from pydantic import BaseModel, ConfigDict, Field
 
 from juju_doctor.artifacts import read_file
@@ -38,7 +39,7 @@ class ApplicationExists(BaseModel):
     maximum: Optional[int] = Field(None, ge=0)
 
 
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for applications existing verbatim.
 
     >>> status({"0": example_status_missing_applications()}, **{"application-name": "foo"})  # doctest: +ELLIPSIS
@@ -63,21 +64,21 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     """  # noqa: E501
     _app = ApplicationExists(**kwargs)
     for status_name, status in juju_statuses.items():
-        if not (apps := status.get("applications")):
+        if not status.apps:
             raise Exception(f'There are no applications present in "{status_name}"')
-        if not (found_app := apps.get(_app.name)):
+        if not (found_app := status.apps.get(_app.name)):
             raise Exception(
                 f"Unable to find the app ({_app.name}) in "
-                f'[{", ".join(apps.keys())}] in "{status_name}"'
+                f'[{", ".join(status.apps.keys())}] in "{status_name}"'
             )
-        if _app.minimum is not None and found_app["scale"] < _app.minimum:
+        if _app.minimum is not None and found_app.scale < _app.minimum:
             raise Exception(
-                f"The scale ({found_app['scale']}) of {_app.name} is below the allowable "
+                f"The scale ({found_app.scale}) of {_app.name} is below the allowable "
                 f'limit: {_app.minimum} in "{status_name}"'
             )
-        if _app.maximum is not None and found_app["scale"] > _app.maximum:
+        if _app.maximum is not None and found_app.scale > _app.maximum:
             raise Exception(
-                f"The scale ({found_app['scale']}) of {_app.name} exceeds the allowable "
+                f"The scale ({found_app.scale}) of {_app.name} exceeds the allowable "
                 f'limit: {_app.maximum} in "{status_name}"'
             )
 
@@ -89,7 +90,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
 def example_status():
     """Doctest input."""
-    return read_file("tests/resources/artifacts/status.yaml")
+    return Status._from_dict(read_file("tests/resources/artifacts/status.yaml") or {})
 
 
 def example_status_missing_applications():
@@ -97,7 +98,8 @@ def example_status_missing_applications():
 
     This deployment status is missing applications.
     """
-    return {}
+    raw = read_file("tests/resources/artifacts/status.yaml") or {}
+    return Status._from_dict({**raw, "applications": {}})
 
 
 def example_with_fake_name():

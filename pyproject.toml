@@ -23,6 +23,8 @@ dependencies = [
   "requests",
   "treelib",
   "pydantic",
+  # Artifact schemas
+  "jubilant",
 ]
 
 [project.optional-dependencies]
