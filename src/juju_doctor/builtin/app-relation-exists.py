@@ -22,9 +22,10 @@ Multiple assertions can be listed under the `with` key, adhering to the `AppRela
 from dataclasses import dataclass
 from typing import Dict, List
 
+from jubilant import Status
 from pydantic import BaseModel, ConfigDict, Field
 
-from juju_doctor.artifacts import read_file
+from juju_doctor.artifacts import read_artifact_file
 
 
 class AppRelationExists(BaseModel):
@@ -35,7 +36,7 @@ class AppRelationExists(BaseModel):
     apps: List = Field(max_length=2)
 
 
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for relation existing verbatim.
 
     >>> status({"0": example_status()}, **example_with_fake_app_0())  # doctest: +ELLIPSIS
@@ -62,15 +63,15 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     _rel_obj = Relation.from_rel_pair(_rel.apps)
 
     for status_name, status in juju_statuses.items():
-        app_0 = status.get("applications", {}).get(_rel_obj.name_0, {})
-        app_1 = status.get("applications", {}).get(_rel_obj.name_1, {})
-        rel_0_to_1 = any(
-            rel.get("related-application") == _rel_obj.name_1
-            for rel in app_0.get("relations", {}).get(_rel_obj.endpoint_0, {})
+        app_0 = status.apps.get(_rel_obj.name_0)
+        app_1 = status.apps.get(_rel_obj.name_1)
+        rel_0_to_1 = app_0 is not None and any(
+            rel.related_app == _rel_obj.name_1
+            for rel in app_0.relations.get(_rel_obj.endpoint_0, [])
         )
-        rel_1_to_0 = any(
-            rel.get("related-application") == _rel_obj.name_0
-            for rel in app_1.get("relations", {}).get(_rel_obj.endpoint_1, {})
+        rel_1_to_0 = app_1 is not None and any(
+            rel.related_app == _rel_obj.name_0
+            for rel in app_1.relations.get(_rel_obj.endpoint_1, [])
         )
         if not all((app_0, app_1, rel_0_to_1, rel_1_to_0)):
             raise Exception(f'The relation {_rel.apps} was not found in "{status_name}"')
@@ -168,12 +169,12 @@ class Relation:
 
 def example_status():
     """Doctest input."""
-    return read_file("tests/resources/artifacts/status.yaml")
+    return Status._from_dict(read_artifact_file("tests/resources/artifacts/status.yaml"))
 
 
 def example_bundle():
     """Doctest input."""
-    return read_file("tests/resources/artifacts/bundle.yaml")
+    return read_artifact_file("tests/resources/artifacts/bundle.yaml")
 
 
 def example_bundle_missing_relations():

@@ -12,7 +12,7 @@ from pydantic.json_schema import models_json_schema
 from rich.console import Console
 from rich.logging import RichHandler
 
-from juju_doctor.artifacts import Artifacts, ModelArtifact
+from juju_doctor.artifacts import ArtifactError, Artifacts, ModelArtifact
 from juju_doctor.constants import BUILTIN_DIR
 from juju_doctor.fetcher import find_pydantic_models_in_module, import_module_from_path
 from juju_doctor.probes import Probe, ProbeTree, RuleSetModel
@@ -59,6 +59,14 @@ def check(
         List[str],
         typer.Option("--show-unit", help="Juju show-unit in a .yaml format"),
     ] = [],
+    show_model_files: Annotated[
+        List[str],
+        typer.Option("--show-model", help="Juju show-model in a .yaml format"),
+    ] = [],
+    model_dump_files: Annotated[
+        List[str],
+        typer.Option("--model-dump", help="Juju dump-model in a .yaml format"),
+    ] = [],
     verbose: Annotated[
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose output."),
@@ -75,9 +83,13 @@ def check(
     * Assertions can be sourced (local) from the current FS or (remote) from repositories.
     """
     # Input validation
-    if models and any([status_files, bundle_files, show_unit_files]):
+    if models and any(
+        [status_files, bundle_files, show_unit_files, show_model_files, model_dump_files]
+    ):
         raise typer.BadParameter("Live models (--model) and static files are mutually exclusive.")
-    if not any([models, status_files, bundle_files, show_unit_files]):
+    if not any(
+        [models, status_files, bundle_files, show_unit_files, show_model_files, model_dump_files]
+    ):
         raise typer.BadParameter("No artifacts were specified, cannot validate the deployment.")
     if not probe_urls:
         raise typer.BadParameter("No probes were specified, cannot validate the deployment.")
@@ -101,19 +113,25 @@ def check(
 
     # Gather the input
     input: Dict[str, ModelArtifact] = {}
-    if models:
-        for model in models:
-            model_artifact = ModelArtifact.from_live_model(model)
-            input[model] = model_artifact
-        artifacts = Artifacts(input)
-    else:
-        for f in status_files:
-            input[f] = ModelArtifact.from_files(status_file=f)
-        for f in bundle_files:
-            input[f] = ModelArtifact.from_files(bundle_file=f)
-        for f in show_unit_files:
-            input[f] = ModelArtifact.from_files(show_unit_file=f)
-        artifacts = Artifacts(input)
+    try:
+        if models:
+            for model in models:
+                model_artifact = ModelArtifact.from_live_model(model)
+                input[model] = model_artifact
+        else:
+            for f in status_files:
+                input[f] = ModelArtifact.from_files(status_file=f)
+            for f in bundle_files:
+                input[f] = ModelArtifact.from_files(bundle_file=f)
+            for f in show_unit_files:
+                input[f] = ModelArtifact.from_files(show_unit_file=f)
+            for f in show_model_files:
+                input[f] = ModelArtifact.from_files(show_model_file=f)
+            for f in model_dump_files:
+                input[f] = ModelArtifact.from_files(model_dump_file=f)
+    except ArtifactError as e:
+        raise typer.BadParameter(str(e))
+    artifacts = Artifacts(input)
 
     # Gather the probes
     probe_tree = ProbeTree()

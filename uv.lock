@@ -278,7 +278,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -313,15 +313,27 @@ wheels = [
 ]
 
 [[package]]
+name = "jubilant"
+version = "1.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/db/73a1732d9f6ad8521f05f31abcf6afca4df8908cd545e1acd19e7042e0ea/jubilant-1.13.0.tar.gz", hash = "sha256:38131c1f07a05d83e42a24866450949717783edfc2307558e7d4aa0bdfd388a6", size = 37151, upload-time = "2026-08-31T06:06:08.505Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/56/5dace82567f6ed14fec490fd8314a0db80a0baedbdaa946d292661bf6455/jubilant-1.13.0-py3-none-any.whl", hash = "sha256:a31ffd77dea7045004f6abddc71bf72082c3d003374bf22ea41b5d5588dc83a8", size = 39472, upload-time = "2026-08-31T06:06:07.266Z" },
+]
+
+[[package]]
 name = "juju-doctor"
 version = "0.1.9"
 source = { editable = "." }
 dependencies = [
     { name = "fsspec" },
+    { name = "jubilant" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "sh" },
     { name = "treelib" },
     { name = "typer" },
 ]
@@ -342,6 +354,7 @@ doctest = [
 requires-dist = [
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'" },
     { name = "fsspec" },
+    { name = "jubilant" },
     { name = "pydantic" },
     { name = "pyright", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
@@ -350,7 +363,6 @@ requires-dist = [
     { name = "requests" },
     { name = "rich", marker = "extra == 'doctest'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "sh" },
     { name = "treelib" },
     { name = "typer" },
 ]
@@ -692,15 +704,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/26/6b/8786ba5736562220d588a2f6653e6c17e90c59ced34a2d7b512ef8956103/ruff-0.15.7-py3-none-win32.whl", hash = "sha256:6d39e2d3505b082323352f733599f28169d12e891f7dd407f2d4f54b4c2886de", size = 10582538, upload-time = "2026-03-19T16:26:15.992Z" },
     { url = "https://files.pythonhosted.org/packages/2b/e9/346d4d3fffc6871125e877dae8d9a1966b254fbd92a50f8561078b88b099/ruff-0.15.7-py3-none-win_amd64.whl", hash = "sha256:4d53d712ddebcd7dace1bc395367aec12c057aacfe9adbb6d832302575f4d3a1", size = 11755839, upload-time = "2026-03-19T16:26:19.897Z" },
     { url = "https://files.pythonhosted.org/packages/8f/e8/726643a3ea68c727da31570bde48c7a10f1aa60eddd628d94078fec586ff/ruff-0.15.7-py3-none-win_arm64.whl", hash = "sha256:18e8d73f1c3fdf27931497972250340f92e8c861722161a9caeb89a58ead6ed2", size = 11023304, upload-time = "2026-03-19T16:26:51.669Z" },
-]
-
-[[package]]
-name = "sh"
-version = "2.2.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/59/52/f43920223c93e31874677c681b8603d36a40d3d8502d3a37f80d3995d43e/sh-2.2.2.tar.gz", hash = "sha256:653227a7c41a284ec5302173fbc044ee817c7bad5e6e4d8d55741b9aeb9eb65b", size = 345866, upload-time = "2025-02-24T07:16:25.363Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/98/d82f14ac7ffedbd38dfa2383f142b26d18d23ca6cf35a40f4af60df666bd/sh-2.2.2-py3-none-any.whl", hash = "sha256:e0b15b4ae8ffcd399bc8ffddcbd770a43c7a70a24b16773fbb34c001ad5d52af", size = 38295, upload-time = "2025-02-24T07:16:23.782Z" },
 ]
 
 [[package]]

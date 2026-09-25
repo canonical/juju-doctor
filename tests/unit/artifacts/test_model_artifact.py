@@ -1,8 +1,11 @@
+from importlib import resources
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
 import yaml
+from jubilant import CLIError, ModelInfo, Status, UnitInfo
 
-from juju_doctor.artifacts import Artifacts, ModelArtifact
+from juju_doctor.artifacts import ArtifactError, Artifacts, ModelArtifact, read_file
 
 JUJU_STATUS = """
 model:
@@ -146,9 +149,11 @@ def test_model_artifact_parsing_from_file():
         model_artifact = ModelArtifact.from_files(
             status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
         )
-        assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
+        assert model_artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
         assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
-        assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+        assert model_artifact.show_units == {
+            "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+        }
 
 
 def test_only_provided_artifacts():
@@ -169,22 +174,70 @@ def test_only_provided_artifacts():
         assert artifacts.bundle
 
 
-def test_model_artifact_parsing_from_live_model():
-    def _juju_side_effect(command, *args, **kwargs):
-        """Dashes `-` are not allowed in chained commands from the `sh` module."""
-        if command == "export-bundle":
-            return JUJU_EXPORT_BUNDLE
-        if command == "show-unit":
-            return JUJU_SHOW_UNIT
-        return ""
+def _live_juju(status=None, unit=None, export_bundle=JUJU_EXPORT_BUNDLE):
+    """Return a MagicMock standing in for a ``jubilant.Juju`` instance."""
+    juju = MagicMock()
+    juju.status.return_value = (
+        status if status is not None else Status._from_dict(yaml.safe_load(JUJU_STATUS))
+    )
+    juju.show_unit.return_value = (
+        unit
+        if unit is not None
+        else UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+    )
+    juju.show_model.side_effect = CLIError(1, "juju show-model")
+    juju.cli.side_effect = lambda *args: export_bundle if args[0] == "export-bundle" else ""
+    return juju
 
-    with patch("sh.juju", MagicMock()) as juju_mock:
-        juju_mock.status.return_value = JUJU_STATUS
-        juju_mock.side_effect = _juju_side_effect
+
+def test_model_artifact_parsing_from_live_model():
+    with patch("juju_doctor.artifacts.Juju") as juju_cls:
+        juju_cls.return_value = _live_juju()
         model_artifact = ModelArtifact.from_live_model(model="some-model")
-        assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
-        assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
-        assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+
+    juju_cls.assert_called_once_with(model="some-model")
+    assert model_artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
+    assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
+    assert model_artifact.show_units == {
+        "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+    }
+    assert model_artifact.show_model is None
+
+
+SUBORDINATE_STATUS = """
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
+machines: {}
+applications:
+  principal:
+    charm: principal
+    charm-origin: charmhub
+    charm-name: principal
+    charm-rev: 1
+    exposed: false
+    units:
+      principal/0:
+        subordinates:
+          subordinate/0: {}
+  subordinate:
+    charm: subordinate
+    charm-origin: charmhub
+    charm-name: subordinate
+    charm-rev: 1
+    exposed: false
+"""
+
+
+def test_from_live_model_gathers_subordinate_units():
+    unit = UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+    with patch("juju_doctor.artifacts.Juju") as juju_cls:
+        juju = _live_juju(status=Status._from_dict(yaml.safe_load(SUBORDINATE_STATUS)))
+        juju.show_unit.return_value = unit
+        juju_cls.return_value = juju
+        artifact = ModelArtifact.from_live_model(model="some-model")
+
+    gathered = {call.args[0] for call in juju.show_unit.call_args_list}
+    assert gathered == {"principal/0", "subordinate/0"}
+    assert set(artifact.show_units or {}) == {"principal/0", "subordinate/0"}
 
 
 def test_model_artifacts_are_equivalent():
@@ -194,17 +247,9 @@ def test_model_artifacts_are_equivalent():
             return mock()
         raise FileNotFoundError(f"No such file: '{filename}'")
 
-    def _juju_side_effect(command, *args, **kwargs):
-        if command == "export-bundle":
-            return JUJU_EXPORT_BUNDLE
-        if command == "show-unit":
-            return JUJU_SHOW_UNIT
-        return ""
-
     with patch("builtins.open", side_effect=_open_side_effect):
-        with patch("sh.juju", MagicMock()) as juju_mock:
-            juju_mock.status.return_value = JUJU_STATUS
-            juju_mock.side_effect = _juju_side_effect
+        with patch("juju_doctor.artifacts.Juju") as juju_cls:
+            juju_cls.return_value = _live_juju()
 
             from_files_artifact = ModelArtifact.from_files(
                 status_file="status.yaml",
@@ -214,3 +259,107 @@ def test_model_artifacts_are_equivalent():
 
             from_live_model_artifact = ModelArtifact.from_live_model(model="some-model")
             assert from_files_artifact == from_live_model_artifact
+
+
+SHOW_MODEL_FILE = "tests/resources/artifacts/show-model.yaml"
+DUMP_MODEL_FILE = "tests/resources/artifacts/dump-model.yaml"
+
+
+def test_show_model_artifact_from_file():
+    artifact = ModelArtifact.from_files(show_model_file=SHOW_MODEL_FILE)
+    assert artifact.show_model is not None
+    assert isinstance(artifact.show_model, ModelInfo)
+    assert artifact.show_model.name == "admin/sixx"
+    assert artifact.show_model.model_uuid == "0d9f03ae-cc37-4f68-8cae-3a6a6590a538"
+
+
+def test_show_model_artifact_aggregation():
+    artifact = ModelArtifact.from_files(show_model_file=SHOW_MODEL_FILE)
+    artifacts = Artifacts({"sixx": artifact})
+    assert artifacts.show_model["sixx"].short_name == "sixx"
+
+
+def test_model_dump_artifact_from_file():
+    artifact = ModelArtifact.from_files(model_dump_file=DUMP_MODEL_FILE)
+    assert artifact.model_dump is not None
+    assert artifact.model_dump["applications"]["applications"]
+    artifacts = Artifacts({"cos": artifact})
+    assert artifacts.model_dump["cos"]["type"] == "caas"
+
+
+def test_py_typed_marker_is_shipped():
+    assert resources.files("juju_doctor").joinpath("py.typed").is_file()
+
+
+def test_read_file_is_lenient_for_missing_files():
+    # The lenient reader is used for optional probe files and returns None.
+    assert read_file("does-not-exist.yaml") is None
+
+
+def test_from_files_missing_file_raises():
+    with pytest.raises(ArtifactError):
+        ModelArtifact.from_files(status_file="does-not-exist.yaml")
+
+
+def test_from_files_empty_file_raises():
+    with patch("builtins.open", mock_open(read_data="")):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(status_file="empty.yaml")
+
+
+def test_from_files_invalid_status_raises():
+    with patch("builtins.open", mock_open(read_data="not-a-status: true")):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(status_file="invalid.yaml")
+
+
+def test_from_live_model_requires_status():
+    with patch("juju_doctor.artifacts.Juju") as juju_cls:
+        juju_cls.return_value.status.side_effect = CLIError(1, "juju status")
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_live_model(model="some-model")
+
+
+def test_show_unit_skips_malformed_units():
+    show_units = """
+k6/0:
+  opened-ports: []
+  charm: local:k6-k8s-60
+  leader: true
+k6/1:
+  not-a-unit: true
+"""
+    with patch("builtins.open", mock_open(read_data=show_units)):
+        artifact = ModelArtifact.from_files(show_unit_file="show-unit.yaml")
+    # The malformed unit is skipped, the valid one is kept.
+    assert list(artifact.show_units or {}) == ["k6/0"]
+
+
+def test_show_unit_all_malformed_raises():
+    show_units = """
+k6/0:
+  not-a-unit: true
+"""
+    with patch("builtins.open", mock_open(read_data=show_units)):
+        with pytest.raises(ArtifactError):
+            ModelArtifact.from_files(show_unit_file="show-unit.yaml")
+
+
+def test_from_live_model_tolerates_removed_commands():
+    def _cli(*args):
+        if args[0] == "export-bundle":
+            raise CLIError(1, "juju export-bundle")
+        return ""
+
+    with patch("juju_doctor.artifacts.Juju") as juju_cls:
+        juju = _live_juju()
+        juju.cli.side_effect = _cli
+        juju_cls.return_value = juju
+        artifact = ModelArtifact.from_live_model(model="some-model")
+
+    # The removed command is skipped, but the remaining artifacts are gathered.
+    assert artifact.status == Status._from_dict(yaml.safe_load(JUJU_STATUS))
+    assert artifact.bundle is None
+    assert artifact.show_units == {
+        "k6/0": UnitInfo._from_dict(yaml.safe_load(JUJU_SHOW_UNIT)["k6/0"])
+    }
