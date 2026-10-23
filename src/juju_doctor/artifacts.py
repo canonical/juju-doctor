@@ -50,9 +50,7 @@ class ModelArtifact:
     def from_live_model(model: str) -> "ModelArtifact":
         """Gather information from a live model."""
         juju_status = yaml.safe_load(sh.juju.status(model=model, format="yaml", _tty_out=False))
-        bundle = _first_yaml_document(
-            sh.juju("export-bundle", model=model, _tty_out=False)
-        )
+        bundle = _first_yaml_document(sh.juju("export-bundle", model=model, _tty_out=False))
         # Get unit data information
         units: List[str] = []
         show_units: Dict[str, Any] = {}  # List of show-unit results in dictionary form

@@ -142,7 +142,7 @@ def _open_side_effect(filename, *args, **kwargs):
 
 
 def test_model_artifact_parsing_from_file():
-     with patch("builtins.open", side_effect=_open_side_effect):
+    with patch("builtins.open", side_effect=_open_side_effect):
         model_artifact = ModelArtifact.from_files(
             status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
         )
