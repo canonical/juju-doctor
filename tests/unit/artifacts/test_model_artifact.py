@@ -142,7 +142,7 @@ def _open_side_effect(filename, *args, **kwargs):
 
 
 def test_model_artifact_parsing_from_file():
-     with patch("builtins.open", side_effect=_open_side_effect):
+    with patch("builtins.open", side_effect=_open_side_effect):
         model_artifact = ModelArtifact.from_files(
             status_file="status.yaml", bundle_file="bundle.yaml", show_unit_file="show-unit.yaml"
         )
@@ -185,6 +185,37 @@ def test_model_artifact_parsing_from_live_model():
         assert model_artifact.status == yaml.safe_load(JUJU_STATUS)
         assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
         assert model_artifact.show_units == yaml.safe_load(JUJU_SHOW_UNIT)
+
+
+def test_live_bundle_ignores_overlay_document():
+    """`juju export-bundle` may append an overlay document for offers/exposed endpoints.
+
+    Only the first document (the bundle itself) should be used.
+    https://github.com/canonical/juju-doctor/issues/10
+    """
+    multi_document_bundle = (
+        JUJU_EXPORT_BUNDLE
+        + "--- # overlay.yaml\n"
+        + "applications:\n"
+        + "  k6:\n"
+        + "    offers:\n"
+        + "      k6-peers:\n"
+        + "        endpoints:\n"
+        + "        - k6\n"
+    )
+
+    def _juju_side_effect(command, *args, **kwargs):
+        if command == "export-bundle":
+            return multi_document_bundle
+        if command == "show-unit":
+            return JUJU_SHOW_UNIT
+        return ""
+
+    with patch("sh.juju", MagicMock()) as juju_mock:
+        juju_mock.status.return_value = JUJU_STATUS
+        juju_mock.side_effect = _juju_side_effect
+        model_artifact = ModelArtifact.from_live_model(model="some-model")
+        assert model_artifact.bundle == yaml.safe_load(JUJU_EXPORT_BUNDLE)
 
 
 def test_model_artifacts_are_equivalent():
