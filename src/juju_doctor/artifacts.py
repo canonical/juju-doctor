@@ -14,16 +14,25 @@ logging.basicConfig(level=logging.WARN, handlers=[RichHandler()])
 log = logging.getLogger(__name__)
 
 
+def _first_yaml_document(contents: str) -> Optional[Dict]:
+    """Parse the first YAML document, ignoring any trailing documents.
+
+    Several Juju commands emit more than one YAML document. For example,
+    ``juju export-bundle`` may append an overlay of offers and exposed
+    endpoints as a second document. Only the first document is used here.
+    https://github.com/canonical/juju-doctor/issues/10
+    """
+    documents = list(yaml.safe_load_all(contents))
+    return documents[0] if documents else None
+
+
 def read_file(filename: Optional[str]) -> Optional[Dict]:
     """Read a file into a string."""
     if not filename:
         return None
     try:
         with open(filename, "r") as f:
-            contents = f.read()
-            # Parse all YAML documents and return only the first one
-            # https://github.com/canonical/juju-doctor/issues/10
-            return list(yaml.safe_load_all(contents))[0]
+            return _first_yaml_document(f.read())
     except Exception as e:
         log.error(e)
     return None
@@ -41,7 +50,9 @@ class ModelArtifact:
     def from_live_model(model: str) -> "ModelArtifact":
         """Gather information from a live model."""
         juju_status = yaml.safe_load(sh.juju.status(model=model, format="yaml", _tty_out=False))
-        bundle = yaml.safe_load(sh.juju("export-bundle", model=model, _tty_out=False))
+        bundle = _first_yaml_document(
+            sh.juju("export-bundle", model=model, _tty_out=False)
+        )
         # Get unit data information
         units: List[str] = []
         show_units: Dict[str, Any] = {}  # List of show-unit results in dictionary form
