@@ -19,11 +19,22 @@ class ArtifactError(Exception):
     """Raised when an artifact cannot be read or parsed."""
 
 
+def _first_yaml_document(contents: str) -> Any:
+    """Parse the first YAML document, ignoring any trailing documents.
+
+    Several Juju commands emit more than one YAML document. For example,
+    ``juju export-bundle`` may append an overlay of offers and exposed
+    endpoints as a second document. Only the first document is used here.
+    https://github.com/canonical/juju-doctor/issues/10
+    """
+    documents = list(yaml.safe_load_all(contents))
+    return documents[0] if documents else None
+
+
 def _load_yaml(filename: str) -> Any:
     """Load the first YAML document of a file."""
     with open(filename, "r") as f:
-        documents = list(yaml.safe_load_all(f.read()))
-    return documents[0] if documents else None
+        return _first_yaml_document(f.read())
 
 
 def read_file(filename: Optional[str]) -> Optional[Dict]:
@@ -163,7 +174,7 @@ class ModelArtifact:
             raise ArtifactError(f"Unable to gather the status artifact for model '{model}'")
 
         bundle = _gather_live(
-            model, "bundle", lambda: yaml.safe_load(juju.cli("export-bundle"))
+            model, "bundle", lambda: _first_yaml_document(juju.cli("export-bundle"))
         )
         show_model = _gather_live(model, "show-model", juju.show_model)
         model_dump = _gather_live(
