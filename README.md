@@ -2,6 +2,13 @@
 
 Run a configurable set of `probes` (assertions) against Juju deployment `artifacts`, which are the output of other tools like `juju`, `sosreport`, and `kubectl`. To enforce best practices, these probes are organized into a `ruleset`, which acts as a guide for correct deployment configurations.
 
+## Purpose & value
+- Unlike with goss, probes written by juju-doctor are equally usable on a live deployment as well as a (partial) support archive.
+- Unlike with LLMs, juju-doctor is intended as read-only operations, no KUBECONFIG needed.
+- Unlike with LLMs, you don't need to come up with prompts and pay for them for every troubleshooting session; instead, you can start with relying on probes that were written by others beforehand, from insights gained from previous incidents.
+- Unlike with charm code, juju-doctor probes can be created and updated much faster, ad hoc, and put immediately in use, without needing to release and refresh charm(s).
+  - This means that juju-doctor probes can serve as a "staging ground" for production teams to communicate the kind of self-test checks that charming teams should consider incorporating into the operator code.
+
 ## Usage
 
 Here's some typical usage examples:
