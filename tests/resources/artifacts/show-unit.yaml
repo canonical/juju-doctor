@@ -263,6 +263,7 @@
         "application-data": {},
         "local-unit": {
           "in-scope": true,
+          "data": {}
         },
         "related-units": {
           "grafana/1": {

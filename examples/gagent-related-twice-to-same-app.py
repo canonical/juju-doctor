@@ -13,11 +13,12 @@ ended up with hybrid, invalid topologies.
 from typing import Dict
 
 import yaml
+from jubilant import Status
 
 from juju_doctor.helpers import get_apps_by_charm_name, get_charm_name_by_app_name
 
 
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for duplicate juju-info telemetry to grafana-agent.
 
     >>> status({"invalid-openstack-model": example_status_redundant_endpoints_agent_cos_proxy()})  # doctest: +ELLIPSIS
@@ -33,13 +34,13 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
         if not (agents := get_apps_by_charm_name(status, "grafana-agent")):
             continue
         for agent_name, agent in agents.items():
-            for endpoint, relations in agent.get("relations", {}).items():
+            for endpoint, relations in agent.relations.items():
                 if endpoint not in ("cos-agent", "juju-info"):
                     continue
                 apps_related_to_agent.setdefault(endpoint, [])
                 for rel in relations:
                     apps_related_to_agent[endpoint].append(
-                        (agent_name, rel["related-application"])
+                        (agent_name, rel.related_app)
                     )
 
         # Assert that either juju-info or cos-agent exists per app, not both
@@ -59,62 +60,74 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 # ==========================
 
 
-def example_status_redundant_endpoints_agent_cos_proxy():
+def example_status_redundant_endpoints_agent_cos_proxy() -> Status:
     """Invalid topology of grafana-agent and another charm.
 
     In this status, grafana-agent and foo-charm are inter-related over both of the
     cos_agent and juju-info interfaces.
     """
-    return yaml.safe_load("""
+    return Status._from_dict(
+        yaml.safe_load("""
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
+machines: {}
 applications:
   ga:
     charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
     relations:
-      cos-agent:
-      - related-application: foo
-        interface: cos_agent
-      juju-info:
-      - related-application: foo
-        interface: juju-info
+      cos-agent: [{related-application: foo}]
+      juju-info: [{related-application: foo}]
   foo:
     charm: foo-charm
+    charm-origin: charmhub
+    charm-name: foo-charm
+    charm-rev: 1
+    exposed: false
     relations:
-      foo-cos-agent:
-      - related-application: ga
-        interface: cos_agent
-      foo-juju-info:
-      - related-application: ga
-        interface: juju-info
+      foo-cos-agent: [{related-application: ga}]
+      foo-juju-info: [{related-application: ga}]
 """)
+    )
 
 
-def example_status_valid():
+def example_status_valid() -> Status:
     """Valid topology of grafana-agent and other charms.
 
     In this status, grafana-agent is related to two different charms: foo and bar. For each
     relation, grafana-agent is related to only one of the cos_agent and juju-info interfaces.
     """
-    return yaml.safe_load("""
+    return Status._from_dict(
+        yaml.safe_load("""
+model: {name: example, type: caas, controller: example, cloud: kubernetes, version: 4.0.0}
+machines: {}
 applications:
   ga:
     charm: grafana-agent
+    charm-origin: charmhub
+    charm-name: grafana-agent
+    charm-rev: 1
+    exposed: false
     relations:
-      cos-agent:
-      - related-application: foo
-        interface: cos_agent
-      juju-info:
-      - related-application: bar
-        interface: juju-info
+      cos-agent: [{related-application: foo}]
+      juju-info: [{related-application: bar}]
   foo:
     charm: foo-charm
+    charm-origin: charmhub
+    charm-name: foo-charm
+    charm-rev: 1
+    exposed: false
     relations:
-      foo-cos-agent:
-      - related-application: ga
-        interface: cos_agent
+      foo-cos-agent: [{related-application: ga}]
   bar:
     charm: bar-charm
+    charm-origin: charmhub
+    charm-name: bar-charm
+    charm-rev: 1
+    exposed: false
     relations:
-      bar-juju-info:
-      - related-application: ga
-        interface: juju-info
+      bar-juju-info: [{related-application: ga}]
 """)
+    )

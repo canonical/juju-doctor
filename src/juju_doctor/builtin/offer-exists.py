@@ -22,10 +22,11 @@ Multiple assertions can be listed under the `with` key, adhering to the `OfferEx
 
 from typing import Dict, Optional
 
+from jubilant import Status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
 
-from juju_doctor.artifacts import read_file
+from juju_doctor.artifacts import read_artifact_file
 
 
 class OfferExists(BaseModel):
@@ -45,7 +46,7 @@ class OfferExists(BaseModel):
         return self
 
 
-def status(juju_statuses: Dict[str, Dict], **kwargs):
+def status(juju_statuses: Dict[str, Status], **kwargs):
     """Status assertion for offers existing verbatim.
 
     >>> status({"0": example_status_missing_offers()}, **{"offer-name": "foo"})  # doctest: +ELLIPSIS
@@ -76,19 +77,22 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
     _offer = OfferExists(**kwargs)
 
     for status_name, status in juju_statuses.items():
-        if not (offers := status.get("offers")):
+        if not status.offers:
             raise Exception(f'There are no offers present in "{status_name}"')
-        if not (found_offer := offers.get(_offer.name)):
+        if not (found_offer := status.offers.get(_offer.name)):
             raise Exception(
                 f"Unable to find the offer ({_offer.name}) in "
-                f'[{", ".join(offers.keys())}] in "{status_name}"'
+                f'[{", ".join(status.offers.keys())}] in "{status_name}"'
             )
-        if _offer.endpoint is not None and _offer.endpoint not in found_offer["endpoints"]:
+        endpoint = _offer.endpoint
+        if endpoint is not None and endpoint not in found_offer.endpoints:
             raise Exception(
-                f"The endpoint of {_offer.name} ({_offer.endpoint}) is not found in "
-                f'[{", ".join(found_offer["endpoints"].keys())}] in "{status_name}"'
+                f"The endpoint of {_offer.name} ({endpoint}) is not found in "
+                f'[{", ".join(found_offer.endpoints.keys())}] in "{status_name}"'
             )
-        interface = found_offer["endpoints"][_offer.endpoint]["interface"]
+        if endpoint is None:
+            continue
+        interface = found_offer.endpoints[endpoint].interface
         if _offer.interface is not None and _offer.interface != interface:
             raise Exception(
                 f"The interface ({_offer.interface}) of the provided offer ({_offer.name}) "
@@ -103,7 +107,7 @@ def status(juju_statuses: Dict[str, Dict], **kwargs):
 
 def example_status():
     """Doctest input."""
-    return read_file("tests/resources/artifacts/status.yaml")
+    return Status._from_dict(read_artifact_file("tests/resources/artifacts/status.yaml"))
 
 
 def example_status_missing_offers():
@@ -111,7 +115,8 @@ def example_status_missing_offers():
 
     This deployment status is missing offers.
     """
-    return {}
+    raw = read_artifact_file("tests/resources/artifacts/status.yaml")
+    return Status._from_dict({**raw, "offers": {}})
 
 
 def example_with_fake_name():

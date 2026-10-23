@@ -16,13 +16,14 @@ requires-python = ">=3.10"
 dependencies = [
   "pyyaml",
   # Main
-  "sh",
   "typer",
   # Fetcher
   "fsspec",
   "requests",
   "treelib",
   "pydantic",
+  # Artifact schemas
+  "jubilant",
 ]
 
 [project.optional-dependencies]
